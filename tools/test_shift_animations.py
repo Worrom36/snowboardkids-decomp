@@ -1,6 +1,6 @@
 import copy
 import unittest
-from tools.animation_assets import pack_animation
+from tools.animation_assets import pack_animation, parse_animation
 from tools.animation_relocations import identify, pack_relocatable_animation
 
 
@@ -43,6 +43,27 @@ class AnimationRelocationTests(unittest.TestCase):
         m['animations'][0]['frames'] *= 9000
         with self.assertRaisesRegex(ValueError, 'overflows'):
             pack_relocatable_animation(m)
+
+    def test_first_table_entry_can_target_later_storage(self):
+        for wide in (False, True):
+            m = identify(self.manifest(wide))
+            m['animations'][1]['frames'][0]['offsets'][0][0] = 99
+            m['animations'].reverse()
+            result = pack_relocatable_animation(m)
+            parsed = parse_animation(result, m['format'], m['part_count'])
+            clips = {a['offset']: a for a in parsed['animations']}
+            self.assertEqual(len(parsed['animation_offsets']), 3)
+            self.assertGreater(parsed['animation_offsets'][0], parsed['animation_offsets'][1])
+            self.assertEqual([clips[p*2]['frames'][0]['offsets'][0][0]
+                              for p in parsed['animation_offsets']], [1, 99, 99])
+
+    def test_reordered_table_cannot_point_into_header(self):
+        m = identify(self.manifest())
+        m['animations'].reverse()
+        result = bytearray(pack_relocatable_animation(m))
+        result[2:4] = (1).to_bytes(2, 'big')
+        with self.assertRaisesRegex(ValueError, 'overlaps table'):
+            parse_animation(result, m['format'], m['part_count'])
 
 
 if __name__ == '__main__':

@@ -5634,6 +5634,352 @@
           }
         }
       }
+    },
+    "combined-formats-palette-binding-unresolved": {
+      "scope": "Fresh controller-pak setup, menus, character and board selection, then Rookie Mountain single-player race; dummy audio",
+      "frames": [
+        750,
+        1500,
+        1950,
+        2900,
+        3100,
+        3500,
+        3950,
+        4500,
+        4950,
+        5500,
+        6000
+      ],
+      "ram_bytes": 4194304,
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "captures_identical": false,
+      "scenario": {
+        "description": "Fresh controller-pak setup, menus, character and board selection, then Rookie Mountain single-player race",
+        "controllers": 1,
+        "frames": [
+          750,
+          1500,
+          1950,
+          2900,
+          3100,
+          3500,
+          3950,
+          4500,
+          4950,
+          5500,
+          6000
+        ],
+        "stop_frame": 6100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "finding": "Font and UI colors differ after palette reordering; CPU-supplied palette indices require relocation bindings.",
+      "runs": {
+        "baseline": {
+          "rom_sha256": "58870ea67d49f778e7a7607eb270ad1d3a081a4733b337b2d607de2606dcfb3c",
+          "screenshots": [
+            "c0dc725be62cdc9953c1ed01e323b7666dea93cc9d1a8d1cd8b7f1a9a230fe06",
+            "eb4eaab173a7a2a7790bc7ac88fb545d4e7021fe7ec699c9e469f8b28db87ee5",
+            "1921028778e7f0d64538e740d1c38e0656622ea95d6df87f24001efa6cfb34bd",
+            "ef25d56b3e3258bb8856d27d4d56a0a848fa295db55bcf713944fb69b5682709",
+            "5e3598cd1c2f3335555e7037b4c880e2b1b97789e5769231ffb38574eff7f82f",
+            "f85dc96fcafd23de37e75378054fcac28e19dac740d2c3c0c725303e6f75cc5e",
+            "9a67c8739dae1d7f0a469aee4b6616c7ff64358d75af3dfb3c5d7744b2aa7e0c",
+            "17ae945c029d6ba558751201bbd6b19bc3a2fafaa6881cbc0064596dd5edf31f",
+            "b0aace6b74d0dc9659b3ee736ed7951f551debc715844d685df776ad1a9b390d",
+            "ce2bbfa2fd5bb3b0c69774f5d5a8ef922522e2f0e20a8a0f09bdf105681c5369",
+            "8f0759105e2a7bd7795b2cdb5f98cfbd5561f873e1766c155c1e992d015e181d"
+          ],
+          "observations": [
+            {
+              "frame": 750,
+              "values": {}
+            },
+            {
+              "frame": 1500,
+              "values": {}
+            },
+            {
+              "frame": 1950,
+              "values": {}
+            },
+            {
+              "frame": 2900,
+              "values": {}
+            },
+            {
+              "frame": 3100,
+              "values": {}
+            },
+            {
+              "frame": 3500,
+              "values": {}
+            },
+            {
+              "frame": 3950,
+              "values": {}
+            },
+            {
+              "frame": 4500,
+              "values": {}
+            },
+            {
+              "frame": 4950,
+              "values": {}
+            },
+            {
+              "frame": 5500,
+              "values": {}
+            },
+            {
+              "frame": 6000,
+              "values": {}
+            }
+          ],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "41f8515857dccfef75af3d71eca3ca495cea8b53bfc23c647e6d4e83a117e249"
+          }
+        },
+        "shifted": {
+          "rom_sha256": "019a1c6909e931487edccdc3712f8f6dfbaf1da991b53e4accf3748c49218ee8",
+          "screenshots": [
+            "2fa16946b37d2eb983a028b91493591943778e8d3094e62a3fea72df046bcd2a",
+            "ba6b2fed0c489afc9c23af4c4ec27d73d8254c0af01afcd2b97e2f977625317e",
+            "62451036078f6ee37c30c541e5976022ee7a56a3fe6bf5566c5df91db54d4a6c",
+            "8d916dc8b1beea0f47a0ef76f8fbedfa08bb818b5d284427b0d8835961963677",
+            "a1f83c8b567ae6c0ae31f1dc093187a779cfecc23d38aec67b37f00bd58b3bbb",
+            "e41a9598fec26199f024ac8a4185892727137404551354a57e0eea9a6d100add",
+            "9d6ea2a17c2616a4cd8e90fec4a97ff3ecf373e93c88e0ec35d8bffcbf21be38",
+            "dd3b9028590788cb15a573b1e8f55d4754cce138419eb8afc1efe98d6f1db915",
+            "a6fd1051061b66add3189c27d0fd4c6875131d2d47c5e0745ac92fd2e06aed34",
+            "7bdecc090e5f22c0243639e643c1a85b110044393350d1e5641149dd007fcce9",
+            "57cc29f2e59b92130876dcdc7e964626dfcabd842731e9958535ac4cdee63dae"
+          ],
+          "observations": [
+            {
+              "frame": 750,
+              "values": {}
+            },
+            {
+              "frame": 1500,
+              "values": {}
+            },
+            {
+              "frame": 1950,
+              "values": {}
+            },
+            {
+              "frame": 2900,
+              "values": {}
+            },
+            {
+              "frame": 3100,
+              "values": {}
+            },
+            {
+              "frame": 3500,
+              "values": {}
+            },
+            {
+              "frame": 3950,
+              "values": {}
+            },
+            {
+              "frame": 4500,
+              "values": {}
+            },
+            {
+              "frame": 4950,
+              "values": {}
+            },
+            {
+              "frame": 5500,
+              "values": {}
+            },
+            {
+              "frame": 6000,
+              "values": {}
+            }
+          ],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "8f298c0fcedacda4f9e0a0b229aeb2641ff8ad33746ab99014c2cc923a8ae65a"
+          }
+        }
+      }
     }
   }
 }

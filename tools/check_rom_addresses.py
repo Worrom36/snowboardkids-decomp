@@ -3,7 +3,6 @@
 
 import argparse
 import re
-import subprocess
 from pathlib import Path
 
 
@@ -45,17 +44,24 @@ def load_allowlist(path: Path) -> set[tuple[str, str]]:
 
 
 def source_files(root: Path):
-    result = subprocess.run(
-        ["git", "ls-files", "src", "include", "asm", "linker_scripts"],
-        cwd=root,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    for relative in result.stdout.splitlines():
-        path = root / relative
-        if path.suffix in {".c", ".h", ".s", ".ld"}:
-            yield path
+    # Include new source files before they are staged. Generated assembly is
+    # normally ignored by git, so discover actual linker inputs independently.
+    # Historical asm/matchings mirrors are inventoried by shift_inventory, but
+    # are not inputs to this build and must not mask the active-file checks.
+    paths = {path for directory in ('src', 'include', 'linker_scripts')
+             for path in (root/directory).rglob('*') if path.suffix in {'.c', '.h', '.s', '.ld'}}
+    linker = root/'snowboardkids.ld'
+    if not linker.exists():
+        raise ValueError('ROM scan: missing generated linker script; run extraction first')
+    inputs = re.findall(r'\b(?:[^\s()]+/)?(asm/[^\s()]+)\.o\(', linker.read_text())
+    if not inputs:
+        raise ValueError('ROM scan: generated assembly input coverage is unexpectedly empty')
+    for name in inputs:
+        path = root/(name+'.s')
+        if not path.is_file():
+            raise ValueError(f'ROM scan: missing generated assembly input {name}.s')
+        paths.add(path)
+    yield from sorted(paths)
 
 
 def main() -> None:

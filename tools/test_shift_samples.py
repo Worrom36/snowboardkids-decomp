@@ -61,6 +61,40 @@ class SampleRelocationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, '9-byte frames'):
                 layout_samples(root, 'BANK')
 
+    def test_explicit_order_moves_split_sample_and_all_users(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rows, first, second = self.fixture(root)
+            first['sample_order'] = ['sample_000030', 'sample_000010']
+            (root/'first.yaml').write_text(yaml.safe_dump(first))
+            payload, offsets, sizes, targets, _ = layout_samples(root, 'BANK')
+            self.assertEqual(payload[16:34], bytes([1])*18)
+            self.assertEqual(payload[48:66], bytes(18))
+            self.assertEqual(pack_sample_slice(root, rows[0], first)+pack_sample_slice(root, rows[1], second), payload)
+            bank = dict(name='BANK', parts=[dict(type='wavetable', offset=0, sample_offset=48,
+                                                 sample_size=18, loop_offset=0)]*2)
+            self.assertEqual([p['sample_offset'] for p in bind_pointer_bank(root, bank)['parts']], [16, 16])
+            for order in (['sample_000030'], ['sample_000030']*2, ['sample_000030', 'missing']):
+                first['sample_order'] = order
+                (root/'first.yaml').write_text(yaml.safe_dump(first))
+                with self.assertRaisesRegex(ValueError, 'every shared sample exactly once'):
+                    layout_samples(root, 'BANK')
+            first.pop('sample_order')
+            second['sample_order'] = ['sample_000030', 'sample_000010']
+            (root/'first.yaml').write_text(yaml.safe_dump(first))
+            (root/'second.yaml').write_text(yaml.safe_dump(second))
+            with self.assertRaisesRegex(ValueError, 'first stream partition'):
+                layout_samples(root, 'BANK')
+            second.pop('sample_order')
+            for part in first['parts']+second['parts']:
+                if part['type'] == 'sample':
+                    part['id'] = 'duplicate'
+            first['sample_order'] = ['duplicate']
+            (root/'first.yaml').write_text(yaml.safe_dump(first))
+            (root/'second.yaml').write_text(yaml.safe_dump(second))
+            with self.assertRaisesRegex(ValueError, 'duplicate shared sample identity'):
+                layout_samples(root, 'BANK')
+
 
 if __name__ == '__main__':
     unittest.main()

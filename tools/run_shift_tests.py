@@ -298,6 +298,23 @@ def main():
     run(linker[:-2]+'objcopy', '-O', 'binary', elf, rom)
     run(sys.executable, ROOT/'tools/n64crc.py', rom)
     print(f'All-graphics runtime fixture (not runtime-validated): {rom}', flush=True)
+    from tools.format_shift_fixture import prepare as prepare_formats, verify as verify_formats
+    format_out = out/'formats'
+    format_out.mkdir(exist_ok=True)
+    source, coverage, moved = prepare_formats(ROOT, rows, format_out, script.read_text(), a.build_dir, linker, run)
+    source, audio_payload = prepare_audio(ROOT, rows, out, source, a.build_dir, linker, run)
+    combined_ld = out/'combined-formats.ld'
+    combined_ld.write_text(source)
+    elf, rom = out/'combined-formats.elf', out/'combined-formats.z64'
+    run(linker, '-T', combined_ld, *extra, '--emit-relocs', '--no-check-sections', '-o', elf)
+    print(f'Combined format corpus: {dict(coverage)}; moved {dict(moved)}', flush=True)
+    print(f'Combined format fields: {verify_formats(elf, format_out/"format-fields.json")} assets, '
+          f'{verify_audio(elf, audio_payload)} audio waves, '
+          f'{verify_fields(elf, graphics_out/"graphics-fields.json")} graphics fields; '
+          f'{verify(baseline, elf)}', flush=True)
+    run(linker[:-2]+'objcopy', '-O', 'binary', elf, rom)
+    run(sys.executable, ROOT/'tools/n64crc.py', rom)
+    print(f'Combined format runtime fixture (not runtime-validated): {rom}', flush=True)
 
 
 if __name__ == '__main__':

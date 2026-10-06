@@ -8,9 +8,22 @@ def parse_animation(data, family, part_count=12):
     if len(data) < word:
         raise ValueError("truncated animation table")
     first = int.from_bytes(data[:word], "big") * 2
-    if not 0 < first <= len(data) or first % word:
+    if not 0 < first <= len(data):
         raise ValueError("invalid animation table size")
-    offsets = [int.from_bytes(data[p:p+word], "big") for p in range(0, first, word)]
+    # The format has no count field. Every stored clip is referenced, so the
+    # earliest target marks the end of the table. Entry zero need not name the
+    # first stored clip after objects have been reordered.
+    offsets = []
+    position = 0
+    while position < first:
+        target = int.from_bytes(data[position:position+word], "big") * 2
+        if not position+word <= target <= len(data):
+            raise ValueError("animation table target overlaps table or exceeds asset")
+        first = min(first, target)
+        offsets.append(target//2)
+        position += word
+    if position != first:
+        raise ValueError("invalid animation table size")
     starts = sorted(set(o * 2 for o in offsets))
     if starts[0] != first:
         raise ValueError("animation overlaps offset table")

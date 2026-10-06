@@ -196,6 +196,13 @@ automatically moves subsequent ROM assets. ADPCM codebook coefficient arrays
 retain the eight-byte alignment required by direct RSP DMA; invalid matching
 offsets are rejected. The internal-audio fixture reorders pointer-bank objects
 while retaining the original ROM extent to isolate decoded audio relocation.
+Animation clips can be reordered independently of table entries, including moving
+the clip referenced by entry zero. Table decoding uses the earliest referenced
+clip to find the table boundary. Shared audio samples can be reordered with a
+`sample_order` list in the first sample-stream manifest (`_27E290`); list every
+stable sample ID exactly once. The second partition cannot override that order.
+The artificial ROM cut between sample partitions remains independent of sample
+identities, and all pointer-bank users resolve against the resulting shared layout.
 
 Original offsets remain extraction metadata. Parts can carry an explicit `id`;
 relocation records identify their source object and field, target object, address
@@ -245,6 +252,17 @@ fixed cases are the KSEG0 base/sign bit, libultra's indexed-cache traversal, and
 the CPU exception vectors. Unexpected unrelocated RAM high halves or constructed
 CPU addresses fail the shift tests; the inventory records each fixed case and
 its uses alongside the compiled data-field audit.
+The ROM boundary source check includes newly added source files and the actual
+generated assembly inputs named by the linker script. Missing generated inputs
+fail explicitly. Historical matching-assembly mirrors remain in the broader
+inventory rather than being treated as active build inputs.
+
+`combined-formats.z64` additionally permutes all eight animation banks, 30 sprite
+tables, and seven tilemaps alongside graphics, audio-bank, ROM, and RAM shifts.
+Its linked payloads pass semantic reference checks, but its current runtime test
+exposes unresolved CPU palette-index bindings: font/UI colors differ when sprite
+palettes move. Packed-field correctness alone is insufficient for this case;
+this fixture is not an accepted runtime result.
 
 `tools/runtime_shift_smoke.py` accepts deterministic controller scenarios, optional
 ELF-resolved memory assertions, isolated controller-pak seeds, and optional AI PCM

@@ -69,6 +69,18 @@ def layout_samples(root, bank_name):
         objects.append(Object(identity, data, original, 16))
         sizes[identity] = len(data)
         targets[original] = identity
+    declarations = [(row['name'], m['sample_order']) for row, m, path in rows if 'sample_order' in m]
+    if declarations:
+        if len(declarations) != 1 or declarations[0][0] != rows[0][0]['name']:
+            raise ValueError(f'{bank_name}: sample_order must be declared only in the first stream partition')
+        order = declarations[0][1]
+        by_id = {obj.id: obj for obj in objects[1:]}
+        if len(by_id) != len(objects)-1:
+            raise ValueError(f'{bank_name}: duplicate shared sample identity')
+        if (not isinstance(order, list) or not all(isinstance(identity, str) for identity in order)
+                or len(order) != len(by_id) or set(order) != set(by_id)):
+            raise ValueError(f'{bank_name}: sample_order must include every shared sample exactly once')
+        objects[1:] = [by_id[identity] for identity in order]
     payload, offsets = relocate(bank_name+'/samples', objects, [], mode='shiftable')
     payload += bytes((-len(payload)) % 16)
     return payload, offsets, sizes, targets, rows
