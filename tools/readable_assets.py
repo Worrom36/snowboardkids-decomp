@@ -111,10 +111,14 @@ def extract_asset(blob, spec, path):
         m = identify(m)
     elif family == "pointer_bank":
         m.update(parse_pointer_bank(data))
+        from tools.structured_relocations import pointer_bank_manifest
+        m = pointer_bank_manifest(m)
     elif family == "embedded_model":
         m.update(parse_embedded_model(data, spec["root_offsets"], path))
     elif family == "music_sequence":
         m.update(parse_music(data))
+        from tools.structured_relocations import music_manifest
+        m = music_manifest(m)
     elif family == "replay":
         if len(data) != 4 * 2400 * 3:
             raise ValueError("unexpected replay size")
@@ -146,13 +150,21 @@ def pack_payload(m, base, mode="matching"):
         else:
             payload = pack_animation(m)
     elif m["format"] == "pointer_bank":
-        payload = pack_pointer_bank(m)
+        if mode == 'shiftable':
+            from tools.structured_relocations import pack_pointer_bank as pack_relocated_bank
+            payload = pack_relocated_bank(m)
+        else:
+            payload = pack_pointer_bank(m)
     elif m["format"] == "sample_bank":
         payload = pack_samples(m, base)
     elif m["format"] == "embedded_model":
         payload = pack_embedded_model(m, base)
     elif m["format"] == "music_sequence":
-        payload = pack_music(m)
+        if mode == 'shiftable':
+            from tools.structured_relocations import pack_music as pack_relocated_music
+            payload = pack_relocated_music(m)
+        else:
+            payload = pack_music(m)
     elif m["format"] == "replay":
         out = bytearray()
         with (base / m["path"]).open(newline="") as stream:
