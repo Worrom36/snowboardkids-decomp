@@ -68,7 +68,9 @@ def verify(base_path, shifted_path):
         start, end = prefix+'_START', prefix+'_END'
         if start not in old_names or end not in old_names or start not in new_names:
             raise ValueError(f'missing expected layout symbol: {prefix}')
-        regions.append((old_names[start], old_names[end], new_names[start]-old_names[start]))
+        content = prefix+'_CONTENT_START'
+        regions.append((old_names[start], old_names[end],
+                        new_names.get(content, new_names[start])-old_names.get(content, old_names[start])))
     def translate(value):
         for start, end, delta in regions:
             if start <= value < end:
@@ -94,6 +96,14 @@ def verify(base_path, shifted_path):
                 raise ValueError(f'{label}: reference location did not follow its section')
             if section == '.entry' and new_address != address:
                 raise ValueError(f'{label}: boot reference location moved')
+            if word != new_word:
+                counts['changed_fields'] += 1
+            if address != new_address:
+                counts['moved_fields'] += 1
+            if kind in (4, 5, 6):
+                mask = 0xfc000000 if kind == 4 else 0xffff0000
+                if (word & mask) != (new_word & mask):
+                    raise ValueError(f'{label}: relocation changed instruction opcode/registers')
             delta = target[1] - symbol[1]
             if kind == 5:
                 pending.append((old, new))
@@ -127,6 +137,8 @@ def verify(base_path, shifted_path):
                     if (new_hi[3] & 0xffff) != ((value+0x8000) >> 16) & 0xffff:
                         raise ValueError(f'{label}: HI16 carry/target mismatch')
                     counts['HI16'] += 1
+                    if (hi[3] & 0xffff) != (new_hi[3] & 0xffff):
+                        counts['changed_HI16'] += 1
                 pending = remaining
             else:
                 raise ValueError(f'{label}: unsupported MIPS relocation {kind}')
@@ -137,6 +149,8 @@ def verify(base_path, shifted_path):
             raise ValueError(f'{section}: HI16 relocation without matching LO16')
     if not counts['32'] or not counts['26'] or not counts['HI16']:
         raise ValueError(f'incomplete relocation coverage: {dict(counts)}')
+    if not counts['changed_fields']:
+        raise ValueError('perturbation did not change any checked reference')
     return dict(counts)
 
 

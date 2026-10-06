@@ -21,3 +21,19 @@ rom:0x00A084 reloc:MIPS_LO16 symbol:gRaceSetupMenuPackedData addend:0xD
 // A common size for this stack is 0x2000, so try checking for the address 0x80320480. Note the stack may have a different size.
 // rom:0x001028 reloc:MIPS_HI16 symbol:main_stack addend:0xXXXX
 // rom:0x001034 reloc:MIPS_LO16 symbol:main_stack addend:0xXXXX
+
+// Race-intro pointer tables address interior objects in packed menu data.
+rom:0x0D6850 reloc:MIPS_32 symbol:gRaceIntroCourseVertices
+rom:0x0D6854 reloc:MIPS_32 symbol:gRaceIntroCourseVertices
+rom:0x0D6858 reloc:MIPS_32 symbol:gRaceIntroCourseVertices
+rom:0x0D685C reloc:MIPS_32 symbol:gRaceIntroCourseVertices
+rom:0x0D6860 reloc:MIPS_32 symbol:gRaceIntroCourseVertices
+rom:0x0D6864 reloc:MIPS_32 symbol:gRaceIntroCourseVertices
+rom:0x0D6868 reloc:MIPS_32 symbol:gRaceIntroAlternateCourseVertices
+rom:0x0D686C reloc:MIPS_32 symbol:gRaceIntroCourseCommands
+rom:0x0D6870 reloc:MIPS_32 symbol:gRaceIntroCourseCommands
+rom:0x0D6874 reloc:MIPS_32 symbol:gRaceIntroCourseCommands
+rom:0x0D6878 reloc:MIPS_32 symbol:gRaceIntroCourseCommands
+rom:0x0D687C reloc:MIPS_32 symbol:gRaceIntroCourseCommands
+rom:0x0D6880 reloc:MIPS_32 symbol:gRaceIntroCourseCommands
+rom:0x0D6884 reloc:MIPS_32 symbol:gRaceIntroAlternateCourseCommands

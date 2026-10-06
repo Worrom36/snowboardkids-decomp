@@ -33,16 +33,21 @@ extern Gfx D_20028F0[];
 extern Gfx D_2002DB8[];
 
 
+extern Vtx gRaceIntroCourseVertices[];
+extern Vtx gRaceIntroAlternateCourseVertices[];
+extern RaceIntroRenderCommandEntry gRaceIntroCourseCommands[];
+extern RaceIntroRenderCommandEntry gRaceIntroAlternateCourseCommands[];
+
 Vtx *gRaceIntroModelVerticesByCourse[7] = {
-    (Vtx *)0x800D5840, (Vtx *)0x800D5840, (Vtx *)0x800D5840, (Vtx *)0x800D5840,
-    (Vtx *)0x800D5840, (Vtx *)0x800D5840, (Vtx *)0x800D59C0,
+    gRaceIntroCourseVertices, gRaceIntroCourseVertices, gRaceIntroCourseVertices, gRaceIntroCourseVertices,
+    gRaceIntroCourseVertices, gRaceIntroCourseVertices, gRaceIntroAlternateCourseVertices,
 };
 
 RaceIntroRenderCommandEntry *gRaceIntroModelCommandsByCourse[7] = {
-    (RaceIntroRenderCommandEntry *)0x800D5A80, (RaceIntroRenderCommandEntry *)0x800D5A80,
-    (RaceIntroRenderCommandEntry *)0x800D5A80, (RaceIntroRenderCommandEntry *)0x800D5A80,
-    (RaceIntroRenderCommandEntry *)0x800D5A80, (RaceIntroRenderCommandEntry *)0x800D5A80,
-    (RaceIntroRenderCommandEntry *)0x800D5C00,
+    gRaceIntroCourseCommands, gRaceIntroCourseCommands,
+    gRaceIntroCourseCommands, gRaceIntroCourseCommands,
+    gRaceIntroCourseCommands, gRaceIntroCourseCommands,
+    gRaceIntroAlternateCourseCommands,
 };
 
 Vtx gRaceIntroBillboardVertices[4] = {

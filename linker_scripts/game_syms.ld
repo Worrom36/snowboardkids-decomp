@@ -72,3 +72,9 @@ ASSERT((buffers_BSS_START & 15) == 0, "runtime buffers require 16-byte alignment
 ASSERT((gDepthBuffer & 63) == 0, "depth buffer requires 64-byte alignment")
 ASSERT((gFramebuffers & 63) == 0, "framebuffers require 64-byte alignment")
 ASSERT(entry_ROM_START == 0x1000 && entry_VRAM == 0x80000400, "hardware boot placement changed")
+
+/* Typed views of the packed menu-effect data consumed by race intros. */
+gRaceIntroCourseVertices = passAwardLabelFlashTileOffsets + 0x24;
+gRaceIntroAlternateCourseVertices = passAwardLabelFlashTileOffsets + 0x1A4;
+gRaceIntroCourseCommands = passAwardLabelFlashTileOffsets + 0x264;
+gRaceIntroAlternateCourseCommands = passAwardLabelFlashTileOffsets + 0x3E4;

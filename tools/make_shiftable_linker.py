@@ -34,7 +34,11 @@ def main() -> None:
             marker = f"        main_{args.grow.upper()}_START = .;"
             if source.count(marker) != 1:
                 parser.error(f"expected one {marker.strip()}")
-            source = source.replace(marker, f"        . += 0x{args.growth:X};\n" + marker)
+            if args.grow == 'bss':
+                source = source.replace(marker, marker + f"\n        . += 0x{args.growth:X};\n"
+                                        "        main_BSS_CONTENT_START = .;")
+            else:
+                source = source.replace(marker, f"        . += 0x{args.growth:X};\n" + marker)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(source)
         return
@@ -42,6 +46,13 @@ def main() -> None:
         parser.error("--after is required for ROM padding")
     if args.after in {"header", "ipl3", "entry"}:
         parser.error("padding before the end of main would alter hardware boot placement")
+    layout = Path(__file__).resolve().parents[1] / 'assets/layout/segments.yaml'
+    if layout.exists():
+        import yaml
+        segments = yaml.safe_load(layout.read_text())['segments']
+        for previous, following in zip(segments, segments[1:]):
+            if previous['name'] == args.after and previous['decoder'] == following['decoder'] == 'sample_bank':
+                parser.error('cannot insert padding inside the contiguous sample stream; move the whole stream instead')
     if args.pad_size <= 0 or args.pad_size % 16 != 0:
         parser.error("--pad-size must be a positive multiple of 16")
 

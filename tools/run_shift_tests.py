@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 
-from verify_linked_relocations import verify
+from verify_linked_relocations import Elf, verify
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -50,18 +50,41 @@ def main():
     baseline, result = link('baseline')
     if result.returncode:
         raise ValueError(result.stderr)
+    try:
+        verify(baseline, baseline)
+    except ValueError as exc:
+        if 'did not change' not in str(exc):
+            raise
+    else:
+        raise ValueError('unchanged ELF incorrectly passed the perturbation check')
     for section in ('text', 'data', 'bss'):
         for size in (16, 0x800):
             elf, result = link(f'{section}-{size:x}', section, size)
             if result.returncode:
                 raise ValueError(result.stderr)
             counts = verify(baseline, elf)
+            if section == 'text' and size == 0x800 and not counts.get('changed_HI16'):
+                raise ValueError('text fixture did not cross a HI16 carry boundary')
             print(f'{section} +0x{size:X}: {counts}', flush=True)
+    broken = out/'corrupt-reference.elf'
+    parsed = Elf(out/'text-10.elf')
+    contents = bytearray(parsed.data)
+    entry = parsed.sections[parsed.names.index('.entry')]
+    contents[entry[4]+15] ^= 1
+    broken.write_bytes(contents)
+    try:
+        verify(baseline, broken)
+    except ValueError as exc:
+        if 'expected' not in str(exc):
+            raise
+    else:
+        raise ValueError('corrupt linked reference was not detected')
+    print('Unchanged and corrupt relocation fixtures correctly rejected', flush=True)
     _, result = link('ram-exhaustion', 'bss', 0x2000)
     if result.returncode == 0 or 'exceeds original 4 MB RAM' not in result.stderr:
         raise ValueError('RAM exhaustion did not fail with the required diagnostic: '+result.stderr)
     print('RAM exhaustion correctly rejected', flush=True)
-    for boundary in ('main', 'SLASH_RACE_ANIMATIONS', '_60F1A0'):
+    for boundary in ('main', 'SLASH_RACE_ANIMATIONS', '_609AA0'):
         for size in (16, 0x10000):
             elf, result = link(f'rom-{boundary}-{size:x}', growth=size, after=boundary)
             if result.returncode:
@@ -110,6 +133,39 @@ def main():
         elf = out/f'asset-{name}.elf'
         run(linker, '-T', temporary, *extra, '--emit-relocs', '--no-check-sections', '-o', elf)
         print(f'Compressed asset {name}: {len(original)} -> {len(encoded)} bytes; {verify(baseline, elf)}', flush=True)
+
+    from tools.graphics_relocations import model_manifest, pack_model
+    row = next(r for r in rows if r['decoder'] == 'embedded_model')
+    manifest, path = materialize(ROOT, row)
+    edited = model_manifest(manifest, path.parent)
+    edited['parts'].insert(0, dict(id='fixture_padding', type='padding', offset=0,
+                                  size=16, data=bytes(16).hex()))
+    payload, exports = pack_model(edited, path.parent)
+    binary, assembly, obj = out/'model.bin', out/'model.s', out/'model.o'
+    binary.write_bytes(payload)
+    source = f'.section .data\n.balign 8\n.incbin "{binary}"\n'
+    for symbol, value in exports.items():
+        source += f'.globl {symbol}\n.set {symbol}, 0x{value:08X}\n'
+    assembly.write_text(source)
+    assembler = linker[:-2]+'as'
+    run(assembler, '-mips3', '-mabi=32', '-no-pad-sections', '-o', obj, assembly)
+    for name, original_script in [('internal-model', out/'baseline.ld'), ('combined', out/'text-800.ld')]:
+        script = out/f'{name}.ld'
+        source = original_script.read_text()
+        source_object = a.build_dir+'/'+row['object']
+        if source.count(source_object) != 1:
+            raise ValueError('expected exactly one embedded-model input')
+        script.write_text(source.replace(source_object, str(obj)))
+        if name == 'combined':
+            run(sys.executable, ROOT/'tools/make_shiftable_linker.py', script, script,
+                '--after', 'main', '--pad-size', '0x10000')
+        elf = out/f'{name}.elf'
+        run(linker, '-T', script, *extra, '--emit-relocs', '--no-check-sections', '-o', elf)
+        print(f'{name}: {verify(baseline, elf)}', flush=True)
+        rom = out/f'{name}.z64'
+        run(linker[:-2]+'objcopy', '-O', 'binary', elf, rom)
+        run(sys.executable, ROOT/'tools/n64crc.py', rom)
+    print(f'Combined runtime fixture (not runtime-validated): {out / "combined.z64"}', flush=True)
 
 
 if __name__ == '__main__':
