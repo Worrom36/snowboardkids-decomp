@@ -200,7 +200,7 @@ LINKER_SCRIPTS = linker_scripts/hardware_regs.ld linker_scripts/libultra_syms.ld
                  linker_scripts/course_select_menu_player_syms.ld
 LDFLAGS        = -T $(LD_SCRIPT) -Map $(TARGET).map \
                  $(foreach ld,$(LINKER_SCRIPTS),-T $(ld)) \
-                 --no-check-sections
+                 --emit-relocs --no-check-sections
 
 # Files
 
@@ -476,7 +476,7 @@ $(SHIFT_LD): FORCE $(LD_SCRIPT) $(TOOLS_DIR)/make_shiftable_linker.py
 $(SHIFT_TARGET).elf: $(SHIFT_LD) $(LINKER_SCRIPTS) $(O_FILES)
 	@mkdir -p $(dir $@)
 	$(V)$(LD) -T $(SHIFT_LD) -Map $(SHIFT_TARGET).map \
-		$(foreach ld,$(LINKER_SCRIPTS),-T $(ld)) --no-check-sections -o $@
+		$(foreach ld,$(LINKER_SCRIPTS),-T $(ld)) --emit-relocs --no-check-sections -o $@
 
 $(SHIFT_TARGET).bin: $(SHIFT_TARGET).elf
 	$(V)$(OBJCOPY) $(OBJCOPYFLAGS) $< $@

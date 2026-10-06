@@ -2,7 +2,6 @@
 
 ABS(BOOT_STACK_SIZE, 0x2000)
 ABS(STACK_SIZE, BOOT_STACK_SIZE)
-ABS(MAIN_BSS_CLEAR_SIZE, 0x7DAC0)
 ABS(bootStackTop, gBootThreadStack)
 
 .set noreorder
@@ -13,9 +12,9 @@ ABS(bootStackTop, gBootThreadStack)
 
 LEAF(entrypoint)
   lui     $t0, %hi(main_BSS_START)
-  lui     $t1, (MAIN_BSS_CLEAR_SIZE >> 16)
+  lui     $t1, %lo(main_BSS_CLEAR_HI)
   addiu   $t0, $t0, %lo(main_BSS_START)
-  ori     $t1, $t1, (MAIN_BSS_CLEAR_SIZE & 0xFFFF)
+  ori     $t1, $t1, %lo(main_BSS_CLEAR_LO)
 
 .clear_bss:
   addi    $t1, $t1, -0x8

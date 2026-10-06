@@ -11,10 +11,10 @@ class ShiftToolsTests(unittest.TestCase):
     def test_layout_preserves_extraction_addresses(self):
         with tempfile.TemporaryDirectory() as d:
             source, target = Path(d) / 'in.ld', Path(d) / 'out.ld'
-            source.write_text('build/src/a.o(.text);\n.entry 0x80000400 : {}\n')
+            source.write_text('build/src/a.o(.text);\n.entry 0x80000400 : {}\n.buffers_bss 0x80160480 (NOLOAD) : {}\n')
             subprocess.run([sys.executable, str(TOOLS / 'make_shiftable_linker.py'),
                             str(source), str(target), '--layout'], check=True)
-            self.assertEqual(target.read_text(), 'build/shiftable/src/a.o(.text);\n.entry 0x80000400 : {}\n')
+            self.assertEqual(target.read_text(), 'build/shiftable/src/a.o(.text);\n.entry 0x80000400 : {}\n.buffers_bss ALIGN(main_BSS_END, 64) (NOLOAD) : {}\n')
 
     def test_boot_padding_rejected(self):
         with tempfile.TemporaryDirectory() as d:

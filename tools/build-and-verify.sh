@@ -26,6 +26,7 @@ BUILD_AND_VERIFY=1 QUIET=1 make -j8 BUILD_MODE="$mode"
 if ((shift_tests)); then
     python3 -m unittest discover -s tools -p 'test_shift*.py'
     QUIET=1 make shift-test BUILD_MODE="$mode"
+    python3 tools/run_shift_tests.py --build-dir "$( [[ "$mode" == matching ]] && echo build || echo build/shiftable )"
 fi
 if [[ "$mode" == matching ]]; then
     printf "\033[0;32mBUILD SUCCEEDED\033[0m. The rebuilt ROM matches snowboardkids.sha1.\n"

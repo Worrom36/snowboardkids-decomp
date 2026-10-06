@@ -1,3 +1,4 @@
+#include "game/engine/runtime_memory.h"
 #include "common.h"
 #include "game/race/camera/race_camera.h"
 #include "game/audio/sound_manager.h"
@@ -21,8 +22,6 @@
 #define BOOT_THREAD_ID 1
 #define MAIN_THREAD_ID 2
 #define THREAD_PRIORITY 10
-#define BOOT_THREAD_STACK_SIZE 0x2000
-#define GAME_THREAD_STACK_SIZE 0x4000
 #define PI_MANAGER_PRIORITY 150
 #define PI_MANAGER_MSG_COUNT 200
 #define DMA_CHUNK_SIZE 0x2000

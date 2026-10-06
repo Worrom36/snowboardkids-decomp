@@ -2,6 +2,7 @@
 """Inject ROM-only padding after a linker segment for shiftability testing."""
 
 import argparse
+import re
 from pathlib import Path
 
 
@@ -13,6 +14,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--grow", choices=("text", "data", "bss"))
+    parser.add_argument("--growth", type=parse_int, default=0)
     parser.add_argument("--layout", action="store_true")
     parser.add_argument("--build-dir", default="build/shiftable")
     parser.add_argument("--after", help="segment name without _ROM_END")
@@ -21,6 +24,17 @@ def main() -> None:
 
     if args.layout:
         source = args.input.read_text().replace("build/", args.build_dir.rstrip("/") + "/")
+        source, count = re.subn(r"\.buffers_bss 0x[0-9A-Fa-f]+ \(NOLOAD\)",
+                                ".buffers_bss ALIGN(main_BSS_END, 64) (NOLOAD)", source)
+        if count != 1:
+            parser.error("expected one runtime buffer section")
+        if args.grow:
+            if args.growth <= 0 or args.growth % 16:
+                parser.error("--growth must be a positive multiple of 16")
+            marker = f"        main_{args.grow.upper()}_START = .;"
+            if source.count(marker) != 1:
+                parser.error(f"expected one {marker.strip()}")
+            source = source.replace(marker, f"        . += 0x{args.growth:X};\n" + marker)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(source)
         return

@@ -1,3 +1,4 @@
+#include "game/engine/runtime_memory.h"
 #include "common.h"
 #include "game/engine/relocatable_heap.h"
 
@@ -130,7 +131,7 @@ s16 allocRelocatableHeapBlock(s32 size) {
 
     /* No suitable gap was found, so append at the current heap end. */
     available = (gRelocatableHeapNextFreeAddress + alignedSize) - gRelocatableHeapStart;
-    if (available > 0x1C0000) {
+    if (available > RELOCATABLE_HEAP_SIZE) {
         return -1;
     }
 
