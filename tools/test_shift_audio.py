@@ -6,13 +6,14 @@ from tools.structured_relocations import pointer_bank_manifest, pack_pointer_ban
 
 class PointerBankRelocationTests(unittest.TestCase):
     def manifest(self):
-        return dict(name='audio fixture', decompressed_size=92, parts=[
+        return dict(name='audio fixture', decompressed_size=96, parts=[
             dict(type='bank_header', offset=0, size=28, signature=b'N64 PtrTables \0\0'.hex(), wave_offsets=[28, 48]),
             dict(type='wavetable', offset=28, size=20, sample_offset=16, sample_size=9,
-                 wave_type=0, flags=0, reserved=0, loop_offset=0, book_offset=68),
+                 wave_type=0, flags=0, reserved=0, loop_offset=0, book_offset=72),
             dict(type='wavetable', offset=48, size=20, sample_offset=16, sample_size=9,
-                 wave_type=0, flags=0, reserved=0, loop_offset=0, book_offset=68),
-            dict(type='codebook', offset=68, size=24, order=1, predictors=1, coefficients=[0]*8)])
+                 wave_type=0, flags=0, reserved=0, loop_offset=0, book_offset=72),
+            dict(type='padding', offset=68, size=4, data=bytes(4).hex()),
+            dict(type='codebook', offset=72, size=24, order=1, predictors=1, coefficients=[0]*8)])
 
     def test_shared_book_moves_once(self):
         m = self.manifest()
@@ -21,9 +22,27 @@ class PointerBankRelocationTests(unittest.TestCase):
         identified = pointer_bank_manifest(m)
         identified['parts'].insert(3, dict(id='new_padding', type='padding', offset=68, size=16, data=bytes(16).hex()))
         result = pack_pointer_bank(identified)
-        self.assertEqual(int.from_bytes(result[44:48], 'big'), 84)
-        self.assertEqual(int.from_bytes(result[64:68], 'big'), 84)
-        self.assertEqual(result[84:], baseline[68:])
+        self.assertEqual(int.from_bytes(result[44:48], 'big'), 88)
+        self.assertEqual(int.from_bytes(result[64:68], 'big'), 88)
+        self.assertEqual(result[88:], baseline[72:])
+
+    def test_codebook_dma_alignment(self):
+        m = pointer_bank_manifest(self.manifest())
+        m['parts'].insert(-1, dict(id='four_bytes', type='padding', offset=72,
+                                 size=4, data=bytes(4).hex()))
+        result = pack_pointer_bank(m)
+        self.assertEqual(int.from_bytes(result[44:48], 'big'), 80)
+        self.assertEqual(int.from_bytes(result[64:68], 'big'), 80)
+        m = self.manifest()
+        m['parts'].pop(3)
+        m['parts'][-1]['offset'] = 68
+        m['decompressed_size'] = 92
+        for part in m['parts'][1:3]:
+            part['book_offset'] = 68
+        with self.assertRaisesRegex(ValueError, 'alignment 8'):
+            pack_pointer_bank(m, mode='matching')
+        with self.assertRaisesRegex(ValueError, 'codebook.*8-byte alignment'):
+            pack_matching(m)
 
     def test_bad_target_and_missing_coverage(self):
         m = pointer_bank_manifest(self.manifest())
@@ -34,6 +53,13 @@ class PointerBankRelocationTests(unittest.TestCase):
         m['relocations'][-1]['target'] = 'missing_book'
         with self.assertRaisesRegex(ValueError, 'unresolved'):
             pack_pointer_bank(m)
+
+    def test_runtime_fixture_checks_shared_storage_not_just_equal_coefficients(self):
+        from tools.audio_shift_fixture import wave_contents
+        original = pack_matching(self.manifest())
+        duplicated = bytearray(original + original[72:])
+        duplicated[64:68] = (96).to_bytes(4, 'big')
+        self.assertNotEqual(wave_contents(original), wave_contents(duplicated))
 
 
 class MusicRelocationTests(unittest.TestCase):

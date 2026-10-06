@@ -27,6 +27,8 @@ def parse_pointer_bank(data):
         if p["loop_offset"]:
             loops.add(p["loop_offset"])
     for pos in sorted(books):
+        if pos % 8:
+            raise ValueError(f"ADPCM codebook at 0x{pos:X}: coefficient DMA requires 8-byte alignment")
         if not 0 < pos <= len(data)-8:
             raise ValueError("invalid codebook offset")
         order, predictors = struct.unpack_from(">II", data, pos)

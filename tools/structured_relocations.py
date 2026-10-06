@@ -48,7 +48,11 @@ def pack_pointer_bank(manifest, mode='shiftable'):
     for part in m['parts']:
         kind = part['type']
         data = bytes.fromhex(part['data']) if kind in ('raw', 'padding') else encode_pointer_part(part)
-        objects.append(Object(part['id'], data, part['offset'], 4 if kind not in ('raw', 'padding') else 1))
+        # alAdpcmPull passes book->book directly to aLoadADPCM. RSP DMA
+        # discards the low three address bits; the eight-byte header preserves
+        # the alignment of the coefficients themselves.
+        alignment = 8 if kind == 'codebook' else 4 if kind not in ('raw', 'padding') else 1
+        objects.append(Object(part['id'], data, part['offset'], alignment))
         if kind == 'bank_header':
             expected_fields.update((part['id'], 20+i*4) for i in range(len(part['wave_offsets'])))
         elif kind == 'wavetable':

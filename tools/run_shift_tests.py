@@ -146,6 +146,15 @@ def main():
     from tools.readable_assets import pack_payload
     from tools.huffman_asset import compress_flexible, decompress_huffman_asset
     rows = load_yaml(ROOT/'assets/layout/segments.yaml')['segments']
+    from tools.audio_shift_fixture import prepare as prepare_audio, verify as verify_audio
+    audio_script, audio_payload = prepare_audio(ROOT, rows, out, (out/'baseline.ld').read_text(),
+                                                a.build_dir, linker, run)
+    audio_ld, audio_elf, audio_rom = (out/('internal-audio'+suffix) for suffix in ('.ld', '.elf', '.z64'))
+    audio_ld.write_text(audio_script)
+    run(linker, '-T', audio_ld, *extra, '--emit-relocs', '--no-check-sections', '-o', audio_elf)
+    print(f'Internal audio: {verify_audio(audio_elf, audio_payload)} linked waves verified', flush=True)
+    run(linker[:-2]+'objcopy', '-O', 'binary', audio_elf, audio_rom)
+    run(sys.executable, ROOT/'tools/n64crc.py', audio_rom)
     row = next(r for r in rows if r['name'] == 'SLASH_RACE_ANIMATIONS')
     manifest, path = materialize(ROOT, row)
     original = (ROOT/'snowboardkids.z64').read_bytes()[row['rom_start']:row['rom_end']]
