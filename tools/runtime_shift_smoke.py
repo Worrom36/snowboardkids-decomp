@@ -162,6 +162,14 @@ def main():
         captures.append(hashes)
         print(f'{label}: captured {len(hashes)} frames with 4 MB RAM', flush=True)
     report['captures_identical'] = captures[0] == captures[1]
+    if scenario and scenario.get('compare_mempak_data'):
+        from runtime_mempak import compare_saved_data
+        report['harness_sha256']['runtime_mempak.py'] = digest(Path(__file__).with_name('runtime_mempak.py'))
+        hashes, report['save_data_identical'] = compare_saved_data(
+            a.out/'baseline/saves', a.out/'shifted/saves')
+        report['save_comparison'] = 'Only validated pak serial numbers and their ID checksums are excluded'
+        for kind in ('baseline', 'shifted'):
+            report['runs'][kind]['save_data_sha256'] = hashes[kind]
     if a.capture_audio:
         audio = [report['runs'][label]['audio'] for label in ('baseline', 'shifted')]
         report['audio_identical'] = all(audio[0][key] == audio[1][key]
@@ -169,6 +177,8 @@ def main():
     (a.out/'report.json').write_text(json.dumps(report, indent=2)+'\n')
     if not report['captures_identical']:
         raise ValueError('fixed-frame captures differ; inspect captures and report.json')
+    if report.get('save_data_identical') is False:
+        raise ValueError('controller-pak game data or non-serial metadata differ; inspect report.json')
     if a.capture_audio and not report['audio_identical']:
         raise ValueError('AI PCM captures differ; inspect audio.wav files and report.json')
     print(f'Runtime captures identical: {a.out / "report.json"}')

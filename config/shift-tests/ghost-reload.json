@@ -1,0 +1,506 @@
+{
+  "description": "Restart from separate saved controller paks, verify compressed ghost tokens, then load a time-trial ghost; debugger selects the mode/course during menus",
+  "controllers": 1,
+  "frames": [
+    2000,
+    3500,
+    4500,
+    5500,
+    6500,
+    7500,
+    8000
+  ],
+  "stop_frame": 8100,
+  "events": [
+    {
+      "frame": 600,
+      "player": 0,
+      "buttons": 16,
+      "duration": 8
+    },
+    {
+      "frame": 800,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 1000,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 1200,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 1400,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 1600,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 1800,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 2000,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 2200,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 2400,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 2600,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 2800,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 3000,
+      "player": 0,
+      "buttons": 1342177280,
+      "duration": 8
+    },
+    {
+      "frame": 3200,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 3400,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 3600,
+      "player": 0,
+      "buttons": 1342177280,
+      "duration": 8
+    },
+    {
+      "frame": 3800,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 4000,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 4200,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 4400,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 4600,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 4800,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 5000,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 5200,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 5400,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 5600,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 5800,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 6000,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 6200,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 6400,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 6600,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    },
+    {
+      "frame": 6800,
+      "player": 0,
+      "buttons": 128,
+      "duration": 8
+    }
+  ],
+  "observe": [
+    {
+      "symbol": "gGameSaveDataBuffer",
+      "label": "ghost_slot_length",
+      "offset": 562,
+      "width": 16,
+      "expected": 166
+    },
+    {
+      "symbol": "gGameSaveDataBuffer",
+      "label": "ghost_slot_offset",
+      "offset": 564,
+      "width": 16,
+      "expected": 0
+    },
+    {
+      "symbol": "gGameSaveDataBuffer",
+      "label": "ghost_first_tokens",
+      "offset": 600,
+      "width": 32,
+      "expected": 852000
+    },
+    {
+      "symbol": "gRacePlayers",
+      "label": "restored_ghost_input_source",
+      "offset": 1570,
+      "width": 8,
+      "frames": [
+        7500,
+        8000
+      ],
+      "expected": 1
+    },
+    {
+      "symbol": "gRacePlayerCount",
+      "width": 8,
+      "frames": [
+        7500,
+        8000
+      ],
+      "expected": 2
+    }
+  ],
+  "writes": [
+    {
+      "frame": 4500,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 4600,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 4700,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 4800,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 4900,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 5000,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 5100,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 5200,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 5300,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 5400,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 5500,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 5600,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 5700,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 5800,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 5900,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 6000,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 6100,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 6200,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 6300,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 6400,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 6500,
+      "symbol": "gRaceSplitscreenMode",
+      "width": 8,
+      "value": 2
+    },
+    {
+      "frame": 4500,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 4600,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 4700,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 4800,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 4900,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 5000,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 5100,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 5200,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 5300,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 5400,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 5500,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 5600,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 5700,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 5800,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 5900,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 6000,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 6100,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 6200,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 6300,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 6400,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    },
+    {
+      "frame": 6500,
+      "symbol": "gRaceCourseIndex",
+      "width": 16,
+      "value": 0
+    }
+  ],
+  "compare_mempak_data": true
+}
