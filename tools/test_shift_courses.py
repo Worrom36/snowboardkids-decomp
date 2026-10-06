@@ -4,6 +4,7 @@ import re
 import unittest
 
 from tools.course_relocations import command_ids, layout_graphics, resource_layout
+from tools.vertex_relocations import annotate_vertices
 
 
 class CourseRelocationTests(unittest.TestCase):
@@ -36,10 +37,24 @@ class CourseRelocationTests(unittest.TestCase):
 
     def test_growth_and_shrink(self):
         streams, m = self.fixture()
-        m['parts'][0]['vertices'] *= 3
+        annotate_vertices(m['parts'][0])
+        vertex = m['parts'][0]['vertices'][0]
+        m['parts'][0]['vertices'] += [dict(vertex, id='new_a'), dict(vertex, id='new_b')]
         self.assertEqual(len(layout_graphics('fixture', streams, m, Path('.'))[3]), 64)
         m['parts'][0]['vertices'] = []
-        with self.assertRaisesRegex(ValueError, 'vertex count exceeds'):
+        with self.assertRaisesRegex(ValueError, 'resizing legacy|unresolved vertex'):
+            layout_graphics('fixture', streams, m, Path('.'))
+
+    def test_interior_vertices_follow_identity(self):
+        streams, m = self.fixture()
+        vertices = m['parts'][0]
+        annotate_vertices(vertices)
+        vertices['vertices'].insert(0, dict(vertices['vertices'][0], id='new_vertex'))
+        packed, _, records, _ = layout_graphics('fixture', streams, m, Path('.'))
+        self.assertEqual([r['value'] for r in records[1:]], [0x03000010]*2)
+        self.assertEqual(struct.unpack_from('>I', packed['SECOND'], 4)[0], 0x03000010)
+        del vertices['vertices'][1]
+        with self.assertRaisesRegex(ValueError, 'unresolved vertex vertex_000000'):
             layout_graphics('fixture', streams, m, Path('.'))
 
     def test_unresolved_and_invalid_alignment(self):

@@ -9,6 +9,7 @@ import struct
 from tools.asset_relocations import Object, relocate
 from tools.graphics_relocations import encoded_parts
 from tools.structured_relocations import identify_parts, target_at
+from tools.vertex_relocations import vertex_range
 
 
 def resource_layout(manifest, base, mode='shiftable'):
@@ -54,6 +55,7 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
     References use the format-defined VTX, DL and SETTIMG operands only.
     """
     m, resources, resource_offsets, resource_data = resource_layout(manifest, base, mode)
+    resource_parts = {p['id']: p for p in m['parts']}
     originals, locations, exports = {}, {}, {}
     cursor = 0
     for stream in streams:
@@ -100,8 +102,7 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
                                           old, kinds=kinds)
                 if opcode == 4:
                     count = (w0 >> 10) & 63
-                    if not count or addend % 16 or addend+count*16 > len(resource_data[target]):
-                        raise ValueError(f'{name}/{source}+4: vertex count exceeds {target}')
+                    addend, _ = vertex_range(resource_parts[target], addend, count, f'{name}/{source}+4 -> {target}')
                 if addend >= len(resource_data[target]):
                     raise ValueError(f'{name}/{source}+4: offset exceeds {target}')
                 value = 0x03000000+resource_offsets[target]+addend

@@ -203,6 +203,13 @@ cannot be resized. Resource parts retain their original offsets when reordered;
 new padding uses `type: padding`, an explicit `id`, and hex `data`. Generated
 graphics `.relocations.json` files report resolved targets and field locations.
 
+Newly extracted vertex entries carry `id: vertex_000010`, relative to the original
+vertex part. Keep each ID attached to its vertex when inserting or moving entries.
+Vertex loads follow these identities in both embedded models and course/character
+resources. A loaded group must stay contiguous and ordered because triangle
+commands refer to its RSP cache positions. Missing IDs, duplicate IDs, split loads,
+and resized legacy arrays without IDs fail explicitly.
+
 Music sequence and modulation events also have stable IDs. All three Mus
 `goto` operands resolve to event identities relative to their sequence, volume,
 and pitch restart streams. Event insertion updates branch offsets and stream

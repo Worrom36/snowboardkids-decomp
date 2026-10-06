@@ -2,6 +2,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from tools.graphics_relocations import model_manifest, pack_model
+from tools.vertex_relocations import annotate_vertices
 
 
 class GraphicsRelocationTests(unittest.TestCase):
@@ -33,7 +34,21 @@ class GraphicsRelocationTests(unittest.TestCase):
                 pack_model(m, base)
             m = model_manifest(self.fixture(base), base)
             m['parts'][0]['vertices'] = []
-            with self.assertRaisesRegex(ValueError, 'vertex count'):
+            with self.assertRaisesRegex(ValueError, 'resizing legacy|unresolved vertex'):
+                pack_model(m, base)
+
+    def test_interior_vertex_identity_moves_and_missing_target_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            m = model_manifest(self.fixture(base), base)
+            part = m['parts'][0]
+            annotate_vertices(part)
+            part['vertices'].insert(0, dict(part['vertices'][0], id='new_vertex'))
+            result, exports = pack_model(m, base)
+            self.assertEqual(exports['MODEL_ROOT_000010'], 0x02000020)
+            self.assertEqual(int.from_bytes(result[36:40], 'big'), 0x02000010)
+            del part['vertices'][1]
+            with self.assertRaisesRegex(ValueError, 'unresolved vertex vertex_000000'):
                 pack_model(m, base)
 
 

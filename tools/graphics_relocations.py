@@ -1,11 +1,12 @@
 """F3DEX embedded objects and link-visible segmented display-list roots."""
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import struct
 
 from tools.asset_relocations import Object, Reference, relocate
 from tools.model_assets import encode_embedded_part
 from tools.structured_relocations import identify_parts, target_at
 from tools.course_graphics_common import trace_course_graphics
+from tools.vertex_relocations import vertex_range
 
 
 def encoded_parts(m, base):
@@ -57,6 +58,7 @@ def pack_model(manifest, base, mode='shiftable'):
     if {(r.source, r.field) for r in refs} != {(p['id'], f) for p, f, _, _, _ in fields}:
         raise ValueError(f"{m['name']}: display-list relocation coverage is incomplete")
     parts = {p['id']: p for p in m['parts']}
+    resolved = []
     for ref in refs:
         if ref.kind != 'segmented' or ref.segment != 2 or ref.width != 4 or ref.unit != 1:
             raise ValueError(f"{m['name']}/{ref.source}+0x{ref.field:X}: expected a segment-2 word")
@@ -70,11 +72,12 @@ def pack_model(manifest, base, mode='shiftable'):
             raise ValueError(f"{m['name']}/{ref.source}: invalid {target['type']} target for opcode 0x{opcode:X}")
         if opcode == 4:
             count = (word0 >> 10) & 63
-            if not count or ref.addend % 16 or ref.addend+count*16 > len(data[ref.target]):
-                raise ValueError(f"{m['name']}/{ref.source}: vertex count exceeds target storage")
+            addend, _ = vertex_range(target, ref.addend, count, f"{m['name']}/{ref.source}+{ref.field}")
+            ref = replace(ref, addend=addend)
+        resolved.append(ref)
     objects = [Object(p['id'], data[p['id']], p['offset'], 8 if p['type'] not in ('raw', 'padding') else 1)
                for p in m['parts']]
-    result, offsets = relocate(m['name'], objects, refs, mode=mode)
+    result, offsets = relocate(m['name'], objects, resolved, mode=mode)
     exports = {}
     for record in m['exports']:
         target, addend = record['target'], record.get('addend', 0)

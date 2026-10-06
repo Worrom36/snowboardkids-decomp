@@ -110,8 +110,11 @@ def write_tilemap_preview(manifest, path):
 
 
 def externalize_model(manifest, path):
+    from tools.vertex_relocations import annotate_vertices
     palettes = [p for p in manifest["parts"] if p["type"] == "palette"]
     for part in manifest["parts"]:
+        if part["type"] == "vertices":
+            annotate_vertices(part)
         if part["type"] != "texture":
             continue
         colors = 16 if part["format"] == "ci4" else 256
