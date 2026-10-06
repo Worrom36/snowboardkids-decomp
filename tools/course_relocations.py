@@ -111,6 +111,14 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
             records.append(dict(source=source, field=4, target=target, kind='segmented',
                                 addend=addend, value=value, location=locations[source]+4))
         packed[stream['name']] = bytes(data)
+    from tools.course_graphics_common import CourseGraphicsGraph, DisplayListNode
+    from tools.texture_relocations import validate_texture_loads
+    whole = bytearray(cursor)
+    for stream in streams:
+        start = locations[stream['name']+'/'+stream['ids'][0]] if stream['ids'] else 0
+        whole[start:start+len(packed[stream['name']])] = packed[stream['name']]
+    graph = CourseGraphicsGraph([DisplayListNode(0, len(whole))], [])
+    validate_texture_loads(name, whole, graph, m['parts'], resource_offsets, resource_data, len(resources), 3)
     return packed, exports, records, resources
 
 

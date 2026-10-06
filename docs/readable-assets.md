@@ -209,6 +209,9 @@ Vertex loads follow these identities in both embedded models and course/characte
 resources. A loaded group must stay contiguous and ordered because triangle
 commands refer to its RSP cache positions. Missing IDs, duplicate IDs, split loads,
 and resized legacy arrays without IDs fail explicitly.
+Texture dimensions, CI format, encoded lengths, and palette counts are checked
+against the relocated display-list loads. Change the corresponding load commands
+with the resource when changing those properties; stale load metadata is rejected.
 
 Music sequence and modulation events also have stable IDs. All three Mus
 `goto` operands resolve to event identities relative to their sequence, volume,

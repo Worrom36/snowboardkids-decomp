@@ -90,5 +90,7 @@ def pack_model(manifest, base, mode='shiftable'):
         exports[record['symbol']] = 0x02000000 + offsets[target] + addend
     if len(exports) != len(m['root_offsets']) or not exports:
         raise ValueError(f"{m['name']}: missing exported display-list roots")
-    trace_course_graphics(result, [value & 0xffffff for value in exports.values()])
+    graph = trace_course_graphics(result, [value & 0xffffff for value in exports.values()])
+    from tools.texture_relocations import validate_texture_loads
+    validate_texture_loads(m['name'], result, graph, m['parts'], offsets, data, len(result), 2)
     return result, exports
