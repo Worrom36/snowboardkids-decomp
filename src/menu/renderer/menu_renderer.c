@@ -8,6 +8,7 @@
 #include "game/engine/system_runtime.h"
 #include "game/menu/renderer/menu_renderer.h"
 #include "game/menu/renderer/menu_render_utils.h"
+#include "game/menu/renderer/sprite_palette_relocation.h"
 
 #define FONT_GFX_CMD(pkt, cmd0, cmd1) \
     {                                 \
@@ -55,6 +56,21 @@ extern s16 gMenuViewportWidth;
 extern s16 gMenuViewportHeight;
 extern s16 gMenuViewportCenterX;
 extern s16 gMenuViewportCenterY;
+
+#ifdef SBK_SPRITE_PALETTE_REMAP
+u16 resolveSpritePaletteIndex(AssetTable *table, u16 index) {
+    SpritePaletteRemap *remap;
+
+    if (!(table->unk0 & 0x80000000)) {
+        return index;
+    }
+    remap = (SpritePaletteRemap *)((u8 *)table + ((table->unk0 & 0x7FFFFFFE) >> 1));
+    if (index >= remap->count) {
+        return index;
+    }
+    return remap->slots[index];
+}
+#endif
 
 void drawMenuAssetRegion(
     s16 x,
@@ -290,7 +306,7 @@ void drawMenuSpriteClipped(s16 x, s16 y, AssetTable *table, u16 imageIndex, u16 
     if (paletteIndex == 0) {
         selectedPalette = entry->paletteIndex;
     } else {
-        selectedPalette = (u16)(paletteIndex - 1);
+        selectedPalette = SPRITE_PALETTE_INDEX(table, (u16)(paletteIndex - 1));
     }
 
     gDPLoadTextureTile_4b(gRegionAllocPtr++, entry->imageOffset + (u8 *)table,
@@ -454,7 +470,7 @@ void drawMenuSpriteWithAlphaClipped(
     if (paletteIndex == 0) {
         selectedPalette = texture->paletteIndex;
     } else {
-        selectedPalette = paletteIndex - 1;
+        selectedPalette = SPRITE_PALETTE_INDEX(asset, paletteIndex - 1);
     }
 
     if (alpha != 0x100) {
@@ -1639,7 +1655,7 @@ void drawMenuColoredGlyph(s16 x, s16 y, u16 glyph, u8 palette, u16 paletteScale,
         glyphWidth = 8;
     }
     paletteBase = (MenuPalette *)(font->entryCount + font->entries);
-    srcPalette = &paletteBase[paletteIndex];
+    srcPalette = &paletteBase[SPRITE_PALETTE_INDEX(font, paletteIndex)];
     x0 = x + gMenuViewportCenterX;
     y0 = y + gMenuViewportCenterY;
     x1 = glyphWidth + x0;
@@ -1799,7 +1815,7 @@ void drawMenuAsciiGlyph(s16 x, s16 y, u16 tileS, s32 tileT, u16 palette, u16 pal
                     if (1) {
                         scratch = allocMenuRenderScratch(sizeof(MenuPalette)); \
                         i = 0; \
-                        source = &palettes[paletteIndex]; \
+                        source = &palettes[SPRITE_PALETTE_INDEX(font, paletteIndex)]; \
                         dst = scratch->colors; \
                     palette_loop: \
                         *dst = (color = (*(u16 *)&source->bytes[i]) & 0xFFFFu); \

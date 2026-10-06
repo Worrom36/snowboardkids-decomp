@@ -182,11 +182,21 @@ void drawRacePlayerGroundShadow(RacePlayer *player) {
 void drawSnowboardModel(Mtx *matrix, s16 dlIndex, s16 textureIndex) {
     void *image;
     void *palette;
+#ifdef SBK_SNOWBOARD_TEXTURE_SIZE
+    s16 width;
+    s16 height;
+#endif
 
     gDPPipeSync(gRegionAllocPtr++);
     gSPSegment(gRegionAllocPtr++, 2, getRelocatableHeapBlockBase(gAssetHandles[0xC]));
     gSPMatrix(gRegionAllocPtr++, matrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
 
+#ifdef SBK_SNOWBOARD_TEXTURE_SIZE
+    getAssetTableImagePaletteAndSize(
+        getRelocatableHeapBlockBase(gAssetHandles[0xD]), textureIndex, &image, &palette, &width, &height
+    );
+    gDPLoadTextureBlock_4b(gRegionAllocPtr++, image, G_IM_FMT_CI, width, height, 0, G_TX_CLAMP, G_TX_CLAMP, 0, 0, 0, 0);
+#else
     getAssetTableImageAndPalette(
         (void *)getRelocatableHeapBlockBase(gAssetHandles[0xD]),
         textureIndex,
@@ -195,6 +205,7 @@ void drawSnowboardModel(Mtx *matrix, s16 dlIndex, s16 textureIndex) {
     );
 
     gDPLoadTextureBlock_4b(gRegionAllocPtr++, image, G_IM_FMT_CI, 64, 64, 0, G_TX_CLAMP, G_TX_CLAMP, 0, 0, 0, 0);
+#endif
     gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, palette);
     gSPDisplayList(gRegionAllocPtr++, gSnowboardDisplayLists[dlIndex]);
 }
@@ -202,10 +213,20 @@ void drawSnowboardModel(Mtx *matrix, s16 dlIndex, s16 textureIndex) {
 void drawGhostSnowboardModel(Mtx *matrix, s16 dlIndex, s16 textureIndex) {
     void *image;
     void *palette;
+#ifdef SBK_SNOWBOARD_TEXTURE_SIZE
+    s16 width;
+    s16 height;
+#endif
 
     gDPPipeSync(gRegionAllocPtr++);
     gSPSegment(gRegionAllocPtr++, 2, getRelocatableHeapBlockBase(gAssetHandles[0xC]));
     gSPMatrix(gRegionAllocPtr++, matrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+#ifdef SBK_SNOWBOARD_TEXTURE_SIZE
+    getAssetTableImagePaletteAndSize(
+        getRelocatableHeapBlockBase(gAssetHandles[0xD]), textureIndex, &image, &palette, &width, &height
+    );
+    gDPLoadTextureBlock_4b(gRegionAllocPtr++, image, G_IM_FMT_CI, width, height, 0, G_TX_CLAMP, G_TX_CLAMP, 0, 0, 0, 0);
+#else
     getAssetTableImageAndPalette(
         (void *)getRelocatableHeapBlockBase(gAssetHandles[0xD]),
         textureIndex,
@@ -214,6 +235,7 @@ void drawGhostSnowboardModel(Mtx *matrix, s16 dlIndex, s16 textureIndex) {
     );
 
     gDPLoadTextureBlock_4b(gRegionAllocPtr++, image, G_IM_FMT_CI, 64, 64, 0, G_TX_CLAMP, G_TX_CLAMP, 0, 0, 0, 0);
+#endif
     gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, palette);
     gSPDisplayList(gRegionAllocPtr++, gGhostSnowboardDisplayLists[dlIndex]);
 }

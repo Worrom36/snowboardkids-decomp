@@ -34,6 +34,18 @@ def parse_int(value: str) -> int:
     return int(value, 0)
 
 
+def runtime_index_inputs(source, build_dir, *, palettes=True, snowboards=False):
+    inputs = [('menu/renderer', name) for name in ('menu_renderer', 'menu_render_utils')] if palettes else []
+    if snowboards:
+        inputs.append(('race/player', 'race_player_model_renderer'))
+    for directory, name in inputs:
+        original = f'{build_dir}/src/{directory}/{name}.o'
+        if original not in source:
+            raise ValueError(f'{name}: missing original renderer linker input')
+        source = source.replace(original, f'{build_dir}/runtime-indices/{name}.o')
+    return source
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=Path)
@@ -41,14 +53,21 @@ def main() -> None:
     parser.add_argument("--grow", choices=("text", "data", "bss"))
     parser.add_argument("--growth", type=parse_int, default=0)
     parser.add_argument("--layout", action="store_true")
+    parser.add_argument("--runtime-indices", action="store_true")
+    parser.add_argument("--runtime-snowboards", action="store_true")
     parser.add_argument("--build-dir", default="build/shiftable")
     parser.add_argument("--after", help="segment name without _ROM_END")
     parser.add_argument("--pad-size", type=parse_int, default=0x10)
     args = parser.parse_args()
 
+    if (args.runtime_indices or args.runtime_snowboards) and not args.layout:
+        parser.error("runtime renderer options require --layout")
     if args.layout:
         source = args.input.read_text().replace("build/", args.build_dir.rstrip("/") + "/")
         source = graphics_layout(source)
+        if args.runtime_indices or args.runtime_snowboards:
+            source = runtime_index_inputs(source, args.build_dir.rstrip('/'),
+                                          palettes=args.runtime_indices, snowboards=args.runtime_snowboards)
         source, count = re.subn(r"\.buffers_bss 0x[0-9A-Fa-f]+ \(NOLOAD\)",
                                 ".buffers_bss ALIGN(main_BSS_END, 64) (NOLOAD)", source)
         if count != 1:

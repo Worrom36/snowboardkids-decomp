@@ -4,6 +4,7 @@
 #include "game/engine/asset_manager.h"
 #include "game/engine/system_runtime.h"
 #include "game/menu/renderer/menu_render_utils.h"
+#include "game/menu/renderer/sprite_palette_relocation.h"
 #include "game/engine/render_callback.h"
 #include "game/engine/relocatable_heap.h"
 #include "game/math/fixed_point_math.h"
@@ -48,6 +49,10 @@ extern void *gMenuAsciiFontPaletteBase;
 u16 D_800D40B0[16] = {
     0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 };
+
+#ifdef SBK_SPRITE_PALETTE_REMAP
+static AssetTable *sMenuAsciiFontAsset;
+#endif
 
 // IDO code generation for this function is sensitive to source line layout.
 // clang-format off
@@ -112,7 +117,7 @@ void getAssetTableImageAndExplicitPalette(u8 *arg0, u16 arg1, u16 arg2, void **a
     temp_v0 = arg0 + (((AssetTable *)arg0)->entryCount * sizeof(AssetTableEntry));
     *arg3 = (void *)(arg0 + temp_v1[1].imageOffset);
     temp_v0 += 8;
-    *arg4 = (void *)((arg2 << 5) + temp_v0);
+    *arg4 = (void *)((SPRITE_PALETTE_INDEX((AssetTable *)arg0, arg2) << 5) + temp_v0);
 }
 
 void getAssetTableImagePaletteAndSize(u8 *arg0, u16 arg1, void **arg2, void **arg3, s16 *arg4, s16 *arg5) {
@@ -664,7 +669,7 @@ void drawAssetTableSpriteWithExplicitPalette(s16 x, s16 y, AssetTable *table, u1
         G_TX_NOLOD,
         G_TX_NOLOD
     );
-    gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, paletteBase + (paletteIndex << 5));
+    gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, paletteBase + (SPRITE_PALETTE_INDEX(table, paletteIndex) << 5));
     gSPTextureRectangle(
         gRegionAllocPtr++,
         x0 << 2,
@@ -867,7 +872,7 @@ void drawScaledAssetTableSpriteWithExplicitPalette(s16 x, s16 y, AssetTable *ass
         G_TX_NOLOD,
         G_TX_NOLOD
     );
-    gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, (paletteIndex << 5) + paletteBase);
+    gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, (SPRITE_PALETTE_INDEX(asset, paletteIndex) << 5) + paletteBase);
     gSPTextureRectangle(
         gRegionAllocPtr++,
         x0 << 2,
@@ -933,7 +938,8 @@ void drawMenuAsciiFontTile(s16 x, s16 y, u16 s, u16 t, u16 paletteIndex) {
 
                 if (gMenuAsciiFontPaletteIndex != paletteIndex) {
                     gMenuAsciiFontPaletteIndex = paletteIndex;
-                    FONT_GFX_CMD(gRegionAllocPtr++, 0xFD100000, (paletteIndex << 5) + (u32)gMenuAsciiFontPaletteBase);
+                    FONT_GFX_CMD(gRegionAllocPtr++, 0xFD100000,
+                                 (SPRITE_PALETTE_INDEX(sMenuAsciiFontAsset, paletteIndex) << 5) + (u32)gMenuAsciiFontPaletteBase);
                     FONT_GFX_CMD(gRegionAllocPtr++, 0xE8000000, 0);
                     FONT_GFX_CMD(gRegionAllocPtr++, 0xF5000100, 0x07000000);
                     FONT_GFX_CMD(gRegionAllocPtr++, 0xE6000000, 0);
@@ -960,6 +966,10 @@ void drawMenuAsciiFontTile(s16 x, s16 y, u16 s, u16 t, u16 paletteIndex) {
 
 void initMenuAsciiFontTexture(void) {
     AssetTable *assetTable = getRelocatableHeapBlockBase(gAssetHandles[6]);
+
+#ifdef SBK_SPRITE_PALETTE_REMAP
+    sMenuAsciiFontAsset = assetTable;
+#endif
 
     gMenuAsciiFontPaletteBase =
         (void *)((assetTable->entryCount * sizeof(AssetTableEntry)) + (u8 *)assetTable + sizeof(AssetTableEntry));

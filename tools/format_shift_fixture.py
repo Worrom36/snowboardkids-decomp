@@ -2,6 +2,7 @@
 from collections import Counter
 import hashlib
 import json
+import struct
 
 from tools.animation_assets import parse_animation
 from tools.animation_relocations import identify, pack_relocatable_animation
@@ -35,6 +36,20 @@ def signature(payload, spec):
             contents.append((shared.setdefault(entry['image_offset'], len(shared)),
                              entry['width'], entry['height'], image['format'], image['data'],
                              [p['values'] for p in parsed['palettes'][start:start+count]]))
+        count = spec.get('palette_count', len(parsed['palettes']))
+        slots = list(range(count))
+        header = int.from_bytes(payload[:4], 'big')
+        if header & 0x80000000:
+            offset = (header & 0x7ffffffe) >> 1
+            if offset+2+count*2 > len(payload) or offset % 2:
+                raise ValueError('CPU palette remap lies outside aligned sprite storage')
+            if int.from_bytes(payload[offset:offset+2], 'big') != count:
+                raise ValueError('CPU palette remap has an incorrect public slot count')
+            slots = list(struct.unpack_from(f'>{count}H', payload, offset+2))
+            if sorted(slots) != list(range(count)):
+                raise ValueError('CPU palette remap is not a complete slot permutation')
+        palette_base = 8+len(parsed['entries'])*8
+        contents.append([payload[palette_base+slot*32:palette_base+(slot+1)*32].hex() for slot in slots])
     elif kind == 'tilemap':
         parsed = parse_tilemap(payload, spec['image_format'])
         tiles = [None]
@@ -63,6 +78,7 @@ def permute(manifest, base):
         images = {p['id']: p for p in moved['images']}
         spec['ci8'] = [i for i, entry in enumerate(moved['entries'])
                        if images[entry['image_id']]['format'] == 'ci8']
+        spec['palette_count'] = len(moved['palettes'])
         order = [image['id'] for image in moved['images']]
         order += [part.get('id', f"raw_{part['offset']:06x}") for part in moved.get('raw_parts', [])]
         moved['image_order'] = list(reversed(order))
@@ -119,6 +135,8 @@ def verify(elf_path, report_path):
     from tools.verify_linked_relocations import Elf
     elf = Elf(elf_path)
     records = json.loads(report_path.read_text())
+    verify_runtime_indices(elf_path)
+    verify_runtime_texture_dimensions(elf_path)
     if len(records) != 45:
         raise ValueError('format fixture final verification is missing expected assets')
     for record in records:
@@ -134,3 +152,60 @@ def verify(elf_path, report_path):
         if signature(payload, record['spec']) != record['semantic_sha256']:
             raise ValueError(f"{record['name']}: final linked references changed contents or sharing")
     return len(records)
+
+
+def verify_runtime_indices(elf_path):
+    """Every CPU-supplied sprite palette selector must reach the translator."""
+    from tools.verify_linked_relocations import Elf
+    elf = Elf(elf_path)
+    functions = {name: value for i, section in enumerate(elf.sections) if section[1] == 2
+                 for name, value, kind, index in elf.symbols(i) if name and kind == 2}
+    expected = {'drawMenuSpriteClipped', 'drawMenuSpriteWithAlphaClipped', 'drawMenuColoredGlyph',
+                'drawMenuAsciiGlyph', 'drawAssetTableSpriteWithExplicitPalette',
+                'drawScaledAssetTableSpriteWithExplicitPalette', 'drawMenuAsciiFontTile',
+                'getAssetTableImageAndExplicitPalette'}
+    if not expected <= functions.keys() or 'resolveSpritePaletteIndex' not in functions:
+        raise ValueError('CPU palette bindings: missing required renderer symbols')
+    starts = sorted(set(functions.values()))
+    callers = Counter()
+    for address, kind, symbol, word in elf.relocations()['.main']:
+        if kind != 4 or symbol[0] != 'resolveSpritePaletteIndex':
+            continue
+        target = (word & 0x3ffffff) << 2 | ((address+4) & 0xf0000000)
+        if word >> 26 != 3 or target != functions['resolveSpritePaletteIndex']:
+            raise ValueError(f'CPU palette binding at 0x{address:X}: incorrect translator call')
+        for name in expected:
+            start = functions[name]
+            end = next((value for value in starts if value > start), 0x80400000)
+            if start <= address < end:
+                callers[name] += 1
+                break
+        else:
+            raise ValueError(f'CPU palette binding at 0x{address:X}: unreviewed caller')
+    if set(callers) != expected or any(count != 1 for count in callers.values()):
+        raise ValueError(f'CPU palette binding coverage is incomplete: {dict(callers)}')
+    return len(callers)
+
+
+def verify_runtime_texture_dimensions(elf_path):
+    from tools.verify_linked_relocations import Elf
+    elf = Elf(elf_path)
+    functions = {name: value for i, section in enumerate(elf.sections) if section[1] == 2
+                 for name, value, kind, index in elf.symbols(i) if name and kind == 2}
+    callers = ('drawSnowboardModel', 'drawGhostSnowboardModel')
+    target = 'getAssetTableImagePaletteAndSize'
+    if any(name not in functions for name in (*callers, target)):
+        raise ValueError('Snowboard dimension bindings: missing required renderer symbols')
+    starts = sorted(set(functions.values()))
+    for name in callers:
+        start = functions[name]
+        end = next((value for value in starts if value > start), 0x80400000)
+        calls = [(address, word) for address, kind, symbol, word in elf.relocations()['.main']
+                 if start <= address < end and kind == 4 and symbol[0] == target]
+        if len(calls) != 1:
+            raise ValueError(f'{name}: missing texture dimension binding')
+        address, word = calls[0]
+        actual = (word & 0x3ffffff) << 2 | ((address+4) & 0xf0000000)
+        if word >> 26 != 3 or actual != functions[target]:
+            raise ValueError(f'{name}: incorrect texture dimension binding')
+    return len(callers)

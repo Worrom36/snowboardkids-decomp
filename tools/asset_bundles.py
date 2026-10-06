@@ -501,8 +501,26 @@ def dependencies(root, row, include_group=True):
 
 
 def write_makefile(root, layout):
+    from tools.sprite_relocations import sprite_manifest, palette_remap, pack_sprites
+    remap = any(palette_remap(sprite_manifest(materialize(root, row)[0]))
+                for row in layout['segments'] if row['decoder'] in ('sprite_table', 'course_sprite_table'))
+    snowboard = next((row for row in layout['segments'] if row['name'] == 'SNOWBOARD_TEXTURES'), None)
+    snowboard_size = False
+    if snowboard:
+        manifest, path = materialize(root, snowboard)
+        snowboard_size = any((image['width'], image['height']) != (64, 57) for image in manifest['images'])
+        try:
+            original_layout = pack_course_sprite_table(manifest, path.parent)
+        except ValueError:
+            snowboard_size = True
+        else:
+            snowboard_size |= pack_sprites(manifest, path.parent) != original_layout
     manifest_dependencies = [str(LAYOUT)]+[r['source'] for r in layout['segments'] if r['decoder']!='course_display_list']
+    if snowboard:
+        manifest_dependencies = sorted(set(manifest_dependencies + dependencies(root, snowboard)))
     lines = ['# Generated bundle scatter rules. Original object paths preserve linker ABI.',
+             f'ASSET_RUNTIME_INDEX_REMAP := {int(remap)}',
+             f'ASSET_RUNTIME_SNOWBOARD_SIZE := {int(snowboard_size)}',
              'assets/layout/bundles.mk: '+' '.join(manifest_dependencies)+' tools/asset_bundles.py',
              '\t$(V)$(PYTHON) tools/asset_bundles.py make-rules']
     for row in layout['segments']:

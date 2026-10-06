@@ -259,10 +259,25 @@ inventory rather than being treated as active build inputs.
 
 `combined-formats.z64` additionally permutes all eight animation banks, 30 sprite
 tables, and seven tilemaps alongside graphics, audio-bank, ROM, and RAM shifts.
-Its linked payloads pass semantic reference checks, but its current runtime test
-exposes unresolved CPU palette-index bindings: font/UI colors differ when sprite
-palettes move. Packed-field correctness alone is insufficient for this case;
-this fixture is not an accepted runtime result.
+Sprite manifests retain logical `palette_ids` separately from physical palette
+order. Reordered palettes append a slot map; eight CPU selection paths translate
+logical indices through it. Links select the optional renderer only when a map
+is needed. Linked verification checks every translator call, including a negative
+test with a corrupted JAL target.
+
+Moving snowboard images also exposed the original renderer's 64×64 load from
+64×57 objects: filtering could sample the next object's bytes. Changed snowboard
+layouts select a renderer that loads and clamps to each image's declared size.
+CI4 images must fit 2 KB texture memory and have 16-texel row alignment. This
+intentionally changes edge clamping; it does not claim identical board-edge pixels
+against the original renderer. Unchanged matching and shiftable links retain the
+original instructions and ROM bytes.
+
+The combined-format fixture now passes all 11 menu/early-gameplay captures in
+4 MB RAM against `runtime-indices-baseline.z64`, which uses the same optional
+renderers with original asset layouts. This comparison isolates relocation from
+the edge-clamping correction. The earlier failed run remains in the runtime
+record as evidence of the CPU bindings that packed-field checks alone missed.
 
 `tools/runtime_shift_smoke.py` accepts deterministic controller scenarios, optional
 ELF-resolved memory assertions, isolated controller-pak seeds, and optional AI PCM

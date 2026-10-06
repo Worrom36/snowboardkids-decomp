@@ -22,7 +22,11 @@ else
     rm -rf build/shiftable
 fi
 QUIET=1 make extract >/dev/null
-BUILD_AND_VERIFY=1 QUIET=1 make -j8 BUILD_MODE="$mode"
+extra_targets=()
+if ((shift_tests)); then
+    extra_targets+=(runtime-index-objects)
+fi
+BUILD_AND_VERIFY=1 QUIET=1 make -j8 BUILD_MODE="$mode" all "${extra_targets[@]}"
 if ((shift_tests)); then
     python3 -m unittest discover -s tools -p 'test_shift*.py'
     QUIET=1 make shift-test BUILD_MODE="$mode"

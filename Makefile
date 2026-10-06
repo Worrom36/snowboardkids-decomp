@@ -269,9 +269,15 @@ default: all
 
 all: course-definitions dirs $(TARGET).z64 $(if $(filter matching,$(BUILD_MODE)),verify)
 
+RUNTIME_INDEX_OBJECTS = $(addprefix $(BUILD_DIR)/runtime-indices/,menu_renderer.o menu_render_utils.o race_player_model_renderer.o)
+.PHONY: runtime-index-objects
+runtime-index-objects: $(RUNTIME_INDEX_OBJECTS)
+
 ifeq ($(BUILD_MODE),shiftable)
-$(LD_SCRIPT): $(BASENAME).ld $(TOOLS_DIR)/make_shiftable_linker.py
-	$(V)$(PYTHON) $(TOOLS_DIR)/make_shiftable_linker.py $< $@ --layout --build-dir $(BUILD_DIR)
+all: runtime-index-objects
+$(LD_SCRIPT): $(BASENAME).ld $(TOOLS_DIR)/make_shiftable_linker.py assets/layout/bundles.mk
+	$(V)$(PYTHON) $(TOOLS_DIR)/make_shiftable_linker.py $< $@ --layout --build-dir $(BUILD_DIR) $(if $(filter 1,$(ASSET_RUNTIME_INDEX_REMAP)),--runtime-indices,) $(if $(filter 1,$(ASSET_RUNTIME_SNOWBOARD_SIZE)),--runtime-snowboards,)
+$(TARGET).elf: $(RUNTIME_INDEX_OBJECTS)
 endif
 
 course-definitions:
@@ -368,6 +374,22 @@ $(BUILD_DIR)/%.o: $(TEXTCONV_DIR)/%.c
 	$(V)$(IDO_CC) $(CFLAGS) $(C_OPT) -I$(dir $*) -o $@ $<
 	$(V)$(RM_MDEBUG)
 	$(V)$(C_OBJ_POSTPROCESS)
+
+# Compile optional renderer variants without changing the matching objects.
+# Flexible links select them only when an asset requires CPU index translation.
+$(BUILD_DIR)/runtime-indices/%.o: $(TEXTCONV_DIR)/src/menu/renderer/%.c include/game/menu/renderer/sprite_palette_relocation.h
+	@mkdir -p $(dir $@)
+	$(V)$(CC_CHECK) $(CC_CHECK_FLAGS) $(CC_CHECK_WARNINGS) $(CC_CHECK_INCLUDES) \
+		$(C_DEFINES) $(CC_CHECK_MIPS_DEFINES) -DSBK_SPRITE_PALETTE_REMAP -iquote src/menu/renderer $<
+	$(V)$(IDO_CC) $(CFLAGS) $(C_OPT) -DSBK_SPRITE_PALETTE_REMAP -Isrc/menu/renderer -o $@ $<
+	$(V)$(RM_MDEBUG)
+
+$(BUILD_DIR)/runtime-indices/race_player_model_renderer.o: $(TEXTCONV_DIR)/src/race/player/race_player_model_renderer.c
+	@mkdir -p $(dir $@)
+	$(V)$(CC_CHECK) $(CC_CHECK_FLAGS) $(CC_CHECK_WARNINGS) $(CC_CHECK_INCLUDES) \
+		$(C_DEFINES) $(CC_CHECK_MIPS_DEFINES) -DSBK_SNOWBOARD_TEXTURE_SIZE -iquote src/race/player $<
+	$(V)$(IDO_CC) $(CFLAGS) $(C_OPT) -DSBK_SNOWBOARD_TEXTURE_SIZE -Isrc/race/player -o $@ $<
+	$(V)$(RM_MDEBUG)
 
 # Patch ll.o for modern binutils, matching the upstream libultra build.
 $(BUILD_DIR)/src/ultra/libc/ll.o: src/ultra/libc/ll.c

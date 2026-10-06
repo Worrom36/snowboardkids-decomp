@@ -17,6 +17,7 @@ def sprite_manifest(manifest):
     for palette in m['palettes']:
         palette.setdefault('id', palette['name'])
     original_palettes = sorted(m['palettes'], key=lambda p: p['offset'])
+    m.setdefault('palette_ids', [p['id'] for p in original_palettes])
     refs = []
     for index, entry in enumerate(m['entries']):
         if 'image_id' not in entry:
@@ -44,8 +45,27 @@ def sprite_manifest(manifest):
     return m
 
 
+def palette_remap(manifest):
+    """Map stable CPU palette IDs to their current packed slots."""
+    physical = [p['id'] for p in manifest['palettes']]
+    logical = manifest['palette_ids']
+    if not isinstance(logical, list) or not all(isinstance(identity, str) and identity for identity in logical):
+        raise ValueError(f"{manifest['name']}: CPU palette identities require a list of nonempty IDs")
+    if len(set(physical)) != len(physical) or len(set(logical)) != len(logical):
+        raise ValueError(f"{manifest['name']}: duplicate palette identity")
+    if set(logical) != set(physical):
+        raise ValueError(f"{manifest['name']}: CPU palette identities require every palette exactly once")
+    if physical == logical:
+        return []
+    if len(logical) > 0xffff:
+        raise ValueError(f"{manifest['name']}: CPU palette remap exceeds 16-bit slots")
+    return [physical.index(identity) for identity in logical]
+
+
 def pack_sprites(manifest, base, mode='shiftable'):
     m = sprite_manifest(manifest)
+    if m['unknown_0'] & 0x80000000:
+        raise ValueError(f"{m['name']}: sprite header uses the reserved CPU palette-remap flag")
     images = {p['id']: p for p in m['images']}
     palettes = [p['id'] for p in m['palettes']]
     header = bytearray(struct.pack('>II', m['unknown_0'], len(m['entries'])))
@@ -77,6 +97,8 @@ def pack_sprites(manifest, base, mode='shiftable'):
         expected = (pixels+1)//2 if image['format'] == 'ci4' else pixels
         if image['format'] not in ('ci4', 'ci8') or not pixels or len(data) != expected:
             raise ValueError(f"{m['name']}/{image['id']}: invalid image format/dimensions")
+        if m['name'] == 'SNOWBOARD_TEXTURES' and (image['format'] != 'ci4' or image['width'] % 16 or len(data) > 2048):
+            raise ValueError(f"{m['name']}/{image['id']}: RDP block loads require CI4, 16-texel rows, and at most 2048 bytes")
         rest.append(Object(image['id'], data, image['offset']))
     for raw in m.get('raw_parts', []):
         rest.append(Object(raw.get('id', f"raw_{raw['offset']:06x}"), bytes.fromhex(raw['data']), raw['offset']))
@@ -89,5 +111,17 @@ def pack_sprites(manifest, base, mode='shiftable'):
         rest.sort(key=lambda obj: obj.offset)
     objects.extend(rest)
     result, offsets = relocate(m['name'], objects, [Reference(**r) for r in m['relocations']], mode=mode)
+    remap = palette_remap(m)
+    if remap:
+        if mode != 'shiftable' or m['unknown_0'] not in (0, 1):
+            raise ValueError(f"{m['name']}: CPU palette remap requires a supported shiftable sprite header")
+        result = bytearray(result)
+        result.extend(bytes(len(result) % 2))
+        start = len(result)
+        if start >= 0x40000000:
+            raise ValueError(f"{m['name']}: CPU palette remap offset overflow")
+        result.extend(struct.pack(f'>{len(remap)+1}H', len(remap), *remap))
+        struct.pack_into('>I', result, 0, 0x80000000 | start << 1 | m['unknown_0'])
+        result = bytes(result)
     parse_course_sprite_table(result, ci8)
     return result

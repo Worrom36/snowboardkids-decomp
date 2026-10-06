@@ -301,7 +301,15 @@ def main():
     from tools.format_shift_fixture import prepare as prepare_formats, verify as verify_formats
     format_out = out/'formats'
     format_out.mkdir(exist_ok=True)
-    source, coverage, moved = prepare_formats(ROOT, rows, format_out, script.read_text(), a.build_dir, linker, run)
+    from tools.make_shiftable_linker import runtime_index_inputs
+    remap_ld, remap_base = out/'runtime-indices-baseline.ld', out/'runtime-indices-baseline.elf'
+    remap_ld.write_text(runtime_index_inputs((out/'baseline.ld').read_text(), a.build_dir, snowboards=True))
+    run(linker, '-T', remap_ld, *extra, '--emit-relocs', '--no-check-sections', '-o', remap_base)
+    remap_rom = out/'runtime-indices-baseline.z64'
+    run(linker[:-2]+'objcopy', '-O', 'binary', remap_base, remap_rom)
+    run(sys.executable, ROOT/'tools/n64crc.py', remap_rom)
+    source = runtime_index_inputs(script.read_text(), a.build_dir, snowboards=True)
+    source, coverage, moved = prepare_formats(ROOT, rows, format_out, source, a.build_dir, linker, run)
     source, audio_payload = prepare_audio(ROOT, rows, out, source, a.build_dir, linker, run)
     combined_ld = out/'combined-formats.ld'
     combined_ld.write_text(source)
@@ -311,7 +319,28 @@ def main():
     print(f'Combined format fields: {verify_formats(elf, format_out/"format-fields.json")} assets, '
           f'{verify_audio(elf, audio_payload)} audio waves, '
           f'{verify_fields(elf, graphics_out/"graphics-fields.json")} graphics fields; '
-          f'{verify(baseline, elf)}', flush=True)
+          f'{verify(remap_base, elf)}', flush=True)
+    check_ram_references(elf)
+    check_mips_literals(elf)
+    from tools.format_shift_fixture import verify_runtime_indices
+    parsed = Elf(elf)
+    palette_calls = [address for address, kind, symbol, word in parsed.relocations()['.main']
+                     if kind == 4 and symbol[0] == 'resolveSpritePaletteIndex']
+    if len(palette_calls) != 8:
+        raise ValueError('negative CPU palette test requires all eight call bindings')
+    section = parsed.sections[parsed.names.index('.main')]
+    contents = bytearray(parsed.data)
+    contents[section[4]+palette_calls[0]-section[3]+3] ^= 1
+    broken = out/'corrupt-palette-call.elf'
+    broken.write_bytes(contents)
+    try:
+        verify_runtime_indices(broken)
+    except ValueError as exc:
+        if 'incorrect translator call' not in str(exc):
+            raise
+    else:
+        raise ValueError('corrupt CPU palette call was not detected')
+    print('Corrupt CPU palette call correctly rejected', flush=True)
     run(linker[:-2]+'objcopy', '-O', 'binary', elf, rom)
     run(sys.executable, ROOT/'tools/n64crc.py', rom)
     print(f'Combined format runtime fixture (not runtime-validated): {rom}', flush=True)
