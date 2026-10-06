@@ -11,6 +11,7 @@ from tools.graphics_relocations import encoded_parts
 from tools.structured_relocations import identify_parts, target_at
 from tools.vertex_relocations import vertex_range
 from tools.graphics_bindings import command_bindings
+from tools.graphics_words import stream_kinds, validate_command, word_kinds
 
 
 def resource_layout(manifest, base, mode='shiftable'):
@@ -57,7 +58,7 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
     """
     m, resources, resource_offsets, resource_data = resource_layout(manifest, base, mode)
     resource_parts = {p['id']: p for p in m['parts']}
-    originals, locations, exports = {}, {}, {}
+    originals, locations, exports, word_types = {}, {}, {}, {}
     cursor = 0
     for stream in streams:
         start = stream['offset'] if mode == 'matching' else cursor
@@ -65,11 +66,14 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
             raise ValueError(f"{name}/{stream['name']}: invalid graphics alignment or overlap")
         if len(stream['ids'])*8 != len(stream['data']):
             raise ValueError(f"{name}/{stream['name']}: command identity coverage is incomplete")
-        for i, identity in enumerate(stream['ids']):
+        for i, (identity, kind) in enumerate(zip(stream['ids'], stream_kinds(stream))):
             key = stream['name']+'/'+identity
             if key in locations or not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*', identity):
                 raise ValueError(f'{name}: duplicate or invalid command identity {key}')
             locations[key] = start+i*8
+            word_types[key] = kind
+            if kind == 'command':
+                validate_command(int.from_bytes(stream['data'][i*8:i*8+4], 'big'), f'{name}/{key}')
             exports[stream['name']+'_'+identity] = 0x02000000+start+i*8
             if re.fullmatch(r'command_[0-9A-Fa-f]{6}', identity):
                 old = stream['offset']+int(identity[8:], 16)
@@ -82,7 +86,7 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
     bindings = command_bindings(m)
     address_sources = {stream['name']+'/'+identity
                        for stream in streams for i, identity in enumerate(stream['ids'])
-                       if stream['data'][i*8] in (4, 6, 0xfd)}
+                       if word_types[stream['name']+'/'+identity] == 'command' and stream['data'][i*8] in (4, 6, 0xfd)}
     for source in bindings:
         if source not in address_sources:
             raise ValueError(f'{name}/{source}+4: binding has no supported address operand')
@@ -90,11 +94,13 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
     for stream in streams:
         data = bytearray(stream['data'])
         for i, identity in enumerate(stream['ids']):
+            source = stream['name']+'/'+identity
+            if word_types[source] == 'data':
+                continue
             w0, w1 = struct.unpack_from('>II', data, i*8)
             opcode = w0 >> 24
             if opcode not in (4, 6, 0xfd):
                 continue
-            source = stream['name']+'/'+identity
             binding = bindings.pop(source, None)
             old = w1 & 0xffffff
             if opcode == 6:
@@ -108,6 +114,8 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
                     if w1 >> 24 != 2 or old not in originals:
                         raise ValueError(f'{name}/{source}+4: unresolved segment-2 display list 0x{w1:X}')
                     target = originals[old]
+                if word_types[target] != 'command':
+                    raise ValueError(f'{name}/{source}+4: display-list target {target} is data')
                 addend = 0
                 value = 0x02000000+locations[target]
             else:
@@ -147,7 +155,16 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
     for stream in streams:
         start = locations[stream['name']+'/'+stream['ids'][0]] if stream['ids'] else 0
         whole[start:start+len(packed[stream['name']])] = packed[stream['name']]
-    graph = CourseGraphicsGraph([DisplayListNode(0, len(whole))], [])
+    # Keep texture state across adjacent command streams, but never consume
+    # embedded data as a command or carry texture state across a data gap.
+    command_offsets = sorted(locations[key] for key in locations if word_types[key] == 'command')
+    nodes = []
+    for offset in command_offsets:
+        if nodes and nodes[-1].end == offset:
+            nodes[-1] = DisplayListNode(nodes[-1].offset, offset+8)
+        else:
+            nodes.append(DisplayListNode(offset, offset+8))
+    graph = CourseGraphicsGraph(nodes, [])
     validate_texture_loads(name, whole, graph, m['parts'], resource_offsets, resource_data, len(resources), 3)
     return packed, exports, records, resources
 
@@ -172,6 +189,7 @@ def pack_graphics_group(root, row, mode='shiftable'):
         path = root/rows[spec['name']]['source']
         data = commands(path)
         ids = command_ids(path.read_text(), data, spec['end']-spec['start'], spec['name'])
-        streams.append(dict(name=spec['name'], offset=spec['start']-bank['graphics_start'], data=data, ids=ids))
+        streams.append(dict(name=spec['name'], offset=spec['start']-bank['graphics_start'], data=data, ids=ids,
+                            kinds=word_kinds(path.read_text(), ids, spec)))
     manifest, path = materialize(root, rows[bank['name']])
     return layout_graphics(bank['name'], streams, manifest, path.parent, mode)

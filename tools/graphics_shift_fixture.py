@@ -6,6 +6,7 @@ from tools.asset_bundles import commands, materialize
 from tools.course_relocations import command_ids, graphics_groups, layout_graphics, resource_layout
 from tools.course_graphics_common import trace_course_graphics
 from tools.huffman_asset import compress_flexible
+from tools.graphics_words import word_kinds
 
 
 def prepare(root, rows, out, script, build_dir, linker, run):
@@ -17,9 +18,11 @@ def prepare(root, rows, out, script, build_dir, linker, run):
             path = root/rows[spec['name']]['source']
             data = commands(path)
             identities = command_ids(path.read_text(), data, spec['end']-spec['start'], spec['name'])
-            streams.append(dict(name=spec['name'], offset=spec['start']-bank['graphics_start'], data=data, ids=identities))
+            streams.append(dict(name=spec['name'], offset=spec['start']-bank['graphics_start'], data=data, ids=identities,
+                                kinds=word_kinds(path.read_text(), identities, spec)))
         streams[0]['data'] = bytes.fromhex('e700000000000000')*2+streams[0]['data']
         streams[0]['ids'][:0] = ['fixture_sync_a', 'fixture_sync_b']
+        streams[0]['kinds'][:0] = ['command', 'command']
         manifest, path = materialize(root, rows[bank['name']])
         manifest['parts'].insert(0, dict(id='fixture_prefix', type='padding', offset=0,
                                          size=16, data=bytes(16).hex()))

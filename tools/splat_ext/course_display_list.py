@@ -1,5 +1,6 @@
 from pathlib import Path
 from tools.asset_staging import staging_path
+from tools.graphics_words import data_offsets
 from typing import Optional
 
 from pygfxd import (
@@ -106,12 +107,14 @@ class N64SegCourse_display_list(CommonSegment):
         return disassembly
 
     @staticmethod
-    def _raw_words(data: bytes) -> str:
+    def _raw_words(data: bytes, data_ranges=(), name='graphics') -> str:
+        raw = data_offsets(data_ranges, len(data), name)
         lines = []
         for offset in range(0, len(data), 8):
             word0 = int.from_bytes(data[offset : offset + 4], "big")
             word1 = int.from_bytes(data[offset + 4 : offset + 8], "big")
-            lines.append(f"    {{{{0x{word0:08X}, 0x{word1:08X}}}}}, /* object:command_{offset:06X} */")
+            kind = 'data' if offset in raw else 'command'
+            lines.append(f"    {{{{0x{word0:08X}, 0x{word1:08X}}}}}, /* object:command_{offset:06X} kind:{kind} */")
         return "\n".join(lines)
 
     def _disassemble(self, data: bytes) -> str:
@@ -150,7 +153,7 @@ class N64SegCourse_display_list(CommonSegment):
             '#include "common.h"',
             "",
             f"Gfx {self.name}[] = {{",
-            self._raw_words(data),
+            self._raw_words(data, self.yaml.get('data_ranges', []), self.name),
             "};",
             "",
         ]

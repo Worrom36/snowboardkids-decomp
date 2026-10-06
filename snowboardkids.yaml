@@ -470,6 +470,8 @@ segments:
   - type: course_display_list
     start: 0xE35C0
     name: BIG_SNOWMAN_COURSE_GRAPHICS
+    data_ranges:
+      - { start: 0x0, end: 0x60, reason: "Six embedded 16-byte vertices before the first display list" }
     vram: 0x02000000
     align: 8
     subalign: 8
@@ -814,6 +816,9 @@ segments:
   - start: 0x10A620
     type: course_display_list
     name: GRASS_VALLEY_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST
+    data_ranges:
+      - { start: 0x190, end: 0x310, reason: "Twenty-four embedded 16-byte vertices between display lists" }
+      - { start: 0x380, end: 0x440, reason: "Twelve embedded 16-byte vertices between display lists" }
     vram: 0x0200B880
     align: 8
     subalign: 8

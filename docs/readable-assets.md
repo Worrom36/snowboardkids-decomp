@@ -207,11 +207,29 @@ identities, and all pointer-bank users resolve against the resulting shared layo
 Original offsets remain extraction metadata. Parts can carry an explicit `id`;
 relocation records identify their source object and field, target object, address
 kind, and addend. Newly extracted graphics word pairs carry
-`/* object:command_000068 */` comments. Keep these IDs with their word pairs when
+`/* object:command_000068 kind:command */` comments. Keep these IDs with their word pairs when
 moving them, and assign new IDs to inserted commands. Legacy unannotated graphics
 cannot be resized. Resource parts retain their original offsets when reordered;
 new padding uses `type: padding`, an explicit `id`, and hex `data`. Generated
 graphics `.relocations.json` files report resolved targets and field locations.
+
+Embedded bytes use `kind:data`; relocation and texture-load validation skip those
+words even when they resemble address-bearing commands. The three original vertex
+data ranges in Big Snowman and Grass Valley are declared in `snowboardkids.yaml`
+with extraction offsets and reasons. Regeneration preserves their type annotations;
+legacy sources inherit the type from their original object IDs. Keep `kind:data`
+with newly inserted or moved raw words. Display-list calls into data and unsupported
+address-bearing commands are rejected instead of emitting an unbound address.
+
+New commands can use a resource manifest's `graphics_relocations` list instead
+of inventing an original numeric address. Each record contains `source`
+(`stream_name/command_id`), `field: 4`, `target` (`stream_name/command_id` for
+display-list calls or `resource_bank/part_id` for loads), `kind: segmented`,
+and `segment` (2 for calls, 3 for resources). Optional `addend` selects a byte
+offset. Vertex loads may specify a `vertices` list of stable vertex IDs whose
+length matches the command's count. Multiple commands can name one new resource;
+they share its storage. Missing targets, duplicate bindings, wrong target types,
+and unused bindings fail with an asset/field diagnostic.
 
 Newly extracted vertex entries carry `id: vertex_000010`, relative to the original
 vertex part. Keep each ID attached to its vertex when inserting or moving entries.
