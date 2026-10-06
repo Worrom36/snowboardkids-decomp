@@ -53,7 +53,9 @@ def main():
         raise ValueError(result.stderr)
     sys.path.insert(0, str(ROOT))
     from tools.check_ram_references import inspect as check_ram_references
+    from tools.check_mips_address_literals import inspect as check_mips_literals
     print(f'CPU data coverage: {check_ram_references(baseline)["counts"]}', flush=True)
+    print(f'MIPS instruction literal audit: {check_mips_literals(baseline)["counts"]}', flush=True)
     try:
         verify(baseline, baseline)
     except ValueError as exc:
@@ -68,6 +70,7 @@ def main():
                 raise ValueError(result.stderr)
             counts = verify(baseline, elf)
             check_ram_references(elf)
+            check_mips_literals(elf)
             if section == 'text' and size == 0x800 and not counts.get('changed_HI16'):
                 raise ValueError('text fixture did not cross a HI16 carry boundary')
             print(f'{section} +0x{size:X}: {counts}', flush=True)
@@ -89,6 +92,26 @@ def main():
     symbols = {name: value for i, section in enumerate(parsed.sections) if section[1] == 2
                for name, value, kind, index in parsed.symbols(i) if name}
     main_section = parsed.sections[parsed.names.index('.main')]
+    location = symbols['drawSnowboardModel']
+    covered = {address for address, kind, symbol, word in parsed.relocations()['.main']}
+    if location in covered or location+4 in covered:
+        raise ValueError('literal coverage fixture requires two instruction words without relocations')
+    position = main_section[4]+location-main_section[3]
+    for name, instructions, diagnostic in [
+            ('uncovered-high-half', bytes.fromhex('3c04800100000000'), 'unrelocated RAM high half'),
+            ('uncovered-address-pair', bytes.fromhex('3c04800034840400'), 'unrelocated CPU address')]:
+        contents = bytearray(parsed.data)
+        contents[position:position+8] = instructions
+        broken = out/(name+'.elf')
+        broken.write_bytes(contents)
+        try:
+            check_mips_literals(broken)
+        except ValueError as exc:
+            if diagnostic not in str(exc):
+                raise
+        else:
+            raise ValueError(f'{name}: unrelocated instruction address was not detected')
+    print('Uncovered instruction high-half and address-pair fixtures correctly rejected', flush=True)
     position = main_section[4]+symbols['gMenuRenderModeResetDl']-main_section[3]
     contents = bytearray(parsed.data)
     contents[position:position+4] = (0x80001000).to_bytes(4, 'big')

@@ -237,6 +237,12 @@ Combined runtime fixtures are emitted under `build/shiftable/shift-tests`; boot,
 menus, every course, multiplayer, audio, replay, save flows, and hardware remain
 separate acceptance checks.
 
+The compiled-instruction audit also checks cached-RAM `lui` literals. Its remaining
+fixed cases are the KSEG0 base/sign bit, libultra's indexed-cache traversal, and
+the CPU exception vectors. Unexpected unrelocated RAM high halves or constructed
+CPU addresses fail the shift tests; the inventory records each fixed case and
+its uses alongside the compiled data-field audit.
+
 The combined character fixture passed an initial Mupen64Plus 2.6.0/Rice check
 with 4 MB RAM: captures at frames 120, 600, and 1800 were byte-identical to the
 original ROM. This covers boot and automatic title-demo rendering, with dummy

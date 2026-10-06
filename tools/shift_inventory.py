@@ -57,13 +57,16 @@ def inventory(root, build):
     packed = packed_inventory(root, build)
     from tools.check_ram_references import inspect
     cpu = inspect(build/'snowboardkids.elf')
+    from tools.check_mips_address_literals import inspect as inspect_instructions
+    instructions = inspect_instructions(build/'snowboardkids.elf')
     linker = []
     for path in [root/'snowboardkids.ld', *sorted(build.glob('*.ld'))]:
         for number, line in enumerate(path.read_text().splitlines(), 1):
             if HEX.search(line):
                 linker.append(dict(path=str(path.relative_to(root)), line=number, text=line.strip()))
     return dict(schema_version=2, numeric_candidates_require_review=True, sources=sources, objects=objects,
-                packed_assets=packed, cpu_data_coverage=cpu, generated_linker_addresses=linker)
+                packed_assets=packed, cpu_data_coverage=cpu, cpu_instruction_literals=instructions,
+                generated_linker_addresses=linker)
 
 
 def packed_inventory(root, build):
