@@ -61,5 +61,7 @@ class N64SegCourse_sprite_table(CommonSegment):
         }
         path = staging_path(self.out_path())
         externalize_sprites(manifest, path)
+        from tools.sprite_relocations import sprite_manifest
+        manifest = sprite_manifest(manifest)
         write_yaml(path, manifest)
         self.log(f"Wrote {self.name} to {path}")

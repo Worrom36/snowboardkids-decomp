@@ -93,6 +93,8 @@ def extract_asset(blob, spec, path):
             ci8.extend(range(start, end))
         m.update(parse_course_sprite_table(data, ci8, True))
         externalize_sprites(m, path)
+        from tools.sprite_relocations import sprite_manifest
+        m = sprite_manifest(m)
     elif family == "tilemap":
         m["image_format"] = spec["image_format"]
         m.update(parse_tilemap(data, m["image_format"]))
@@ -105,6 +107,8 @@ def extract_asset(blob, spec, path):
             palette = [v for p in m["palettes"][slot:slot+count] for v in p]
             externalize_image(image, path.parent, f"{m['name']}/{image['name']}.png", palette)
         write_tilemap_preview(m,path)
+        from tools.tilemap_relocations import tilemap_manifest
+        m = tilemap_manifest(m)
     elif family in ("race_animation", "scene_animation"):
         m.update(parse_animation(data, family, spec.get("part_count", 12)))
         from tools.animation_relocations import identify
@@ -142,9 +146,17 @@ def pack_payload(m, base, mode="matching"):
     if m.get("schema_version") != 2:
         raise ValueError("unsupported readable asset schema version")
     if m["format"] == "sprite_table":
-        payload = pack_course_sprite_table(m, base)
+        if mode == 'shiftable':
+            from tools.sprite_relocations import pack_sprites
+            payload = pack_sprites(m, base)
+        else:
+            payload = pack_course_sprite_table(m, base)
     elif m["format"] == "tilemap":
-        payload = pack_tilemap(m, base)
+        if mode == 'shiftable':
+            from tools.tilemap_relocations import pack_tilemap as pack_relocated_tilemap
+            payload = pack_relocated_tilemap(m, base)
+        else:
+            payload = pack_tilemap(m, base)
     elif m["format"] in ("race_animation", "scene_animation"):
         if mode == 'shiftable':
             from tools.animation_relocations import pack_relocatable_animation

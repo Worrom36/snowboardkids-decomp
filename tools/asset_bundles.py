@@ -437,7 +437,11 @@ def pack_segment(root, row, compressed=True, mode="matching"):
         else:
             packer = {'course_surface_data': pack_course_surface_data, 'course_sprite_table': pack_course_sprite_table,
                       'model_resources': pack_course_model_resources, 'course_model_resources': pack_course_model_resources}[row['decoder']]
-            result = packer(m) if row['decoder'] == 'course_surface_data' else packer(m, path.parent)
+            if mode == 'shiftable' and row['decoder'] == 'course_sprite_table':
+                from tools.sprite_relocations import pack_sprites
+                result = pack_sprites(m, path.parent)
+            else:
+                result = packer(m) if row['decoder'] == 'course_surface_data' else packer(m, path.parent)
             if compressed and mode == "matching":
                 result = compress_huffman_asset(result, compression_metadata_from_manifest(m))
         if mode == 'shiftable' and compressed and m['compression'] != 'none':
