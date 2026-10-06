@@ -179,9 +179,38 @@ python3 tools/asset_bundles.py pack BIG_SNOWMAN_COURSE_MODEL_RESOURCES --out /tm
 python3 tools/textconv.py tools/charmap.txt input.bin output.txt --decode
 ```
 
-Compression retains Huffman tables, LZ token choices, padding bits, and unused
-tails. Structural edits that change encoded size do not automatically relocate
-other assets; the original ROM layout remains the matching target.
+Matching compression retains Huffman tables, LZ token choices, padding bits,
+and unused tails. `./tools/build-and-verify.sh` retains the original SHA1 check.
+`./tools/build-and-verify.sh --mode shiftable --shift-tests` uses isolated outputs
+under `build/shiftable`, deterministic variable-size compression, flexible ROM
+placement, linked BSS and runtime buffers, and the original 4 MB RAM limit.
+An unchanged shiftable build is byte-identical to the matching ROM.
+
+Internal relocation currently covers animation tables, audio-bank objects and
+shared samples, music stream tables, snowboard graphics, sprite images and
+palettes, tilemap tables, and course/character resource objects. Character
+graphics commands export stable symbols used by menu and race model tables.
+All 19 course/character resource groups are checked against the original
+payloads, including 5,886 graphics reference fields. Changing compressed sizes
+automatically moves subsequent ROM assets.
+
+Original offsets remain extraction metadata. Parts can carry an explicit `id`;
+relocation records identify their source object and field, target object, address
+kind, and addend. Newly extracted graphics word pairs carry
+`/* object:command_000068 */` comments. Keep these IDs with their word pairs when
+moving them, and assign new IDs to inserted commands. Legacy unannotated graphics
+cannot be resized. Resource parts retain their original offsets when reordered;
+new padding uses `type: padding`, an explicit `id`, and hex `data`. Generated
+graphics `.relocations.json` files report resolved targets and field locations.
+
+Some structural changes still fail explicitly: moving course graphics commands
+requires resolving shared CPU tables across course address spaces; changing
+music event-stream lengths requires event-level branch identities. Course
+collision indices and replay render-cache pointers still need their own audit.
+Passing ROM/RAM and packed-field tests does not establish full shiftability.
+Combined runtime fixtures are emitted under `build/shiftable/shift-tests`; boot,
+menus, every course, multiplayer, audio, replay, save flows, and hardware remain
+separate acceptance checks.
 
 ## Coverage and validation
 

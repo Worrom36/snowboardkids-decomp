@@ -3,7 +3,24 @@
 
 import argparse
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+
+def graphics_layout(source):
+    from tools.course_relocations import graphics_groups
+    for bank, group in graphics_groups(Path(__file__).resolve().parents[1]):
+        if not any('.'+s['name']+' ' in source for s in group):
+            continue
+        for previous, following in zip(group, group[1:]):
+            name = following['name']
+            source, count = re.subn(rf'(\.{re.escape(name)}) 0x[\da-fA-F]+ :',
+                                    rf"\1 ALIGN({previous['name']}_VRAM_END, 8) :", source)
+            if count != 1:
+                raise ValueError(f'{name}: expected one graphics section placement')
+    return source
 
 
 def parse_int(value: str) -> int:
@@ -24,6 +41,7 @@ def main() -> None:
 
     if args.layout:
         source = args.input.read_text().replace("build/", args.build_dir.rstrip("/") + "/")
+        source = graphics_layout(source)
         source, count = re.subn(r"\.buffers_bss 0x[0-9A-Fa-f]+ \(NOLOAD\)",
                                 ".buffers_bss ALIGN(main_BSS_END, 64) (NOLOAD)", source)
         if count != 1:
@@ -46,6 +64,10 @@ def main() -> None:
         parser.error("--after is required for ROM padding")
     if args.after in {"header", "ipl3", "entry"}:
         parser.error("padding before the end of main would alter hardware boot placement")
+    from tools.course_relocations import graphics_groups
+    for bank, group in graphics_groups(Path(__file__).resolve().parents[1]):
+        if any(s['name'] == args.after for s in group[:-1]):
+            parser.error(f"cannot insert padding inside {bank['name']} graphics DMA stream")
     layout = Path(__file__).resolve().parents[1] / 'assets/layout/segments.yaml'
     if layout.exists():
         import yaml

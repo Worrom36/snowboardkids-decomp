@@ -167,6 +167,48 @@ def main():
         run(sys.executable, ROOT/'tools/n64crc.py', rom)
     print(f'Combined runtime fixture (not runtime-validated): {out / "combined.z64"}', flush=True)
 
+    from tools.asset_bundles import commands
+    from tools.course_relocations import layout_graphics, command_ids
+    graphics = next(r for r in rows if r['name'] == 'SLASH_GRAPHICS')
+    bank = next(r for r in rows if r['name'] == 'SLASH_MODEL_RESOURCES')
+    manifest, path = materialize(ROOT, bank)
+    manifest['parts'].insert(0, dict(id='fixture_padding', type='padding', offset=0,
+                                    size=16, data=bytes(16).hex()))
+    source_path = ROOT/graphics['source']
+    data = commands(source_path)
+    ids = command_ids(source_path.read_text(), data, graphics['rom_end']-graphics['rom_start'], graphics['name'])
+    streams = [dict(name=graphics['name'], offset=0, ids=['fixture_sync_a', 'fixture_sync_b']+ids,
+                    data=bytes.fromhex('e700000000000000')*2+data)]
+    packed, exports, records, resources = layout_graphics('slash-fixture', streams, manifest, path.parent)
+    if not records or any(r['value'] != 0x03000000+16+int.from_bytes(data[i*8+4:i*8+8], 'big') % 0x1000000
+                          for i, identity in enumerate(ids) for r in records
+                          if r['source'] == 'SLASH_GRAPHICS/'+identity and r['target'].startswith(bank['name']+'/')):
+        raise ValueError('character resource fields did not follow their moved targets')
+    script = (out/'combined.ld').read_text()
+    for row, payload in ((graphics, packed[graphics['name']]), (bank, compress_flexible(resources))):
+        binary, obj = out/(row['name']+'.bin'), out/(row['name']+'.o')
+        binary.write_bytes(payload)
+        if row == graphics:
+            assembly = out/(row['name']+'.s')
+            source = f'.section .data\n.balign 8\n.globl {row["name"]}\n{row["name"]}:\n.incbin "{binary}"\n'
+            source += ''.join(f'.globl {s}\n.set {s}, 0x{v:08X}\n' for s, v in exports.items())
+            assembly.write_text(source)
+            run(assembler, '-mips3', '-mabi=32', '-no-pad-sections', '-o', obj, assembly)
+        else:
+            run(linker, '-r', '-b', 'binary', '-o', obj, binary)
+        original_object = a.build_dir+'/'+row['object']
+        if script.count(original_object) != 1:
+            raise ValueError(f'{row["name"]}: missing character fixture input')
+        script = script.replace(original_object, str(obj))
+    combined = out/'combined-character.ld'
+    combined.write_text(script)
+    elf, rom = out/'combined-character.elf', out/'combined-character.z64'
+    run(linker, '-T', combined, *extra, '--emit-relocs', '--no-check-sections', '-o', elf)
+    print(f'Combined character commands and shared resources: {verify(baseline, elf)}', flush=True)
+    run(linker[:-2]+'objcopy', '-O', 'binary', elf, rom)
+    run(sys.executable, ROOT/'tools/n64crc.py', rom)
+    print(f'Combined character runtime fixture (not runtime-validated): {rom}', flush=True)
+
 
 if __name__ == '__main__':
     main()

@@ -111,7 +111,7 @@ class N64SegCourse_display_list(CommonSegment):
         for offset in range(0, len(data), 8):
             word0 = int.from_bytes(data[offset : offset + 4], "big")
             word1 = int.from_bytes(data[offset + 4 : offset + 8], "big")
-            lines.append(f"    {{{{0x{word0:08X}, 0x{word1:08X}}}}}, /* Exact source word; see decoded reference above. */")
+            lines.append(f"    {{{{0x{word0:08X}, 0x{word1:08X}}}}}, /* object:command_{offset:06X} */")
         return "\n".join(lines)
 
     def _disassemble(self, data: bytes) -> str:

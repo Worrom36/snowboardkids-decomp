@@ -423,7 +423,8 @@ def pack_segment(root, row, compressed=True, mode="matching"):
     if mode not in ("matching", "shiftable"):
         raise ValueError(f"unknown asset build mode: {mode}")
     if row['decoder'] == 'course_display_list':
-        result = commands(safe_path(root, row['source']))
+        from tools.course_relocations import pack_graphics_group
+        result = pack_graphics_group(root, row, mode)[0][row['name']]
     else:
         m, path = materialize(root, row)
         if mode == 'shiftable' and row['decoder'] == 'sample_bank':
@@ -446,6 +447,9 @@ def pack_segment(root, row, compressed=True, mode="matching"):
             if mode == 'shiftable' and row['decoder'] == 'course_sprite_table':
                 from tools.sprite_relocations import pack_sprites
                 result = pack_sprites(m, path.parent)
+            elif mode == 'shiftable' and row['decoder'] in ('model_resources', 'course_model_resources'):
+                from tools.course_relocations import resource_layout
+                result = resource_layout(m, path.parent, mode)[1]
             else:
                 result = packer(m) if row['decoder'] == 'course_surface_data' else packer(m, path.parent)
             if compressed and mode == "matching":
@@ -483,6 +487,13 @@ def dependencies(root, row, include_group=True):
         for sibling in load_yaml(root/LAYOUT)['segments']:
             if sibling['decoder'] == 'sample_bank' and load_yaml(root/sibling['source'])['bank_asset'] == bank:
                 result.extend(dependencies(root, sibling, include_group=False))
+    if include_group and row['decoder'] == 'course_display_list':
+        from tools.course_relocations import graphics_groups
+        rows = {r['name']: r for r in load_yaml(root/LAYOUT)['segments']}
+        for bank, group in graphics_groups(root):
+            if any(s['name'] == row['name'] for s in group):
+                for name in [bank['name']]+[s['name'] for s in group]:
+                    result.extend(dependencies(root, rows[name], include_group=False))
     return sorted(set(result))
 
 
@@ -551,14 +562,21 @@ def main():
         a.out.write_bytes(data)
         if row['decoder'] in ('course_display_list', 'embedded_model'):
             assembly = f'.section .data\n.balign 8\n.globl {a.name}\n{a.name}:\n.incbin "{a.out.resolve()}"\n'
-            if row['decoder'] == 'embedded_model':
+            if row['decoder'] == 'course_display_list':
+                from tools.course_relocations import pack_graphics_group, command_ids
+                _, all_exports, records, _ = pack_graphics_group(root, row, a.mode)
+                source = root/row['source']
+                identities = command_ids(source.read_text(), commands(source), row['rom_end']-row['rom_start'], a.name)
+                exports = {a.name+'_'+identity: all_exports[a.name+'_'+identity] for identity in identities}
+                a.out.with_suffix('.relocations.json').write_text(json.dumps(records, indent=2)+'\n')
+            else:
                 from tools.graphics_relocations import pack_model
                 manifest, path = materialize(root, row)
                 _, exports = pack_model(manifest, path.parent, mode=a.mode)
-                for symbol, value in exports.items():
-                    if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', symbol):
-                        raise ValueError(f'{a.name}: invalid exported symbol {symbol!r}')
-                    assembly += f'.globl {symbol}\n.set {symbol}, 0x{value:08X}\n'
+            for symbol, value in exports.items():
+                if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', symbol):
+                    raise ValueError(f'{a.name}: invalid exported symbol {symbol!r}')
+                assembly += f'.globl {symbol}\n.set {symbol}, 0x{value:08X}\n'
             a.out.with_suffix('.s').write_text(assembly)
         deps = dependencies(root,row)
         a.out.with_suffix('.d').write_text(f"{a.out.with_suffix('.o')}: {' '.join(deps)}\n"+
