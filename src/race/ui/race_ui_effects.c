@@ -1,3 +1,4 @@
+#include "game/engine/model_asset_symbols.h"
 #include "game/race/course/race_course_effects.h"
 #include "game/engine/game_task_scheduler.h"
 #include "game/race/race_state.h"
@@ -236,14 +237,14 @@ typedef struct {
 } RaceUiSparkleRetargetScratch;
 
 RaceCourseScrollingTextureInit gRaceCourseScrollingTextureInit[RACE_COURSE_SCROLLING_TEXTURE_COUNT] = {
-    { 0x0200D350, 0x0044, 0x00, 0x00 },
-    { 0x0200D5D0, 0x0003, 0x01, 0x00 },
-    { 0x02008C18, 0x0003, 0x01, 0x00 },
-    { 0x02006970, 0x0003, 0x01, 0x00 },
-    { 0x0200D800, 0x0003, 0x01, 0x00 },
-    { 0x0200DB58, 0x0003, 0x00, 0x00 },
-    { 0x02009700, 0x0003, 0x01, 0x01 },
-    { 0x02009770, 0x0003, 0x00, 0x00 },
+    { (s32)QUICKSAND_VALLEY_COURSE_SCROLLING_TEXTURE_0_DISPLAY_LIST_command_000000, 0x0044, 0x00, 0x00 },
+    { (s32)QUICKSAND_VALLEY_COURSE_SCROLLING_TEXTURE_1_DISPLAY_LIST_command_000000, 0x0003, 0x01, 0x00 },
+    { (s32)NIGHT_HIGHWAY_COURSE_SCROLLING_TEXTURE_DISPLAY_LIST_command_000000, 0x0003, 0x01, 0x00 },
+    { (s32)ANIMAL_LAND_COURSE_SCROLLING_TEXTURE_DISPLAY_LIST_command_000000, 0x0003, 0x01, 0x00 },
+    { (s32)DIZZY_LAND_COURSE_SCROLLING_TEXTURE_0_DISPLAY_LIST_command_000000, 0x0003, 0x01, 0x00 },
+    { (s32)DIZZY_LAND_COURSE_SCROLLING_TEXTURE_1_DISPLAY_LIST_command_000000, 0x0003, 0x00, 0x00 },
+    { (s32)SUNSET_ROCK_COURSE_SCROLLING_TEXTURE_0_DISPLAY_LIST_command_000000, 0x0003, 0x01, 0x01 },
+    { (s32)SUNSET_ROCK_COURSE_SCROLLING_TEXTURE_1_DISPLAY_LIST_command_000000, 0x0003, 0x00, 0x00 },
 };
 
 Vec3i D_800D6030[] = {
@@ -406,13 +407,46 @@ Vtx D_800D63D0[] = {
 };
 
 u32 *gRaceCourseRankModelDisplayLists[] = {
-    (u32 *)0x02009200, (u32 *)0x02009200, (u32 *)0x02008E40, (u32 *)0x02009020, (u32 *)0x02009200, (u32 *)0x02009200,
-    (u32 *)0x020091E0, (u32 *)0x020093E8, (u32 *)0x02009200, (u32 *)0x02009200, (u32 *)0x02008E40, (u32 *)0x02009020,
-    (u32 *)0x0200B6F0, (u32 *)0x0200B6F0, (u32 *)0x0200B6F0, (u32 *)0x0200B880, (u32 *)0x0200B6F0, (u32 *)0x0200B6F0,
-    (u32 *)0x0200D448, (u32 *)0x0200D5E0, (u32 *)0x0200B6F0, (u32 *)0x0200B6F0, (u32 *)0x0200C5A0, (u32 *)0x0200C760,
-    (u32 *)0x0200B6F0, (u32 *)0x0200B6F0, (u32 *)0x0200BAD8, (u32 *)0x0200BC68, (u32 *)0x0200B6F0, (u32 *)0x0200B6F0,
-    (u32 *)0x0200BAD8, (u32 *)0x0200BC68, (u32 *)0x02006BA0, (u32 *)0x02006BA0, (u32 *)0x02006BA0, (u32 *)0x02006D50,
-    (u32 *)0x0200B6F0, (u32 *)0x0200B6F0, (u32 *)0x02005BA8, (u32 *)0x02005DB8,
+    (u32 *)BIG_SNOWMAN_COURSE_SURFACE_1_RANK_MODEL_DISPLAY_LIST_command_000000,
+    (u32 *)BIG_SNOWMAN_COURSE_SURFACE_1_RANK_MODEL_DISPLAY_LIST_command_000000,
+    (u32 *)BIG_SNOWMAN_COURSE_FINISH_RANK_MODEL_LAPS_REMAINING_DISPLAY_LIST_command_000000,
+    (u32 *)BIG_SNOWMAN_COURSE_FINISH_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000000,
+    (u32 *)0x02009200 /* Unused course/slot. */,
+    (u32 *)0x02009200 /* Unused course/slot. */,
+    (u32 *)SUNSET_ROCK_COURSE_RANK_MODEL_LAPS_REMAINING_DISPLAY_LIST_command_000000,
+    (u32 *)SUNSET_ROCK_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000000,
+    (u32 *)0x02009200 /* Unused course/slot. */,
+    (u32 *)0x02009200 /* Unused course/slot. */,
+    (u32 *)0x02008E40 /* Unused course/slot. */,
+    (u32 *)0x02009020 /* Unused course/slot. */,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)GRASS_VALLEY_COURSE_RANK_MODEL_LAPS_REMAINING_DISPLAY_LIST_command_000000,
+    (u32 *)GRASS_VALLEY_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000000,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)DIZZY_LAND_COURSE_RANK_MODEL_LAPS_REMAINING_DISPLAY_LIST_command_000000,
+    (u32 *)DIZZY_LAND_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000000,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)QUICKSAND_VALLEY_COURSE_RANK_MODEL_LAPS_REMAINING_DISPLAY_LIST_command_000000,
+    (u32 *)QUICKSAND_VALLEY_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000000,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)SILVER_MOUNTAIN_COURSE_RANK_MODEL_LAPS_REMAINING_DISPLAY_LIST_command_000000,
+    (u32 *)SILVER_MOUNTAIN_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000000,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)0x0200BAD8 /* Unused course/slot. */,
+    (u32 *)0x0200BC68 /* Unused course/slot. */,
+    (u32 *)0x02006BA0 /* Unused course/slot. */,
+    (u32 *)0x02006BA0 /* Unused course/slot. */,
+    (u32 *)NINJA_LAND_COURSE_RANK_MODEL_LAPS_REMAINING_DISPLAY_LIST_command_000000,
+    (u32 *)NINJA_LAND_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000000,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)0x0200B6F0 /* Unused course/slot. */,
+    (u32 *)ROOKIE_MOUNTAIN_COURSE_RANK_MODEL_LAPS_REMAINING_DISPLAY_LIST_command_000000,
+    (u32 *)ROOKIE_MOUNTAIN_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000000,
 };
 
 RaceUiProjectileVertexBlock D_800D64A0[] = {

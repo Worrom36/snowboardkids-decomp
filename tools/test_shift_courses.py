@@ -1,5 +1,6 @@
 from pathlib import Path
 import struct
+import re
 import unittest
 
 from tools.course_relocations import command_ids, layout_graphics, resource_layout
@@ -80,6 +81,26 @@ class CourseRelocationTests(unittest.TestCase):
                 m, path = materialize(root, rows[bank['name']])
                 self.assertEqual(resources, pack_course_model_resources(m, path.parent))
         self.assertEqual(checked, 5886)
+
+    def test_only_uninstantiated_rank_slots_keep_original_fill_values(self):
+        root = Path(__file__).resolve().parents[1]
+        scene = (root/'src/race/scene/race_scene_setup.c').read_text()
+        pieces = re.split(r'\n        case (\d+):', scene)
+        active = set()
+        for course, body in zip(pieces[1::2], pieces[2::2]):
+            for slot in re.findall(r'&initRaceCourseRankModel,\s*0,\s*0x64,\s*(\d+)\)', body):
+                active.update((int(course)*4+int(slot)*2, int(course)*4+int(slot)*2+1))
+        source = (root/'src/race/ui/race_ui_effects.c').read_text()
+        body = re.search(r'gRaceCourseRankModelDisplayLists\[\] = \{(.*?)\};', source, re.S)[1]
+        entries = [entry.strip() for entry in body.split(',') if entry.strip()]
+        self.assertEqual(len(entries), 40)
+        self.assertEqual(len(active), 18)
+        for index, entry in enumerate(entries):
+            with self.subTest(slot=index):
+                if index in active:
+                    self.assertRegex(entry, r'_command_[0-9A-F]{6}$')
+                else:
+                    self.assertIn('Unused course/slot', entry)
 
 
 if __name__ == '__main__':

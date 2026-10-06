@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Link temporary perturbations from existing matching objects; never edit assets."""
 import argparse
+import json
 from pathlib import Path
 import re
 import shutil
@@ -229,6 +230,42 @@ def main():
     run(linker[:-2]+'objcopy', '-O', 'binary', elf, rom)
     run(sys.executable, ROOT/'tools/n64crc.py', rom)
     print(f'Combined character runtime fixture (not runtime-validated): {rom}', flush=True)
+    from tools.graphics_shift_fixture import prepare, verify_fields
+    graphics_out = out/'all-graphics'
+    graphics_out.mkdir(exist_ok=True)
+    source, fields = prepare(ROOT, rows, graphics_out, (out/'combined.ld').read_text(), a.build_dir, linker, run)
+    script = out/'combined-all-graphics.ld'
+    script.write_text(source)
+    elf, rom = out/'combined-all-graphics.elf', out/'combined-all-graphics.z64'
+    run(linker, '-T', script, *extra, '--emit-relocs', '--no-check-sections', '-o', elf)
+    counts = verify(baseline, elf)
+    checked = verify_fields(elf, graphics_out/'graphics-fields.json')
+    if checked != fields:
+        raise ValueError('combined graphics relocation coverage changed during linking')
+    parsed = Elf(elf)
+    report = json.loads((graphics_out/'graphics-fields.json').read_text())
+    group, = report[:1]
+    ref = group['records'][0]
+    stream, identity = ref['source'].split('/')
+    section = parsed.sections[parsed.names.index('.'+stream)]
+    start = min(value for name, value in group['exports'].items() if name.startswith(stream+'_'))
+    position = section[4]+group['exports'][stream+'_'+identity]-start+ref['field']
+    contents = bytearray(parsed.data)
+    contents[position+3] ^= 8
+    broken = out/'corrupt-packed-graphics.elf'
+    broken.write_bytes(contents)
+    try:
+        verify_fields(broken, graphics_out/'graphics-fields.json')
+    except ValueError as exc:
+        if 'packed field points to' not in str(exc):
+            raise
+    else:
+        raise ValueError('corrupt final packed graphics field was not detected')
+    print('Corrupt final packed graphics field correctly rejected', flush=True)
+    print(f'All graphics groups: {checked} linked packed fields; {counts}', flush=True)
+    run(linker[:-2]+'objcopy', '-O', 'binary', elf, rom)
+    run(sys.executable, ROOT/'tools/n64crc.py', rom)
+    print(f'All-graphics runtime fixture (not runtime-validated): {rom}', flush=True)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+#include "game/engine/model_asset_symbols.h"
 #include "game/race/race_state.h"
 #include "common.h"
 #include "game/menu/renderer/menu_renderer.h"
@@ -162,12 +163,32 @@ Gfx gRaceCourseSceneryFogPanelDisplayList[] = {
 };
 
 Gfx *gRaceCourseObjectDisplayLists[] = {
-    (void *)0x02000000, (void *)0x02000160, (void *)0x02000000, (void *)0x020002C0,
-    (void *)0x02000410, (void *)0x020028F0, (void *)0x02002DB8, (void *)0x02000000,
-    (void *)0x02000568, (void *)0x02000910, (void *)0x02000B30, (void *)0x02001350,
-    (void *)0x02001548, (void *)0x02001678, (void *)0x02001730, (void *)0x02001810, (void *)0x020018E8,
-    (void *)0x020019C0, (void *)0x02001D00, gRaceCourseSceneryFogPanelDisplayList, (void *)0x020020A8,
-    (void *)0x02002208, (void *)0x020023A8, (void *)0x02002490, (void *)0x02002660, (void *)0x02002ED0,
+    SHARED_RACE_GRAPHICS_command_000000,
+    SHARED_RACE_GRAPHICS_command_000160,
+    SHARED_RACE_GRAPHICS_command_000000,
+    SHARED_RACE_GRAPHICS_command_0002C0,
+    SHARED_RACE_GRAPHICS_command_000410,
+    _14A200_command_000000,
+    _14A200_command_0004C8,
+    SHARED_RACE_GRAPHICS_command_000000,
+    SHARED_RACE_GRAPHICS_command_000568,
+    _148220_command_000000,
+    _148440_command_000000,
+    _148440_command_000820,
+    _148440_command_000A18,
+    _148F88_command_000000,
+    _149040_command_000000,
+    _149120_command_000000,
+    _1491F8_command_000000,
+    _ADDR_20019C0_command_000000,
+    _149610_command_000000,
+    gRaceCourseSceneryFogPanelDisplayList,
+    _1499B8_command_000000,
+    _1499B8_command_000160,
+    _1499B8_command_000300,
+    _ADDR_2002490_command_000000,
+    PAN_DISPLAY_LIST_command_000000,
+    _14A200_command_0005E0,
 };
 
 RaceCourseSceneryEntry gBigSnowmanCourseSceneryEntries[] = {
@@ -292,14 +313,14 @@ RaceCourseGateEntry gCourseGateSoundParams[] = {
 };
 
 RaceCourseWaterLayerEntry gCourseWaterLayerEntries[] = {
-    { 0x02000060, 0x02000088, 0x02000000, 6,  1, 3, 0 },
-    { 0x0200BB90, 0x0200BBB8, 0x0200BA10, 24, 1, 3, 0 },
-    { 0x0200BCC0, 0x0200BCE8, 0x0200BC00, 12, 1, 3, 0 },
+    { (u32)BIG_SNOWMAN_COURSE_GRAPHICS_command_000060, (u32)BIG_SNOWMAN_COURSE_GRAPHICS_command_000088, (u32)BIG_SNOWMAN_COURSE_GRAPHICS_command_000000, 6,  1, 3, 0 },
+    { (u32)GRASS_VALLEY_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000310, (u32)GRASS_VALLEY_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000338, (u32)GRASS_VALLEY_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000190, 24, 1, 3, 0 },
+    { (u32)GRASS_VALLEY_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000440, (u32)GRASS_VALLEY_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000468, (u32)GRASS_VALLEY_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000380, 12, 1, 3, 0 },
 };
 
 RaceCourseTriggerEntry gCourseTriggerEntries[] = {
-    { 2, 1, 0x186, 0, { 0x14CB79E2, 0xD85220A4, 0xD28EDA6A }, 0xF90, 0x70, 0x02009148 },
-    { 4, 6, 0x122, 0, { 0xF7B42249, 0xF305D31B, 0xEB7622AF }, 0xFBA, 0x400, 0x02006988 },
+    { 2, 1, 0x186, 0, { 0x14CB79E2, 0xD85220A4, 0xD28EDA6A }, 0xF90, 0x70, (u32)SUNSET_ROCK_COURSE_TRIGGER_VOLUME_DISPLAY_LIST_command_000000 },
+    { 4, 6, 0x122, 0, { 0xF7B42249, 0xF305D31B, 0xEB7622AF }, 0xFBA, 0x400, (u32)ANIMAL_LAND_COURSE_TRIGGER_VOLUME_DISPLAY_LIST_command_000000 },
 };
 
 extern s32 gMenuFlowState;

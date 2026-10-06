@@ -210,8 +210,12 @@ tables; malformed command state, missing targets, and 16-bit branch overflow
 fail with a diagnostic. A shared goto with multiple modulation restart contexts
 is rejected until those contexts can be represented unambiguously.
 
-Some structural changes still fail explicitly: moving course graphics commands
-requires resolving shared CPU tables across course address spaces. Collision
+Course graphics commands also export stable symbols. Active water, trigger,
+scrolling-texture, shared race-object, and rank-model CPU fields bind to those
+symbols; unused historical rank-table slots are explicitly marked. The combined
+fixture moves commands and resources in all 19 groups, verifies their final linked
+fields and decoded resource objects, and also shifts main code and ROM placement.
+Some structural changes still fail explicitly. Collision
 coordinates and contiguous face groups use stable IDs; counts and indices follow
 their new positions. Existing surface order is retained because CPU course-progress
 ranges use positional surface indices. Reordering surfaces requires those CPU

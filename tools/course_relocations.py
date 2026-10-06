@@ -135,17 +135,4 @@ def pack_graphics_group(root, row, mode='shiftable'):
         ids = command_ids(path.read_text(), data, spec['end']-spec['start'], spec['name'])
         streams.append(dict(name=spec['name'], offset=spec['start']-bank['graphics_start'], data=data, ids=ids))
     manifest, path = materialize(root, rows[bank['name']])
-    result = layout_graphics(bank['name'], streams, manifest, path.parent, mode)
-    # Character consumers already use command symbols. Some course consumers
-    # share one numeric table across several mutually exclusive segment-2
-    # spaces; do not emit stale pointers until those bindings are explicit.
-    from tools.asset_bundles import CHAR_RESOURCES
-    if bank['name'] not in CHAR_RESOURCES:
-        for stream in streams:
-            for identity in stream['ids']:
-                if re.fullmatch(r'command_[0-9A-Fa-f]{6}', identity):
-                    expected = 0x02000000+stream['offset']+int(identity[8:], 16)
-                    if result[1][stream['name']+'_'+identity] != expected:
-                        raise ValueError(f"{bank['name']}/{stream['name']}/{identity}: moved course command requires "
-                                         "CPU table bindings for its mutually exclusive graphics spaces")
-    return result
+    return layout_graphics(bank['name'], streams, manifest, path.parent, mode)

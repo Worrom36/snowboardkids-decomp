@@ -14,6 +14,13 @@ def graphics_layout(source):
     for bank, group in graphics_groups(Path(__file__).resolve().parents[1]):
         if not any('.'+s['name']+' ' in source for s in group):
             continue
+        for spec in group:
+            name = spec['name']
+            marker = f'{name}_VRAM = ADDR(.{name});'
+            if source.count(marker) != 1:
+                raise ValueError(f'{name}: expected one graphics root binding')
+            adjustment = 0x02000000+spec['start']-bank['graphics_start']-spec['vram']
+            source = source.replace(marker, f'{name}_VRAM = {name}_command_000000 - 0x{adjustment:X};')
         for previous, following in zip(group, group[1:]):
             name = following['name']
             source, count = re.subn(rf'(\.{re.escape(name)}) 0x[\da-fA-F]+ :',
