@@ -526,7 +526,7 @@ def write_makefile(root, layout):
     for row in layout['segments']:
         obj = '$(BUILD_DIR)/' + (row['object'] if 'object' in row else str(Path(row['legacy']).with_suffix('.o')))
         dep = ' '.join(dependencies(root, row))
-        lines += [f'{obj}: {dep} $(wildcard tools/*assets.py tools/*asset*.py tools/*relocations.py tools/course_*common.py)',
+        lines += [f'{obj}: {dep} $(wildcard tools/*assets.py tools/*asset*.py tools/*relocations.py tools/course_*common.py tools/*bindings.py tools/*words.py tools/*indices.py)',
                   '\t@mkdir -p $(dir $@)',
                   f"\t$(V)$(PYTHON) tools/asset_bundles.py pack {row['name']} --mode $(BUILD_MODE) --out $(@:.o=.bin)"]
         if row['decoder'] in ('course_display_list', 'embedded_model'):

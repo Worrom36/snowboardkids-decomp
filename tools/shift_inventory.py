@@ -59,6 +59,8 @@ def inventory(root, build):
     cpu = inspect(build/'snowboardkids.elf')
     from tools.check_mips_address_literals import inspect as inspect_instructions
     instructions = inspect_instructions(build/'snowboardkids.elf')
+    from tools.graphics_shift_fixture import cpu_graphics_bindings
+    graphics_aliases = cpu_graphics_bindings(root)
     linker = []
     for path in [root/'snowboardkids.ld', *sorted(build.glob('*.ld'))]:
         for number, line in enumerate(path.read_text().splitlines(), 1):
@@ -66,7 +68,7 @@ def inventory(root, build):
                 linker.append(dict(path=str(path.relative_to(root)), line=number, text=line.strip()))
     return dict(schema_version=2, numeric_candidates_require_review=True, sources=sources, objects=objects,
                 packed_assets=packed, cpu_data_coverage=cpu, cpu_instruction_literals=instructions,
-                generated_linker_addresses=linker)
+                generated_linker_addresses=linker, cpu_graphics_aliases=graphics_aliases)
 
 
 def packed_inventory(root, build):

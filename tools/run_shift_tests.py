@@ -298,6 +298,44 @@ def main():
     run(linker[:-2]+'objcopy', '-O', 'binary', elf, rom)
     run(sys.executable, ROOT/'tools/n64crc.py', rom)
     print(f'All-graphics runtime fixture (not runtime-validated): {rom}', flush=True)
+    internal_out = out/'interior-graphics'
+    internal_out.mkdir(exist_ok=True)
+    internal_source, internal_fields = prepare(
+        ROOT, rows, internal_out, (out/'combined.ld').read_text(), a.build_dir, linker, run, internal=True)
+    internal_script = out/'combined-interior-graphics.ld'
+    internal_script.write_text(internal_source)
+    internal_elf, internal_rom = out/'combined-interior-graphics.elf', out/'combined-interior-graphics.z64'
+    run(linker, '-T', internal_script, *extra, '--emit-relocs', '--no-check-sections', '-o', internal_elf)
+    internal_counts = verify(baseline, internal_elf)
+    if verify_fields(internal_elf, internal_out/'graphics-fields.json') != internal_fields:
+        raise ValueError('interior graphics coverage changed during linking')
+    moved = Elf(internal_elf)
+    moved_symbols = {name: value for i, section in enumerate(moved.sections) if section[1] == 2
+                     for name, value, kind, index in moved.symbols(i) if name}
+    # The leading root and a later root in the SAME stream must move differently.
+    if moved_symbols['D_20006C8']-moved_symbols['D_2000000'] == 0x6c8:
+        raise ValueError('interior graphics fixture failed to move CPU roots independently')
+    contents = bytearray(moved.data)
+    for i, section in enumerate(moved.sections):
+        if section[1] != 2:
+            continue
+        for index, (name, value, kind, target_section) in enumerate(moved.symbols(i)):
+            if name == 'D_20006C8':
+                position = section[4]+index*section[9]+4
+                contents[position:position+4] = (moved_symbols['D_2000000']+0x6c8).to_bytes(4, 'big')
+    broken = out/'corrupt-cpu-graphics-alias.elf'
+    broken.write_bytes(contents)
+    try:
+        verify_fields(broken, internal_out/'graphics-fields.json')
+    except ValueError as exc:
+        if 'CPU graphics alias does not resolve' not in str(exc):
+            raise
+    else:
+        raise ValueError('stale CPU graphics interior alias was not detected')
+    run(linker[:-2]+'objcopy', '-O', 'binary', internal_elf, internal_rom)
+    run(sys.executable, ROOT/'tools/n64crc.py', internal_rom)
+    print(f'Nonuniform internal graphics: {internal_fields} packed fields and CPU aliases; {internal_counts}', flush=True)
+    print(f'Interior graphics runtime fixture (not runtime-validated): {internal_rom}', flush=True)
     from tools.format_shift_fixture import prepare as prepare_formats, verify as verify_formats
     format_out = out/'formats'
     format_out.mkdir(exist_ok=True)
