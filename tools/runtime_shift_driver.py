@@ -9,6 +9,39 @@ from pathlib import Path
 import sys
 
 
+def observation_schedule(scenario):
+    """Every declared memory assertion must actually run, including off-capture frames."""
+    stop = scenario['stop_frame']
+    scheduled = set(scenario.get('observation_frames', []))
+    for observation in scenario.get('observe', []):
+        if 'frames' not in observation:
+            continue
+        frames = observation['frames']
+        if not isinstance(frames, list) or not frames:
+            raise ValueError(f"{observation['symbol']}: memory observation has an empty frame schedule")
+        if any(type(frame) is not int for frame in frames):
+            raise ValueError(f"{observation['symbol']}: memory observation frames must be integers")
+        scheduled.update(frames)
+    if any(type(frame) is not int or not 0 < frame < stop for frame in scheduled):
+        raise ValueError('memory observation frame lies outside the scenario')
+    return scheduled
+
+
+def verify_observation_coverage(scenario, observations):
+    scheduled = set(scenario['frames']) | observation_schedule(scenario)
+    recorded = {record['frame']: record['values'] for record in observations}
+    if len(recorded) != len(observations):
+        raise ValueError('duplicate runtime observation frame')
+    missing = scheduled-recorded.keys()
+    if missing:
+        raise ValueError(f'missing runtime observation frames: {sorted(missing)}')
+    for spec in scenario.get('observe', []):
+        label = spec.get('label', spec['symbol'])
+        for frame in spec.get('frames', scheduled):
+            if label not in recorded[frame]:
+                raise ValueError(f'frame {frame}: missing memory observation {label}')
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('rom', type=Path)
@@ -24,9 +57,7 @@ def main():
     a = p.parse_args()
     scenario = json.loads(a.scenario.read_text())
     frames, stop = set(scenario['frames']), scenario['stop_frame']
-    observation_frames = set(scenario.get('observation_frames', []))
-    if any(index < 1 or index >= stop for index in observation_frames):
-        p.error('memory observation frame lies outside the scenario')
+    observation_frames = observation_schedule(scenario)
     if not frames or min(frames) < 1 or max(frames) >= stop or not 1 <= scenario['controllers'] <= 4:
         p.error('invalid scenario frame or controller counts')
     events, occupied = {}, set()
@@ -205,6 +236,7 @@ def main():
     (out/'observations.json').write_text(json.dumps(observations, indent=2)+'\n')
     if errors:
         raise ValueError('; '.join(errors))
+    verify_observation_coverage(scenario, observations)
 
 
 if __name__ == '__main__':

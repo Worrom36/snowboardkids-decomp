@@ -7,9 +7,28 @@ import wave
 import png
 from tools.runtime_audio import inspect_audio
 from tools.runtime_shift_smoke import solid_capture
+from tools.runtime_shift_driver import observation_schedule, verify_observation_coverage
 
 
 class RuntimeCaptureTests(unittest.TestCase):
+    def test_memory_assertions_run_without_a_screenshot_at_their_frame(self):
+        scenario = dict(stop_frame=100, frames=[50], observe=[dict(symbol='state', frames=[30])])
+        self.assertEqual(observation_schedule(scenario), {30})
+        for frames in ([], [0], [100], ['30']):
+            scenario['observe'][0]['frames'] = frames
+            with self.subTest(frames=frames), self.assertRaises(ValueError):
+                observation_schedule(scenario)
+
+    def test_missing_late_memory_checks_cannot_pass_with_earlier_screenshots(self):
+        scenario = dict(stop_frame=100, frames=[10], observe=[dict(symbol='state', frames=[90])])
+        with self.assertRaisesRegex(ValueError, 'missing runtime observation frames'):
+            verify_observation_coverage(scenario, [dict(frame=10, values={})])
+        records = [dict(frame=10, values={}), dict(frame=90, values={})]
+        with self.assertRaisesRegex(ValueError, 'missing memory observation state'):
+            verify_observation_coverage(scenario, records)
+        records[1]['values']['state'] = 1
+        verify_observation_coverage(scenario, records)
+
     def test_blank_renderer_cannot_supply_visual_coverage(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)/'capture.png'

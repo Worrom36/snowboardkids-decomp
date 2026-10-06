@@ -17,10 +17,28 @@ COURSES = ['Big Snowman', 'Sunset Rock', 'Night Highway', 'Grass Valley', 'Dizzy
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--out', type=Path, required=True)
+    p.add_argument('--extended-cpu-race', action='store_true',
+                   help='generate one complete Big Snowman CPU-driven race with a results assertion')
     a = p.parse_args()
     root = Path(__file__).resolve().parents[1]
     original = json.loads((root/'config/shift-tests/menus-and-race.json').read_text())
     a.out.mkdir(parents=True, exist_ok=False)
+    if a.extended_cpu_race:
+        original.update(
+            description='Extended Big Snowman race with player-zero CPU control after setup; '
+                        'debugger bypasses unlocks. Full course path and results, not human steering coverage.',
+            frames=[7500, 10000, 14000, 18000, 22000, 26000], stop_frame=26100,
+            writes=[dict(frame=4900, symbol='gRaceCourseIndex', width=16, value=0),
+                    dict(frame=6000, symbol='gRacePlayers', offset=4, width=8, value=1)],
+            observe=[dict(symbol='gRaceCourseIndex', width=16, expected=0),
+                     dict(symbol='gRacePlayers', label='player_flags', offset=0x2fc, width=32),
+                     dict(symbol='gRacePlayers', label='lap', offset=0x508, width=8),
+                     dict(symbol='gRacePlayers', label='course_path', offset=0x502, width=16),
+                     dict(symbol='gRaceResultState', width=8, frames=[26000], expected=1),
+                     dict(symbol='gMenuFlowState', width=32)])
+        (a.out/'full-cpu-race.json').write_text(json.dumps(original, indent=2)+'\n')
+        print(f'Generated extended CPU race under {a.out}')
+        return
     for index, name in enumerate(COURSES):
         scenario = copy.deepcopy(original)
         scenario.update(description=f'{name} load and early single-player gameplay; debugger bypasses course unlocks',
