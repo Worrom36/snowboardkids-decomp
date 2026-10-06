@@ -268,3 +268,28 @@ def compress_huffman_asset(data: bytes, metadata: CompressionMetadata) -> bytes:
         + bytes(encoded)
         + metadata.unused_tail
     )
+
+
+def compress_flexible(data: bytes, original: bytes | None = None) -> bytes:
+    """Deterministic new trees for edits; preserve the entire unchanged stream.
+
+    Both native codec modes are considered. Including all byte symbols avoids
+    depending on the original asset's alphabet. Weights fit the on-ROM u8 table.
+    """
+    from collections import Counter
+
+    if original is not None and decompress_huffman_asset(original)[0] == data:
+        return original
+    candidates = []
+    for flags, symbols in ((0, data), (1, bytes(_tokenize_lz(data)))):
+        frequencies = Counter(symbols)
+        maximum = max(frequencies.values(), default=1)
+        weights = bytes(max(1, (frequencies[value] * 255 + maximum - 1) // maximum)
+                        for value in range(256))
+        metadata = CompressionMetadata(flags, b'\x00\xff' + weights + b'\x00', '', b'',
+                                       symbols if flags else None)
+        encoded = compress_huffman_asset(data, metadata)
+        # Asset DMA consumers require aligned transfers. Original streams retain
+        # their exact padding above; newly encoded streams use zero padding.
+        candidates.append(encoded + bytes((-len(encoded)) % 16))
+    return min(candidates, key=lambda encoded: (len(encoded), encoded[4]))

@@ -16,8 +16,8 @@ import yaml
 from tools.course_surface_data_common import load_yaml, pack_course_surface_data
 from tools.course_graphics_common import pack_course_model_resources, compression_metadata_from_manifest
 from tools.course_sprite_table_common import pack_course_sprite_table
-from tools.readable_assets import pack_asset
-from tools.huffman_asset import compress_huffman_asset
+from tools.readable_assets import pack_asset, pack_payload
+from tools.huffman_asset import compress_huffman_asset, compress_flexible
 
 ROOT = Path(__file__).resolve().parents[1]
 LAYOUT = Path('assets/layout/segments.yaml')
@@ -419,7 +419,9 @@ def organize_shared_resources(root, rows, bundles):
     path.write_bytes(dump(original))
 
 
-def pack_segment(root, row, compressed=True):
+def pack_segment(root, row, compressed=True, mode="matching"):
+    if mode not in ("matching", "shiftable"):
+        raise ValueError(f"unknown asset build mode: {mode}")
     if row['decoder'] == 'course_display_list':
         result = commands(safe_path(root, row['source']))
     else:
@@ -428,14 +430,22 @@ def pack_segment(root, row, compressed=True):
         if row['decoder'] in ASSET_TYPES or row['decoder'] == 'readable_asset':
             if not compressed:
                 m['compression'] = 'none'
-            result = pack_asset(m, path.parent)
+            if mode == 'shiftable':
+                result = pack_payload(m, path.parent)
+            else:
+                result = pack_asset(m, path.parent)
         else:
             packer = {'course_surface_data': pack_course_surface_data, 'course_sprite_table': pack_course_sprite_table,
                       'model_resources': pack_course_model_resources, 'course_model_resources': pack_course_model_resources}[row['decoder']]
             result = packer(m) if row['decoder'] == 'course_surface_data' else packer(m, path.parent)
-            if compressed:
+            if compressed and mode == "matching":
                 result = compress_huffman_asset(result, compression_metadata_from_manifest(m))
-    if compressed and len(result) != row['rom_end']-row['rom_start']:
+        if mode == 'shiftable' and compressed and m['compression'] != 'none':
+            with (root / 'snowboardkids.z64').open('rb') as original:
+                original.seek(row['rom_start'])
+                original_bytes = original.read(row['rom_end'] - row['rom_start'])
+            result = compress_flexible(result, original_bytes)
+    if mode == 'matching' and compressed and len(result) != row['rom_end']-row['rom_start']:
         raise ValueError(f"{row['name']}: packed size {len(result)} exceeds/changes fixed ROM allocation {row['rom_end']-row['rom_start']}")
     return result
 
@@ -468,7 +478,7 @@ def write_makefile(root, layout):
         dep = ' '.join(dependencies(root, row))
         lines += [f'{obj}: {dep} $(wildcard tools/*assets.py tools/*asset*.py tools/course_*common.py)',
                   '\t@mkdir -p $(dir $@)',
-                  f"\t$(V)$(PYTHON) tools/asset_bundles.py pack {row['name']} --out $(@:.o=.bin)"]
+                  f"\t$(V)$(PYTHON) tools/asset_bundles.py pack {row['name']} --mode $(BUILD_MODE) --out $(@:.o=.bin)"]
         if row['decoder'] == 'course_display_list':
             lines.append('\t$(V)$(AS) $(ASFLAGS) -no-pad-sections -o $@ $(@:.o=.s)')
         else:
@@ -495,6 +505,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('action', choices=['migrate', 'pack', 'verify', 'previews', 'index-models', 'make-rules'])
     p.add_argument('name', nargs='?')
+    p.add_argument('--mode', choices=('matching', 'shiftable'), default='matching')
     p.add_argument('--root', type=Path, default=ROOT)
     p.add_argument('--out', type=Path)
     p.add_argument('--if-absent', action='store_true')
@@ -517,7 +528,7 @@ def main():
         row = next(r for r in layout['segments'] if r['name'] == a.name)
         if a.out is None:
             p.error('pack requires --out')
-        data = pack_segment(root, row)
+        data = pack_segment(root, row, mode=a.mode)
         a.out.parent.mkdir(parents=True, exist_ok=True)
         a.out.write_bytes(data)
         if row['decoder'] == 'course_display_list':

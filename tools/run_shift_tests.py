@@ -68,6 +68,49 @@ def main():
                 raise ValueError(result.stderr)
             print(f'ROM after {boundary} +0x{size:X}: {verify(baseline, elf)}', flush=True)
 
+    # Change a real compressed payload in memory, then substitute only its
+    # generated object in a temporary linker script.
+    sys.path.insert(0, str(ROOT))
+    import copy
+    import random
+    from tools.asset_bundles import materialize
+    from tools.course_surface_data_common import load_yaml
+    from tools.readable_assets import pack_payload
+    from tools.huffman_asset import compress_flexible, decompress_huffman_asset
+    rows = load_yaml(ROOT/'assets/layout/segments.yaml')['segments']
+    row = next(r for r in rows if r['name'] == 'SLASH_RACE_ANIMATIONS')
+    manifest, path = materialize(ROOT, row)
+    original = (ROOT/'snowboardkids.z64').read_bytes()[row['rom_start']:row['rom_end']]
+    for name in ('grow', 'shrink'):
+        edited = copy.deepcopy(manifest)
+        rng = random.Random(0x534B)
+        for animation in edited['animations']:
+            for frame in animation['frames']:
+                for xyz in frame['offsets']:
+                    for index in range(3):
+                        xyz[index] = rng.randrange(-32768, 32768) if name == 'grow' else 0
+                for xyz in frame['rotations']:
+                    for index in range(3):
+                        xyz[index] = rng.randrange(512) * 8 if name == 'grow' else 0
+        payload = pack_payload(edited, path.parent)
+        encoded = compress_flexible(payload, original)
+        if decompress_huffman_asset(encoded)[0] != payload:
+            raise ValueError(f'{name}: compressed payload did not round-trip')
+        if not (len(encoded) > len(original) if name == 'grow' else len(encoded) < len(original)):
+            raise ValueError(f'{name}: compressed size did not change in the expected direction')
+        binary, obj = out/f'asset-{name}.bin', out/f'asset-{name}.o'
+        binary.write_bytes(encoded)
+        run(linker, '-r', '-b', 'binary', '-o', obj, binary)
+        script = (out/'baseline.ld').read_text()
+        source_object = a.build_dir + '/' + row['object']
+        if script.count(source_object) != 1:
+            raise ValueError(f'{name}: expected one linker input for {source_object}')
+        temporary = out/f'asset-{name}.ld'
+        temporary.write_text(script.replace(source_object, str(obj)))
+        elf = out/f'asset-{name}.elf'
+        run(linker, '-T', temporary, *extra, '--emit-relocs', '--no-check-sections', '-o', elf)
+        print(f'Compressed asset {name}: {len(original)} -> {len(encoded)} bytes; {verify(baseline, elf)}', flush=True)
+
 
 if __name__ == '__main__':
     main()
