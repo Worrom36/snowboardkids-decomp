@@ -289,8 +289,11 @@ progress uses those indices; overlapping face ranges move together. Semantic
 checks follow the final encoded coordinate, face, track, drum, and sample
 references and preserve sharing. Independent `internal-samples.z64` and
 `internal-music.z64` fixtures separate audio changes from the other
-formats. Fixture generation is not runtime acceptance; record emulator results
-before treating these additional permutations as validated gameplay.
+formats. The recorded expanded fixture passes menus, loading/early gameplay on
+all ten courses, two- and four-player split screen, and Exit/Save/restart. Those
+captures moved music streams while retaining envelope entry order; the separate
+envelope capture below checks that additional permutation. ROM hashes distinguish
+the tested variants. These checks do not cover complete races or hardware.
 The isolated shared-sample fixture passes its decoded target checks and boot
 screenshots, but exact PCM comparison currently fails after stereo frame 321860.
 It retains the original ROM extents and identical boot/code bytes through

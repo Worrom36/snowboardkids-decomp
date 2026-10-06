@@ -8,7 +8,7 @@ def annotate_vertices(part):
         vertex['id'] = f'vertex_{index*16:06X}'
 
 
-def vertex_range(part, original_offset, count, context):
+def vertex_range(part, original_offset, count, context, targets=None):
     """Resolve an original F3DEX load to a contiguous sequence of identities.
 
     A vertex load preserves order in the RSP cache. Moving a loaded group is
@@ -29,7 +29,11 @@ def vertex_range(part, original_offset, count, context):
         ids = [f'vertex_{index*16:06X}' for index in range(len(vertices))]
     if len(ids) != len(set(ids)):
         raise ValueError(f'{context}: duplicate vertex object identity')
-    targets = [f'vertex_{original_offset+i*16:06X}' for i in range(count)]
+    if targets is None:
+        targets = [f'vertex_{original_offset+i*16:06X}' for i in range(count)]
+    elif (not isinstance(targets, list) or len(targets) != count or
+          not all(isinstance(identity, str) for identity in targets)):
+        raise ValueError(f'{context}: explicit vertex range must match the command count')
     positions = {identity: index for index, identity in enumerate(ids)}
     missing = [identity for identity in targets if identity not in positions]
     if missing:

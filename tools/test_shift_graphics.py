@@ -51,6 +51,22 @@ class GraphicsRelocationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'unresolved vertex vertex_000000'):
                 pack_model(m, base)
 
+    def test_authored_vertex_identity_can_replace_original_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            m = model_manifest(self.fixture(base), base)
+            part = m['parts'][0]
+            part['vertices'][0]['id'] = 'authored_vertex'
+            m['relocations'][0]['vertices'] = ['authored_vertex']
+            result, exports = pack_model(m, base)
+            self.assertEqual(int.from_bytes(result[20:24], 'big'), 0x02000000)
+            part['vertices'].insert(0, dict(part['vertices'][0], id='unreferenced_vertex'))
+            result, exports = pack_model(m, base)
+            self.assertEqual(int.from_bytes(result[36:40], 'big'), 0x02000010)
+            m['relocations'][0]['vertices'] = ['missing']
+            with self.assertRaisesRegex(ValueError, 'unresolved vertex missing'):
+                pack_model(m, base)
+
 
 if __name__ == '__main__':
     unittest.main()

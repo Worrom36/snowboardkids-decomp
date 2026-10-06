@@ -54,7 +54,9 @@ def pack_model(manifest, base, mode='shiftable'):
     m = model_manifest(manifest, base)
     data = encoded_parts(m, base)
     fields = list(pointer_fields(m, data))
-    refs = [Reference(**record) for record in m['relocations']]
+    refs = [Reference(**{key: value for key, value in record.items() if key != 'vertices'}) for record in m['relocations']]
+    vertex_bindings = {(record['source'], record['field']): record['vertices']
+                       for record in m['relocations'] if 'vertices' in record}
     if {(r.source, r.field) for r in refs} != {(p['id'], f) for p, f, _, _, _ in fields}:
         raise ValueError(f"{m['name']}: display-list relocation coverage is incomplete")
     parts = {p['id']: p for p in m['parts']}
@@ -67,12 +69,15 @@ def pack_model(manifest, base, mode='shiftable'):
             raise ValueError(f"{m['name']}/{ref.source}: unresolved target {ref.target}")
         word0 = int.from_bytes(data[ref.source][ref.field-4:ref.field], 'big')
         opcode = word0 >> 24
+        if opcode != 4 and (ref.source, ref.field) in vertex_bindings:
+            raise ValueError(f"{m['name']}/{ref.source}: vertex identities require a vertex-load command")
         expected_kind = {4: ('vertices',), 6: ('display_list',), 0xfd: ('texture', 'palette')}[opcode]
         if target['type'] not in expected_kind:
             raise ValueError(f"{m['name']}/{ref.source}: invalid {target['type']} target for opcode 0x{opcode:X}")
         if opcode == 4:
             count = (word0 >> 10) & 63
-            addend, _ = vertex_range(target, ref.addend, count, f"{m['name']}/{ref.source}+{ref.field}")
+            addend, _ = vertex_range(target, ref.addend, count, f"{m['name']}/{ref.source}+{ref.field}",
+                                     targets=vertex_bindings.get((ref.source, ref.field)))
             ref = replace(ref, addend=addend)
         resolved.append(ref)
     objects = [Object(p['id'], data[p['id']], p['offset'], 8 if p['type'] not in ('raw', 'padding') else 1)

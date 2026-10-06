@@ -10,6 +10,7 @@ from tools.asset_relocations import Object, relocate
 from tools.graphics_relocations import encoded_parts
 from tools.structured_relocations import identify_parts, target_at
 from tools.vertex_relocations import vertex_range
+from tools.graphics_bindings import command_bindings
 
 
 def resource_layout(manifest, base, mode='shiftable'):
@@ -78,6 +79,13 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
         cursor = start+len(stream['data'])
     if cursor > 0x1000000:
         raise ValueError(f'{name}: graphics exceed the 24-bit segment offset')
+    bindings = command_bindings(m)
+    address_sources = {stream['name']+'/'+identity
+                       for stream in streams for i, identity in enumerate(stream['ids'])
+                       if stream['data'][i*8] in (4, 6, 0xfd)}
+    for source in bindings:
+        if source not in address_sources:
+            raise ValueError(f'{name}/{source}+4: binding has no supported address operand')
     packed, records = {}, []
     for stream in streams:
         data = bytearray(stream['data'])
@@ -87,22 +95,42 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
             if opcode not in (4, 6, 0xfd):
                 continue
             source = stream['name']+'/'+identity
+            binding = bindings.pop(source, None)
             old = w1 & 0xffffff
             if opcode == 6:
-                if w1 >> 24 != 2 or old not in originals:
-                    raise ValueError(f'{name}/{source}+4: unresolved segment-2 display list 0x{w1:X}')
-                target, addend = originals[old], 0
+                if binding:
+                    if binding['segment'] != 2 or binding.get('addend', 0) or 'vertices' in binding:
+                        raise ValueError(f'{name}/{source}+4: display-list binding requires a segment-2 command identity')
+                    target = binding['target']
+                    if target not in locations:
+                        raise ValueError(f'{name}/{source}+4: unresolved display-list command {target}')
+                else:
+                    if w1 >> 24 != 2 or old not in originals:
+                        raise ValueError(f'{name}/{source}+4: unresolved segment-2 display list 0x{w1:X}')
+                    target = originals[old]
+                addend = 0
                 value = 0x02000000+locations[target]
             else:
-                if w1 >> 24 != 3:
-                    raise ValueError(f'{name}/{source}+4: unsupported graphics segment {w1 >> 24}')
                 kinds = ('vertices',) if opcode == 4 else ('texture', 'palette')
-                target, addend = target_at(dict(m, parts=[p for p in m['parts']
-                                                         if p['type'] != 'padding' and p.get('original', True)]),
-                                          old, kinds=kinds)
+                if binding:
+                    prefix = m['name']+'/'
+                    if binding['segment'] != 3 or not binding['target'].startswith(prefix):
+                        raise ValueError(f'{name}/{source}+4: resource binding requires this segment-3 bank')
+                    target, addend = binding['target'][len(prefix):], binding.get('addend', 0)
+                    if target not in resource_parts or resource_parts[target]['type'] not in kinds:
+                        raise ValueError(f'{name}/{source}+4: unresolved or invalid {kinds} target {target}')
+                    if opcode != 4 and 'vertices' in binding:
+                        raise ValueError(f'{name}/{source}+4: vertex identities require a vertex-load command')
+                else:
+                    if w1 >> 24 != 3:
+                        raise ValueError(f'{name}/{source}+4: unsupported graphics segment {w1 >> 24}')
+                    target, addend = target_at(dict(m, parts=[p for p in m['parts']
+                                                             if p['type'] != 'padding' and p.get('original', True)]),
+                                              old, kinds=kinds)
                 if opcode == 4:
                     count = (w0 >> 10) & 63
-                    addend, _ = vertex_range(resource_parts[target], addend, count, f'{name}/{source}+4 -> {target}')
+                    addend, _ = vertex_range(resource_parts[target], addend, count, f'{name}/{source}+4 -> {target}',
+                                             targets=binding.get('vertices') if binding else None)
                 if addend >= len(resource_data[target]):
                     raise ValueError(f'{name}/{source}+4: offset exceeds {target}')
                 value = 0x03000000+resource_offsets[target]+addend
@@ -111,6 +139,8 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
             records.append(dict(source=source, field=4, target=target, kind='segmented',
                                 addend=addend, value=value, location=locations[source]+4))
         packed[stream['name']] = bytes(data)
+    if bindings:
+        raise ValueError(f'{name}: unused graphics bindings {sorted(bindings)}')
     from tools.course_graphics_common import CourseGraphicsGraph, DisplayListNode
     from tools.texture_relocations import validate_texture_loads
     whole = bytearray(cursor)
