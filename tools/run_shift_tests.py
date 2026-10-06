@@ -54,6 +54,24 @@ def main():
     sys.path.insert(0, str(ROOT))
     from tools.check_ram_references import inspect as check_ram_references
     from tools.check_mips_address_literals import inspect as check_mips_literals
+    from tools.check_vi_mode_scalars import inspect as check_vi_mode_scalars
+    print(f'Video-mode scalar fields: {check_vi_mode_scalars(baseline)}', flush=True)
+    parsed = Elf(baseline)
+    owner, address = next((owner, value) for i, section in enumerate(parsed.sections) if section[1] == 2
+                          for name, value, kind, owner in parsed.symbols(i) if name == 'osViModeNtscLan1')
+    section = parsed.sections[owner]
+    position = section[4]+address-section[3]
+    contents = bytearray(parsed.data)
+    contents[position:position+4] = (0x02000010).to_bytes(4, 'big')
+    broken = out/'corrupt-vi-mode-scalar.elf'
+    broken.write_bytes(contents)
+    try:
+        check_vi_mode_scalars(broken)
+    except ValueError as exc:
+        if 'OSViMode type/padding is a scalar' not in str(exc):
+            raise
+    else:
+        raise ValueError('video-mode scalar relocated as a graphics pointer was not detected')
     print(f'CPU data coverage: {check_ram_references(baseline)["counts"]}', flush=True)
     print(f'MIPS instruction literal audit: {check_mips_literals(baseline)["counts"]}', flush=True)
     try:
@@ -315,6 +333,8 @@ def main():
     # The leading root and a later root in the SAME stream must move differently.
     if moved_symbols['D_20006C8']-moved_symbols['D_2000000'] == 0x6c8:
         raise ValueError('interior graphics fixture failed to move CPU roots independently')
+    if moved_symbols['D_20006C8'] == moved_symbols['_1467B0_command_0006C8']:
+        raise ValueError('interior graphics fixture failed to separate overlapping podium/menu addresses')
     contents = bytearray(moved.data)
     for i, section in enumerate(moved.sections):
         if section[1] != 2:

@@ -5,13 +5,16 @@
  * C references and legacy assembly references resolve to the same address.
  */
 
-/* Shared race-model overlay addresses. */
-D_2000000 = SHARED_RACE_GRAPHICS_command_000000;
-D_20006C8 = SHARED_RACE_GRAPHICS_command_0006C8;
+/* Award podium segment 2: initPassAwardCelebration loads _145380 into handle 8. */
+D_2000000 = _145380_command_000000;
+D_20006C8 = _145380_command_0006C8;
+D_2000D78 = _145380_command_000D78;
+/* Menu boards use the same handle and segment with a different bank. */
+D_2000E48 = _1467B0_command_000E48;
+D_2000E70 = _1467B0_command_000E70;
+
+/* Shared race-model segment 2: handle 0xA. */
 D_2000910 = _148220_command_000000;
-D_2000D78 = _148440_command_000248;
-D_2000E48 = _148440_command_000318;
-D_2000E70 = _148440_command_000340;
 D_2001678 = _148F88_command_000000;
 D_2001730 = _149040_command_000000;
 D_2001810 = _149120_command_000000;

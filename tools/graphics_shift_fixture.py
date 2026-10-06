@@ -23,16 +23,19 @@ def cpu_graphics_bindings(root):
 
 
 def insert_internal_commands(streams):
-    """Change interior and downstream offsets independently of the leading pad."""
+    """Insert unreachable data after G_ENDDL, changing interior/downstream offsets."""
     for stream in streams:
         commands = [i for i, kind in enumerate(stream['kinds']) if kind == 'command']
-        if not commands:
-            continue
         ends = [i for i in commands if stream['data'][i*8] == 0xb8]
-        index = ends[0] if ends else commands[len(commands)//2]
-        stream['data'] = stream['data'][:index*8]+bytes.fromhex('e700000000000000')+stream['data'][index*8:]
-        stream['ids'].insert(index, 'fixture_internal_sync')
-        stream['kinds'].insert(index, 'command')
+        if not ends:
+            continue  # A stream fragment has no proven non-executed boundary.
+        index = ends[0]+1
+        # Different banks sharing segment addresses must not receive identical
+        # displacements: that would hide a CPU alias bound to the wrong bank.
+        words = 1+sum(stream['name'].encode('ascii')) % 4
+        stream['data'] = stream['data'][:index*8]+bytes(8*words)+stream['data'][index*8:]
+        stream['ids'][index:index] = [f'fixture_internal_padding_{i}' for i in range(words)]
+        stream['kinds'][index:index] = ['data']*words
 
 
 def prepare(root, rows, out, script, build_dir, linker, run, *, internal=False):
@@ -63,13 +66,14 @@ def prepare(root, rows, out, script, build_dir, linker, run, *, internal=False):
             spec = next(s for s in group if s['start']-bank['graphics_start'] <= offset < s['end']-bank['graphics_start'])
             identity = f"{spec['name']}_command_{offset-(spec['start']-bank['graphics_start']):06X}"
             roots.append(exports[identity] & 0xffffff)
+        aliases = [binding for binding in bindings if binding['target'] in exports]
+        roots.extend(exports[binding['target']] & 0xffffff for binding in aliases)
         trace_course_graphics(whole, roots)
         if not references:
             raise ValueError(f"{bank['name']}: graphics fixture has no reference checks")
         _, _, resource_offsets, resource_data = resource_layout(manifest, path.parent)
         targets = {identity: dict(offset=resource_offsets[identity], size=len(data), sha256=hashlib.sha256(data).hexdigest())
                    for identity, data in resource_data.items()}
-        aliases = [binding for binding in bindings if binding['target'] in exports]
         covered_aliases.update(binding['alias'] for binding in aliases)
         report.append(dict(asset=bank['name'], records=references, exports=exports, resource_objects=targets,
                            cpu_bindings=aliases))
@@ -102,6 +106,8 @@ def prepare(root, rows, out, script, build_dir, linker, run, *, internal=False):
 def verify_fields(elf_path, report_path):
     """Check reference locations and packed fields in the final linked ELF."""
     from tools.verify_linked_relocations import Elf
+    from tools.check_vi_mode_scalars import inspect as check_vi_mode_scalars
+    check_vi_mode_scalars(elf_path)
     elf = Elf(elf_path)
     sections = {name: section for name, section in zip(elf.names, elf.sections)}
     symbols = {name: value for i, section in enumerate(elf.sections) if section[1] == 2

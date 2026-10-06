@@ -1,5 +1,9 @@
 // Visit https://github.com/ethteck/splat/wiki/Advanced-Reloc for documentation about this file
 // entrypoint relocs
+// OSViMode.type (2) plus padding: scalar 0x02000000, not a segment-2 pointer.
+rom:0x0DFFE0 reloc:MIPS_NONE symbol:0x02000000
+rom:0x0E1150 reloc:MIPS_NONE symbol:0x02000000
+
 rom:0x001024 reloc:MIPS_HI16 symbol:main
 rom:0x00102C reloc:MIPS_LO16 symbol:main
 
