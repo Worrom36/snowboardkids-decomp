@@ -107,6 +107,8 @@ def extract_asset(blob, spec, path):
         write_tilemap_preview(m,path)
     elif family in ("race_animation", "scene_animation"):
         m.update(parse_animation(data, family, spec.get("part_count", 12)))
+        from tools.animation_relocations import identify
+        m = identify(m)
     elif family == "pointer_bank":
         m.update(parse_pointer_bank(data))
     elif family == "embedded_model":
@@ -130,7 +132,7 @@ def extract_asset(blob, spec, path):
     return m
 
 
-def pack_payload(m, base):
+def pack_payload(m, base, mode="matching"):
     if m.get("schema_version") != 2:
         raise ValueError("unsupported readable asset schema version")
     if m["format"] == "sprite_table":
@@ -138,7 +140,11 @@ def pack_payload(m, base):
     elif m["format"] == "tilemap":
         payload = pack_tilemap(m, base)
     elif m["format"] in ("race_animation", "scene_animation"):
-        payload = pack_animation(m)
+        if mode == 'shiftable':
+            from tools.animation_relocations import pack_relocatable_animation
+            payload = pack_relocatable_animation(m)
+        else:
+            payload = pack_animation(m)
     elif m["format"] == "pointer_bank":
         payload = pack_pointer_bank(m)
     elif m["format"] == "sample_bank":
@@ -160,7 +166,7 @@ def pack_payload(m, base):
         payload = bytes(out)
     else:
         raise ValueError(f"unsupported asset format {m['format']}")
-    if len(payload) != m["decompressed_size"]:
+    if mode == "matching" and len(payload) != m["decompressed_size"]:
         raise ValueError("decompressed size mismatch")
     return payload
 

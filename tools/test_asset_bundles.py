@@ -91,6 +91,18 @@ class BundleTests(unittest.TestCase):
             self.assertEqual(materialize(root,row)[0]['coordinates'],[1,2,3])
             self.assertIn('mesh.yaml',dependencies(root,row))
 
+    def test_relocation_identities_are_not_file_dependencies(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root/'record.yaml').write_bytes(dump(dict(
+                sections=[dict(source='frames.yaml')],
+                parts=[dict(path='texture.png')],
+                relocations=[dict(source='animation_table', field=0, target='frames')]
+            )))
+            row = dict(source='record.yaml', decoder='race_animation')
+            self.assertEqual(dependencies(root, row),
+                             ['assets/layout/segments.yaml', 'frames.yaml', 'record.yaml', 'texture.png'])
+
     def test_commands_reject_nonliteral_edits(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d)/'model.c'

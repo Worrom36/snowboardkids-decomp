@@ -431,7 +431,7 @@ def pack_segment(root, row, compressed=True, mode="matching"):
             if not compressed:
                 m['compression'] = 'none'
             if mode == 'shiftable':
-                result = pack_payload(m, path.parent)
+                result = pack_payload(m, path.parent, mode=mode)
             else:
                 result = pack_asset(m, path.parent)
         else:
@@ -457,6 +457,9 @@ def dependencies(root, row):
         def walk(value):
             if isinstance(value, dict):
                 for k, v in value.items():
+                    # Relocation sources are object identities, not files.
+                    if k == 'relocations':
+                        continue
                     if k in ('source', 'path') and isinstance(v, str):
                         result.append(str(safe_path(root, path.parent / v).relative_to(root)))
                     else:
@@ -476,7 +479,7 @@ def write_makefile(root, layout):
     for row in layout['segments']:
         obj = '$(BUILD_DIR)/' + (row['object'] if 'object' in row else str(Path(row['legacy']).with_suffix('.o')))
         dep = ' '.join(dependencies(root, row))
-        lines += [f'{obj}: {dep} $(wildcard tools/*assets.py tools/*asset*.py tools/course_*common.py)',
+        lines += [f'{obj}: {dep} $(wildcard tools/*assets.py tools/*asset*.py tools/*relocations.py tools/course_*common.py)',
                   '\t@mkdir -p $(dir $@)',
                   f"\t$(V)$(PYTHON) tools/asset_bundles.py pack {row['name']} --mode $(BUILD_MODE) --out $(@:.o=.bin)"]
         if row['decoder'] == 'course_display_list':
