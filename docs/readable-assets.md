@@ -211,8 +211,13 @@ fail with a diagnostic. A shared goto with multiple modulation restart contexts
 is rejected until those contexts can be represented unambiguously.
 
 Some structural changes still fail explicitly: moving course graphics commands
-requires resolving shared CPU tables across course address spaces. Course
-collision indices and replay render-cache pointers still need their own audit.
+requires resolving shared CPU tables across course address spaces. Collision
+coordinates and contiguous face groups use stable IDs; counts and indices follow
+their new positions. Existing surface order is retained because CPU course-progress
+ranges use positional surface indices. Reordering surfaces requires those CPU
+bindings first. Replay snapshot matrix/vertex fields are archived render caches:
+the first viewport sets `gRenderMatricesDirty`, and the model, shadow, and speed-fan
+renderers replace them with current scratch allocations before drawing.
 Passing ROM/RAM and packed-field tests does not establish full shiftability.
 Combined runtime fixtures are emitted under `build/shiftable/shift-tests`; boot,
 menus, every course, multiplayer, audio, replay, save flows, and hardware remain

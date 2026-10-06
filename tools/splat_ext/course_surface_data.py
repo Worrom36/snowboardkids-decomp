@@ -122,5 +122,7 @@ class N64SegCourse_surface_data(CommonSegment):
             "surfaces": surfaces,
         }
         path = staging_path(self.out_path())
+        from tools.surface_relocations import surface_manifest
+        manifest = surface_manifest(manifest)
         write_yaml(path, manifest)
         self.log(f"Wrote {self.name} to {path}")

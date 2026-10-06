@@ -450,6 +450,9 @@ def pack_segment(root, row, compressed=True, mode="matching"):
             elif mode == 'shiftable' and row['decoder'] in ('model_resources', 'course_model_resources'):
                 from tools.course_relocations import resource_layout
                 result = resource_layout(m, path.parent, mode)[1]
+            elif mode == 'shiftable' and row['decoder'] == 'course_surface_data':
+                from tools.surface_relocations import pack_surfaces
+                result = pack_surfaces(m)
             else:
                 result = packer(m) if row['decoder'] == 'course_surface_data' else packer(m, path.parent)
             if compressed and mode == "matching":
