@@ -5,7 +5,6 @@
 #include "game/race/player/race_player_input.h"
 #include "game/race/race_replay.h"
 
-#define RACE_INPUT_REPLAY_FRAME_COUNT 0x960
 #define INPUT_MASK_HARD_STEER_X 0xF0000
 #define INPUT_MASK_HARD_STEER_Y 0xC000
 

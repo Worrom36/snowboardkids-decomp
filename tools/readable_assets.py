@@ -184,15 +184,36 @@ def pack_payload(m, base, mode="matching"):
         else:
             payload = pack_music(m)
     elif m["format"] == "replay":
+        from tools.asset_runtime_limits import replay_shape
+        name = m['name']
+        players, frames = replay_shape()
+        if (m['player_count'], m['frames_per_player']) != (players, frames):
+            raise ValueError(f'{name}: replay dimensions must match runtime {players} players x {frames} frames; '
+                             'changing the playback row stride is unsupported')
         out = bytearray()
         with (base / m["path"]).open(newline="") as stream:
             rows = csv.DictReader(stream)
+            if not {'player', 'frame', 'buttons', 'stick_x', 'stick_y'} <= set(rows.fieldnames or ()):
+                raise ValueError(f'{name}: replay CSV is missing player/frame/input columns')
             for i, row in enumerate(rows):
-                if int(row["player"]) != i // m["frames_per_player"] or int(row["frame"]) != i % m["frames_per_player"]:
-                    raise ValueError("replay rows must be in player/frame order")
-                out.extend(struct.pack(">Bbb", *(int(row[k], 0) for k in ("buttons", "stick_x", "stick_y"))))
+                try:
+                    player, frame = int(row['player']), int(row['frame'])
+                except (TypeError, ValueError):
+                    raise ValueError(f'{name}: replay row {i+2} player/frame must be integers') from None
+                if player != i // m["frames_per_player"] or frame != i % m["frames_per_player"]:
+                    raise ValueError(f'{name}: replay row {i+2} must be in player/frame order')
+                values = []
+                for field, low, high in (('buttons', 0, 255), ('stick_x', -128, 127), ('stick_y', -128, 127)):
+                    try:
+                        value = int(row[field], 0)
+                    except (TypeError, ValueError):
+                        raise ValueError(f'{name}: replay row {i+2} field {field} must be an integer') from None
+                    if not low <= value <= high:
+                        raise ValueError(f'{name}: replay row {i+2} field {field} exceeds {low}..{high}')
+                    values.append(value)
+                out.extend(struct.pack('>Bbb', *values))
         if len(out) != m["player_count"] * m["frames_per_player"] * 3:
-            raise ValueError("replay frame count mismatch")
+            raise ValueError(f'{name}: replay frame count mismatch')
         payload = bytes(out)
     else:
         raise ValueError(f"unsupported asset format {m['format']}")

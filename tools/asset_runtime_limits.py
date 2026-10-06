@@ -5,6 +5,19 @@ import re
 
 
 @lru_cache(maxsize=1)
+def replay_shape():
+    path = Path(__file__).resolve().parents[1]/'include/game/race/player/race_player_input.h'
+    text = path.read_text()
+    values = []
+    for name in ('RACE_PLAYER_COUNT', 'RACE_INPUT_REPLAY_FRAME_COUNT'):
+        match = re.search(r'^#define\s+'+name+r'\s+(0x[\da-fA-F]+|\d+)\s*$', text, re.M)
+        if not match or int(match[1], 0) <= 0:
+            raise ValueError(f'{path.name}: missing positive literal replay limit {name}')
+        values.append(int(match[1], 0))
+    return tuple(values)
+
+
+@lru_cache(maxsize=1)
 def runtime_limits():
     path = Path(__file__).resolve().parents[1]/'include/game/engine/runtime_memory.h'
     text = path.read_text()

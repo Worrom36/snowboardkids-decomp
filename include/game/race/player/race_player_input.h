@@ -7,6 +7,7 @@
 #include "game/race/player/character_model.h"
 
 #define RACE_PLAYER_COUNT 4
+#define RACE_INPUT_REPLAY_FRAME_COUNT 0x960
 #define RACE_PLAYER_MODEL_PART_CAPACITY 14
 #define RACE_PLAYER_COLLISION_SQUASHED 0x200000
 
