@@ -161,7 +161,11 @@ python3 tools/asset_bundles.py pack BIG_SNOWMAN_COURSE_MODEL_RESOURCES --out /tm
   Menu/scene animations contain fourteen translation and rotation triples.
   Offset-table aliases and frame counts remain exact.
 - Replay CSVs retain four players × 2,400 frames, with button bits and signed
-  stick coordinates. Row order and counts are validated.
+  stick coordinates. Row order, counts, and field ranges are validated against
+  the runtime's shared player/frame definitions. Replay payloads contain no
+  internal pointers: their contiguous player/frame indexing is a runtime format
+  requirement. Input content can change and recompress to a different encoded
+  size; changing dimensions without changing the runtime row stride is rejected.
 - Music manifests expose named Mus commands, notes, envelopes, and volume/pitch
   streams. Operands and variable-length duration encodings retain their original
   bytes. Loop and jump commands are listings, not an offline music synthesizer.
@@ -185,6 +189,15 @@ and unused tails. `./tools/build-and-verify.sh` retains the original SHA1 check.
 under `build/shiftable`, deterministic variable-size compression, flexible ROM
 placement, linked BSS and runtime buffers, and the original 4 MB RAM limit.
 An unchanged shiftable build is byte-identical to the matching ROM.
+
+Shiftable packing checks the allocation constants shared with the runtime in
+`include/game/engine/runtime_memory.h`. Music must fit its 64 KB DMA destination;
+decoded data plus compressed staging must fit the heap with 16-byte allocation
+rounding. These are necessary per-asset bounds, not proof that every scene's live
+allocations fit together. Samples stream from ROM and do not use that bound.
+The sound bank retains 251 logical instrument slots because music/SFX indices
+and CPU tuning tables use those slots; changing the count fails with a diagnostic.
+Individual wave records, books, loops, and shared samples can move independently.
 
 Internal relocation currently covers animation tables, audio-bank objects and
 shared samples, music stream tables, snowboard graphics, sprite images and
@@ -274,6 +287,34 @@ The ROM boundary source check includes newly added source files and the actual
 generated assembly inputs named by the linker script. Missing generated inputs
 fail explicitly. Historical matching-assembly mirrors remain in the broader
 inventory rather than being treated as active build inputs.
+The source guard also rejects interior ROM literals in the address arguments of
+DMA and asset-loading APIs, and interior legacy `D_...` ROM names in generated
+assembly. Symbol-relative offsets, transfer sizes, and scalar constants are not
+classified as pointers by their numeric range alone. This guard does not perform
+general C dataflow analysis; compiled relocations and packed-format checks remain
+necessary for references passed indirectly through variables and tables.
+
+The 21 legacy CPU graphics aliases in `game_syms.ld` bind to individual command
+identities, including roots inside shared streams. `combined-interior-graphics.z64`
+inserts unreachable data after display-list terminators as well as leading
+padding. Gap sizes vary by stream so overlapping bank addresses also diverge.
+Interior and downstream roots therefore move by different amounts.
+The linked-field checks follow the exported target identities and reject a
+deliberately restored stale bundle-relative alias.
+Segment numbers alone do not identify a bank: podium roots bind to `_145380`,
+menu boards to `_1467B0`, and race items to the shared race bank. Their DMA
+contexts are distinct even where original segmented addresses coincide.
+Two extracted video-mode words also resemble segment-2 pointers, but encode
+`OSViMode.type` and padding. Explicit extraction annotations preserve them as
+scalars, and linked checks reject relocations or changed bytes in those fields.
+The distinct-bank fixture now passes all 11 menu/early-race captures, including
+the previously failing title screen, and all three award podium variants with
+four captures each. It also passes loading and early gameplay on all ten courses
+and two- and four-player split screen, plus both Big Snowman laps and results.
+Generate the podium scenarios with
+`python3 tools/runtime_podium_scenarios.py --out /tmp/sbk-podiums`. They inject
+completed progression after replay exit and assert the awarded level; they test
+bank loading and drawing, not normal unlock requirements.
 
 `combined-formats.z64` additionally permutes all eight animation banks, 30 sprite
 tables, and seven tilemaps alongside graphics, audio-bank, ROM, and RAM shifts.
@@ -312,11 +353,25 @@ all ten courses, two- and four-player split screen, and Exit/Save/restart. Those
 captures moved music streams while retaining envelope entry order; the separate
 envelope capture below checks that additional permutation. ROM hashes distinguish
 the tested variants. These checks do not cover complete races or hardware.
+The later combined fixture also permutes envelope entries and passes the same
+course/menu/multiplayer/save/reload checks and title-replay exit. An extended
+CPU-driven Big Snowman run completes both laps and enters results with six
+matching captures. Generate it with
+`python3 tools/runtime_course_scenarios.py --extended-cpu-race --out /tmp/sbk-full-race`;
+the debugger enables CPU control
+after setup. This covers the full course path and results, not human steering
+or full completion of every course.
 The isolated shared-sample fixture passes its decoded target checks and boot
 screenshots, but exact PCM comparison currently fails after stereo frame 321860.
 It retains the original ROM extents and identical boot/code bytes through
 `0x101000`, so this case requires investigation beyond the ROM-padding boot
 timing difference. It is not recorded as a passing audio result.
+`tools/runtime_audio_dma_probe.py` prepares a diagnostic pair that marks the
+exhausted-DMA-pool fallback and asserts that marker every VI after startup.
+Both diagnostic runs pass all 1,690 checks while PCM still differs; forcing
+exhaustion at frame 600 correctly fails at 601. This narrows the investigation
+without accepting the audio difference. The probe alters code/checksum timing,
+so its result describes the instrumented ROMs, not every original execution.
 
 Music envelopes have stable `entry_ids`, an optional physical `entry_order`, and
 explicit `envelope_relocations` from sequence events. Packing updates all
@@ -328,11 +383,42 @@ and drum commands currently fail with a typed-binding diagnostic; the original
 17 music assets have empty drum maps. Their wave/envelope indices must be modeled
 before that structural extension is supported.
 The isolated music fixture with moved streams and envelopes passes exact PCM
-and screenshot comparison through boot/title playback. This does not establish
-audio coverage for every track. `title-replay-exit.json` separately asserts
+and screenshot comparison through boot/title playback. The longer all-bank test
+loads all 17 distinct music banks through the game's pending request queue and
+passes playback-state and screenshot assertions, but exact PCM differs during
+part of the transition sequence. Isolating bank 11 produces identical PCM over
+the common capture duration, with six extra stereo frames at the shifted run's
+end; strict equality still fails. These results remain separate from an audio
+acceptance pass. Generate this temporary scenario with
+`python3 tools/runtime_music_scenario.py --out /tmp/sbk-music.json`; `--bank`
+selects individual banks or a shorter transition sequence.
+`title-replay-exit.json` separately asserts
 recorded-input playback, presses Start, checks the replay fade state, and compares
-five captures against the combined fixture. Post-race ghost replay remains a
-separate acceptance item.
+five captures against the combined fixture. `post-race-replay-exit.json` records
+partial time-trial history, injects a finish flag, enters post-race playback,
+and exits with Start. Seven captures match the combined fixture; assertions
+check results, history-input playback, and camera activation/deactivation.
+`ghost-save.json` additionally enables record qualification, compresses the
+history into a 166-word saved replay, and uses the normal Exit/Save UI.
+`ghost-reload.json` restarts from each run's own pak and asserts the restored
+length/tokens and activation of the second racer as a history-input ghost. All six save
+and seven reload captures match the distinct-bank fixture. These tests still
+inject finish/qualification and menu mode values; they do not establish natural
+time-trial completion or qualification.
+Scenarios can set `compare_mempak_data: true` to require identical saved data.
+The comparison validates pak ID checksums/backups and excludes only serial
+numbers and their ID checksums. Device metadata, allocation tables, directories,
+reserved bytes, and game data must match. Both ghost runs pass that comparison;
+the saved pak images differ only in their independently formatted IDs.
+
+An unmodified-ROM sample-order probe additionally observes 24 audio channels
+around the first PCM divergence. Wave indices, cached pitches, and playing flags
+match at all 353 observation points. Note/envelope differences occur only when
+the music clocks differ by one update; channels 0–13 have identical observed
+states at all 173 shared music-clock values. DMA request counts also differ.
+This supports a scheduling explanation, but does not prove exact PCM equivalence
+or replace validation of every synthesis state. Retriggered SFX cannot be aligned
+by a clock value alone; the recorded analysis keeps those cases separate.
 
 `tools/runtime_shift_smoke.py` accepts deterministic controller scenarios, optional
 ELF-resolved memory assertions, isolated controller-pak seeds, and optional AI PCM
@@ -340,6 +426,8 @@ capture. It records emulator/plugin and ROM hashes, screenshots, observations,
 and audio WAV files. All-blank renderer output is rejected. Interrupt randomization
 is disabled so unchanged-ROM audio repeats are deterministic. PCM comparison
 requires an LLE RSP; the capture plugin rejects HLE audio processing.
+Per-observation frame lists schedule their own checks even between screenshots;
+empty or out-of-range assertion schedules fail before emulation.
 
 The combined all-graphics fixture passed Mupen64Plus 2.6.0 with Angrylion Plus and
 z64 RSP in 4 MB RAM through fresh-pak setup, menus, character/board selection,
@@ -375,8 +463,10 @@ fixture also passes two- and four-player split-screen comparisons and an Exit/Sa
 round trip: both saved and live-player money reload as the unique fixture value.
 Use `save-money.json`, then `reload-money.json` with `--baseline-mempak` and
 `--shifted-mempak` pointing to the respective isolated save images. These scenarios
-change only emulator RAM and temporary pak files. Full races, explicit replay
-controls, and hardware validation remain acceptance items until separately recorded.
+change only emulator RAM and temporary pak files. Use the same seed options for
+`ghost-reload.json` after `ghost-save.json`. Coverage remains scoped to the recorded
+scenarios: full completion of the other courses, natural time-trial qualification,
+and hardware validation are still pending.
 Recorded ROM/plugin hashes, capture hashes, memory assertions, and audio results
 are retained in `docs/shift-runtime-results.json`, including the unresolved audio
 comparisons. Temporary screenshots, logs, PCM, and controller-pak files remain in
@@ -396,7 +486,8 @@ from unknown data. `make verify-assets` reconstructs each registered asset and
 compares it with its original ROM slice, including compression tails. It exits
 nonzero on missing sources, invalid packing, or mismatches.
 
-Run the focused tests with:
+The codec checks run as part of `./tools/build-and-verify.sh --shift-tests`.
+To run them separately:
 
 ```sh
 PYTHONPATH=tools:. python3 -m unittest tools.test_readable_assets \
