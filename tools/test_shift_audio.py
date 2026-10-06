@@ -53,7 +53,7 @@ class MusicRelocationTests(unittest.TestCase):
         self.assertEqual(int.from_bytes(relocated[24:28], 'big'), 52)
         self.assertEqual(relocated[52:], data[36:])
 
-    def test_missing_branch_coverage_and_resizing_rejected(self):
+    def test_missing_branch_coverage_rejected(self):
         from tools.structured_relocations import music_manifest, pack_music
         m, _ = self.manifest()
         m = music_manifest(m)
@@ -62,9 +62,68 @@ class MusicRelocationTests(unittest.TestCase):
             pack_music(m)
         m, _ = self.manifest()
         m = music_manifest(m)
-        m['parts'][-1]['size'] += 1
-        with self.assertRaisesRegex(ValueError, 'event-level'):
+        m['event_relocations'].clear()
+        with self.assertRaisesRegex(ValueError, 'coverage'):
             pack_music(m)
+
+    def test_insert_event_before_goto_target(self):
+        from tools.structured_relocations import music_manifest, pack_music
+        m, _ = self.manifest()
+        m = music_manifest(m)
+        m['parts'][-1]['events'].insert(0, dict(id='new_tempo', command='tempo', operands=[120]))
+        data = pack_music(m)
+        self.assertEqual(data[36:39], bytes([0x85, 120, 0xa1]))
+        self.assertEqual(int.from_bytes(data[39:41], 'big'), 2)
+
+    def test_all_goto_stream_operands_follow_events(self):
+        import struct
+        from tools.music_assets import parse_music
+        from tools.structured_relocations import music_manifest, pack_music
+        data = struct.pack('>9I', 1, 24, 28, 32, 0, 0, 36, 45, 47)
+        data += bytes([0x85, 120, 0xa1, 0, 0, 0, 1, 0, 1, 60, 70, 60, 70])
+        m = music_manifest(dict(name='three branches', **parse_music(data)))
+        self.assertEqual(pack_music(m), data)
+        for part in m['parts']:
+            if part['type'] == 'modulation':
+                part['events'].insert(0, dict(id='new_value', value=20))
+        shifted = pack_music(m)
+        self.assertEqual(shifted[41:45], bytes([0, 2, 0, 2]))
+        broken = copy.deepcopy(m)
+        broken['event_relocations'].pop()
+        with self.assertRaisesRegex(ValueError, 'coverage'):
+            pack_music(broken)
+        broken = copy.deepcopy(m)
+        broken['event_relocations'][0]['target'] = 'missing_event'
+        with self.assertRaisesRegex(ValueError, 'unresolved'):
+            pack_music(broken)
+
+    def test_malformed_command_state_rejected(self):
+        from tools.structured_relocations import music_manifest, pack_music
+        m, _ = self.manifest()
+        m = music_manifest(m)
+        m['parts'][-1]['events'].insert(0, dict(id='bad_note', note=30))
+        with self.assertRaisesRegex(ValueError, 'boundaries|truncated'):
+            pack_music(m)
+
+    def test_branch_offset_overflow(self):
+        from tools.structured_relocations import music_manifest, pack_music
+        m, _ = self.manifest()
+        m = music_manifest(m)
+        m['parts'][-1]['events'][:0] = [dict(id=f'tempo_{i}', command='tempo', operands=[120])
+                                       for i in range(32768)]
+        with self.assertRaisesRegex(ValueError, 'overflows 2-byte'):
+            pack_music(m)
+
+    def test_music_corpus_matches(self):
+        from tools.asset_bundles import ROOT, LAYOUT, load_yaml, materialize
+        from tools.music_assets import pack_music as pack_matching_music
+        from tools.structured_relocations import pack_music
+        rows = [r for r in load_yaml(ROOT/LAYOUT)['segments'] if r['decoder'] == 'music_sequence']
+        self.assertEqual(len(rows), 17)
+        for row in rows:
+            with self.subTest(asset=row['name']):
+                manifest, path = materialize(ROOT, row)
+                self.assertEqual(pack_music(manifest), pack_matching_music(manifest))
 
 
 if __name__ == '__main__':

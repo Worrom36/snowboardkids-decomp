@@ -203,14 +203,28 @@ cannot be resized. Resource parts retain their original offsets when reordered;
 new padding uses `type: padding`, an explicit `id`, and hex `data`. Generated
 graphics `.relocations.json` files report resolved targets and field locations.
 
+Music sequence and modulation events also have stable IDs. All three Mus
+`goto` operands resolve to event identities relative to their sequence, volume,
+and pitch restart streams. Event insertion updates branch offsets and stream
+tables; malformed command state, missing targets, and 16-bit branch overflow
+fail with a diagnostic. A shared goto with multiple modulation restart contexts
+is rejected until those contexts can be represented unambiguously.
+
 Some structural changes still fail explicitly: moving course graphics commands
-requires resolving shared CPU tables across course address spaces; changing
-music event-stream lengths requires event-level branch identities. Course
+requires resolving shared CPU tables across course address spaces. Course
 collision indices and replay render-cache pointers still need their own audit.
 Passing ROM/RAM and packed-field tests does not establish full shiftability.
 Combined runtime fixtures are emitted under `build/shiftable/shift-tests`; boot,
 menus, every course, multiplayer, audio, replay, save flows, and hardware remain
 separate acceptance checks.
+
+The combined character fixture passed an initial Mupen64Plus 2.6.0/Rice check
+with 4 MB RAM: captures at frames 120, 600, and 1800 were byte-identical to the
+original ROM. This covers boot and automatic title-demo rendering, with dummy
+audio and no gameplay input. `tools/runtime_shift_smoke.py` repeats that comparison
+with a supplied local emulator installation and X display, retaining logs,
+screenshots, ROM hashes, and a JSON report. The remaining runtime acceptance
+items above have not been performed.
 
 ## Coverage and validation
 

@@ -65,7 +65,7 @@ def pack_pointer_bank(manifest, mode='shiftable'):
     return result
 
 
-def music_manifest(manifest):
+def music_table_manifest(manifest):
     m = identify_parts(manifest)
     if 'relocations' in m:
         return m
@@ -95,30 +95,11 @@ def music_manifest(manifest):
     return m
 
 
+def music_manifest(manifest):
+    from tools.music_relocations import event_manifest
+    return event_manifest(manifest)
+
+
 def pack_music(manifest, mode='shiftable'):
-    from tools.music_assets import encode_music_part, parse_music
-    m = music_manifest(manifest)
-    expected = set()
-    for part in m['parts']:
-        if part['type'] == 'sequence_header':
-            expected.update((part['id'], 4+4*i) for i, key in enumerate(
-                ('sequence_table', 'volume_table', 'pitch_table', 'envelope_table', 'drum_table')) if part[key])
-        elif part['type'] == 'pointers':
-            expected.update((part['id'], 4*i) for i, value in enumerate(part['values']) if value)
-        elif part['type'] == 'sequence':
-            expected.update((part['id'], event['offset']-part['offset']+1)
-                            for event in part['events'] if event.get('command') == 'goto')
-    refs = [Reference(**r) for r in m['relocations']]
-    if {(r.source, r.field) for r in refs} != expected:
-        raise ValueError(f"{m['name']}: music relocation coverage is incomplete")
-    objects = []
-    for part in m['parts']:
-        kind = part['type']
-        data = bytes.fromhex(part['data']) if kind in ('raw', 'padding') else encode_music_part(part)
-        if kind in ('sequence', 'modulation') and len(data) != part['size']:
-            raise ValueError(f"{m['name']}/{part['id']}: resizing event streams requires event-level branch identities")
-        objects.append(Object(part['id'], data, part['offset'],
-                              4 if kind in ('sequence_header', 'pointers') else 1))
-    result, offsets = relocate(m['name'], objects, refs, mode=mode)
-    parse_music(result)
-    return result
+    from tools.music_relocations import pack_events
+    return pack_events(manifest, mode)
