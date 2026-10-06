@@ -420,6 +420,7 @@ def organize_shared_resources(root, rows, bundles):
 
 
 def pack_segment(root, row, compressed=True, mode="matching"):
+    from tools.asset_runtime_limits import validate_runtime_size, validate_wave_count
     if mode not in ("matching", "shiftable"):
         raise ValueError(f"unknown asset build mode: {mode}")
     if row['decoder'] == 'course_display_list':
@@ -433,6 +434,10 @@ def pack_segment(root, row, compressed=True, mode="matching"):
         if mode == 'shiftable' and row['decoder'] == 'pointer_bank':
             from tools.sample_relocations import bind_pointer_bank
             m = bind_pointer_bank(root, m)
+            headers = [part for part in m['parts'] if part['type'] == 'bank_header']
+            if len(headers) != 1:
+                raise ValueError(f"{row['name']}: expected one runtime sound bank header")
+            validate_wave_count(row['name'], len(headers[0]['wave_offsets']))
         # Accept pre-migration layout records without restoring a generic Splat type.
         if row['decoder'] in ASSET_TYPES or row['decoder'] == 'readable_asset':
             if not compressed:
@@ -458,10 +463,14 @@ def pack_segment(root, row, compressed=True, mode="matching"):
             if compressed and mode == "matching":
                 result = compress_huffman_asset(result, compression_metadata_from_manifest(m))
         if mode == 'shiftable' and compressed and m['compression'] != 'none':
+            decoded_size = len(result)
             with (root / 'snowboardkids.z64').open('rb') as original:
                 original.seek(row['rom_start'])
                 original_bytes = original.read(row['rom_end'] - row['rom_start'])
             result = compress_flexible(result, original_bytes)
+            validate_runtime_size(row['name'], row['decoder'], decoded_size, len(result))
+        elif mode == 'shiftable':
+            validate_runtime_size(row['name'], row['decoder'], len(result))
     if mode == 'matching' and compressed and len(result) != row['rom_end']-row['rom_start']:
         raise ValueError(f"{row['name']}: packed size {len(result)} exceeds/changes fixed ROM allocation {row['rom_end']-row['rom_start']}")
     return result
@@ -526,7 +535,7 @@ def write_makefile(root, layout):
     for row in layout['segments']:
         obj = '$(BUILD_DIR)/' + (row['object'] if 'object' in row else str(Path(row['legacy']).with_suffix('.o')))
         dep = ' '.join(dependencies(root, row))
-        lines += [f'{obj}: {dep} $(wildcard tools/*assets.py tools/*asset*.py tools/*relocations.py tools/course_*common.py tools/*bindings.py tools/*words.py tools/*indices.py)',
+        lines += [f'{obj}: {dep} include/game/engine/runtime_memory.h $(wildcard tools/*assets.py tools/*asset*.py tools/*relocations.py tools/course_*common.py tools/*bindings.py tools/*words.py tools/*indices.py)',
                   '\t@mkdir -p $(dir $@)',
                   f"\t$(V)$(PYTHON) tools/asset_bundles.py pack {row['name']} --mode $(BUILD_MODE) --out $(@:.o=.bin)"]
         if row['decoder'] in ('course_display_list', 'embedded_model'):

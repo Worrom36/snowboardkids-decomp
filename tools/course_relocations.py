@@ -83,6 +83,8 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
         cursor = start+len(stream['data'])
     if cursor > 0x1000000:
         raise ValueError(f'{name}: graphics exceed the 24-bit segment offset')
+    from tools.asset_runtime_limits import validate_runtime_size
+    validate_runtime_size(name, 'course_display_list', cursor)
     bindings = command_bindings(m)
     address_sources = {stream['name']+'/'+identity
                        for stream in streams for i, identity in enumerate(stream['ids'])

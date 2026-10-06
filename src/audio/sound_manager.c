@@ -7,6 +7,7 @@
 #include "game/engine/relocatable_heap.h"
 #include "game/audio/sound_manager.h"
 #include "game/engine/system_runtime.h"
+#include "game/engine/runtime_memory.h"
 #include "libmus/libmus.h"
 #include "game/race/player/race_player_input.h"
 
@@ -56,7 +57,7 @@ typedef union SoundHalfArg {
     } half;
 } SoundHalfArg;
 
-u8 D_800DABB0[0xFC] = {
+u8 D_800DABB0[SOUND_BANK_WAVE_COUNT + 1] = {
     0xDF, 0xD5, 0xE5, 0xF9, 0xD5, 0xE4, 0xE2, 0xD5, 0xE1, 0xEA, 0xED, 0xE1, 0xD5, 0xD5, 0xE1, 0xD5, 0xE0, 0xC9,
     0xE1, 0xED, 0xD8, 0xC9, 0xCC, 0xCA, 0xF9, 0xD1, 0xD5, 0xE1, 0xC9, 0xED, 0xCF, 0xED, 0xE1, 0xED, 0xE3, 0xD5,
     0xE1, 0xF9, 0xED, 0xE1, 0xE1, 0xD5, 0xE1, 0xD5, 0xF9, 0xED, 0xF9, 0xED, 0xE1, 0xD5, 0xC9, 0xF9, 0xED, 0xE1,
@@ -73,7 +74,7 @@ u8 D_800DABB0[0xFC] = {
     0xE1, 0xD5, 0xC9, 0xBD, 0xD5, 0xC9, 0xE1, 0xD5, 0xC9, 0xBD, 0xE1, 0xD5, 0xC9, 0xBD, 0xF9, 0xED, 0xD5, 0x00,
 };
 
-f32 D_800DACAC[0xFB] = { 0.0f };
+f32 D_800DACAC[SOUND_BANK_WAVE_COUNT] = { 0.0f };
 
 u32 D_800DB098[0x219] = {
     0x80000000, 0x814C8401, 0x01017FFF, 0x7F019C7F, 0xA67F3022, 0x80000000, 0x814E8401, 0x01017FFF, 0x7F019C7F,
@@ -358,15 +359,15 @@ void initSoundManager(void) {
     gPlayerLoopingSoundId3 = 0;
     gSharedLoopingPositionalSoundHandle = 0;
 
-    gAssetHandles[3] = allocRelocatableHeapBlock(0x80000);
+    gAssetHandles[3] = allocRelocatableHeapBlock(SOUND_HEAP_SIZE);
     LOAD_ASSET(SOUND_POINTER_BANK, 4);
-    gAssetHandles[5] = allocRelocatableHeapBlock(0x10000);
+    gAssetHandles[5] = allocRelocatableHeapBlock(MUSIC_SEQUENCE_BUFFER_SIZE);
 
     init.count = 0x18;
     init.unk4 = &gSchedulerState;
     init.outputRate = 0x6E;
     init.heapBase = (u8 *)getRelocatableHeapBlockBase(gAssetHandles[3]);
-    init.heapLen = 0x80000;
+    init.heapLen = SOUND_HEAP_SIZE;
     init.soundBank = (PlayerCommandBank *)getRelocatableHeapBlockBase(gAssetHandles[4]);
     init.sampleBaseOffset = (s32)&_27E290_ROM_START;
     init.tuningTable = D_800DABB0;
