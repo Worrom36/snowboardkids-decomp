@@ -110,7 +110,8 @@ def packed_inventory(root, build):
             m = tilemap_manifest(m)
         elif kind == 'course_surface_data':
             m = surface_manifest(m)
-        records = list(m.get('relocations', []))+list(m.get('event_relocations', []))+list(m.get('index_relocations', []))
+        records = [record for field in ('relocations', 'event_relocations', 'index_relocations', 'envelope_relocations')
+                   for record in m.get(field, [])]
         if kind == 'pointer_bank':
             for part in m['parts']:
                 if part['type'] == 'wavetable':
@@ -124,6 +125,8 @@ def packed_inventory(root, build):
             status = 'fixed-count button/stick records; no pointer fields'
         elif kind == 'course_surface_data':
             status = 'explicit coordinate/face indices; CPU course-progress surface order is constrained'
+        elif kind == 'music_sequence':
+            status = 'explicit table/event/envelope references; runtime requires contiguous header/track pointer block'
         result.append(dict(asset=row['name'], decoder=kind, manifest=row['source'], records=records, status=status))
     if not seen_graphics or not any(a['records'] for a in result if a['decoder'] == 'music_sequence'):
         raise ValueError('packed relocation inventory unexpectedly empty')

@@ -65,6 +65,8 @@ def music_signature(data):
     by_offset = {p['offset']: p for p in parts}
     header = by_offset[0]
     shared, active = {}, set()
+    envelope_entries = by_offset[header['envelope_table']]['entries'] if header['envelope_table'] else []
+    shared_envelopes = {}
 
     def target(offset):
         if not offset:
@@ -81,8 +83,15 @@ def music_signature(data):
             if any(e.get('command') == 'goto' for e in part['events']):
                 raise ValueError('music fixture: goto streams need branch-aware semantic comparison')
             value = [{k: v for k, v in e.items() if k != 'offset'} for e in part['events']]
+            from tools.music_indices import decode_index
+            for event in value:
+                if event.get('command') == 'envelope':
+                    index = decode_index(event.pop('operands'), 'music fixture envelope')
+                    if index >= len(envelope_entries):
+                        raise ValueError('music fixture: envelope target exceeds table')
+                    event['envelope'] = (shared_envelopes.setdefault(index, len(shared_envelopes)), envelope_entries[index])
         elif kind == 'envelopes':
-            value = part['entries']
+            value = sorted(part['entries'])
         elif kind == 'pointers':
             value = [target(p) for p in part['values']]
         else:
@@ -121,6 +130,9 @@ def permute(manifest):
         moved['faces'] = [face for start, end in reversed(sorted(groups)) for face in moved['faces'][start:end]]
         return pack_surfaces(moved)
     moved = music_manifest(manifest)
+    for part in moved['parts']:
+        if part['type'] == 'envelopes':
+            part['entry_order'] = list(reversed(part['entry_ids']))
     fixed = [p for p in moved['parts'] if p['type'] == 'sequence_header' or
              p['type'] == 'pointers' and p.get('role') in ('sequence', 'volume', 'pitch')]
     moved['parts'] = fixed + list(reversed([p for p in moved['parts'] if p not in fixed]))

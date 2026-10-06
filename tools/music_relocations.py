@@ -12,9 +12,10 @@ def encode_event(part, event):
 
 def event_manifest(manifest):
     from tools.structured_relocations import music_table_manifest
+    from tools.music_indices import identify_envelopes
     m = music_table_manifest(manifest)
     if 'event_relocations' in m:
-        return m
+        return identify_envelopes(m)
     parts = {p['id']: p for p in m['parts']}
     old_events = {}
     for part in m['parts']:
@@ -74,11 +75,12 @@ def event_manifest(manifest):
             event['goto_bases'][role] = base_part['id']
     m['event_relocations'] = event_refs
     m['relocations'] = [r for r in m['relocations'] if parts[r['source']]['type'] != 'sequence']
-    return m
+    return identify_envelopes(m)
 
 
 def pack_events(manifest, mode='shiftable'):
-    m = event_manifest(manifest)
+    from tools.music_indices import bind_indices
+    m = bind_indices(event_manifest(manifest))
     objects, expected = [], set()
     event_types, stream_events = {}, {}
     for part in m['parts']:

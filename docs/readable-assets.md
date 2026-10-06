@@ -278,6 +278,9 @@ The combined-format fixture now passes all 11 menu/early-gameplay captures in
 renderers with original asset layouts. This comparison isolates relocation from
 the edge-clamping correction. The earlier failed run remains in the runtime
 record as evidence of the CPU bindings that packed-field checks alone missed.
+It also passes loading and early gameplay on all ten courses, two- and
+four-player split screen, and an Exit/Save/restart round trip with the unique
+money value restored in both saved and live-player state.
 
 `combined-course-music-samples.z64` extends that fixture with all ten collision
 coordinate tables and face groups, all 17 music stream layouts, and all 251
@@ -293,6 +296,22 @@ screenshots, but exact PCM comparison currently fails after stereo frame 321860.
 It retains the original ROM extents and identical boot/code bytes through
 `0x101000`, so this case requires investigation beyond the ROM-padding boot
 timing difference. It is not recorded as a passing audio result.
+
+Music envelopes have stable `entry_ids`, an optional physical `entry_order`, and
+explicit `envelope_relocations` from sequence events. Packing updates all
+envelope command indices, including variable-length index growth, before resolving
+event and `goto` offsets. The three track tables determine the header track count
+and must have equal lengths. They remain together immediately after the header:
+`MusStartSong` rebases that contiguous pointer block in place. Nonempty drum maps
+and drum commands currently fail with a typed-binding diagnostic; the original
+17 music assets have empty drum maps. Their wave/envelope indices must be modeled
+before that structural extension is supported.
+The isolated music fixture with moved streams and envelopes passes exact PCM
+and screenshot comparison through boot/title playback. This does not establish
+audio coverage for every track. `title-replay-exit.json` separately asserts
+recorded-input playback, presses Start, checks the replay fade state, and compares
+five captures against the combined fixture. Post-race ghost replay remains a
+separate acceptance item.
 
 `tools/runtime_shift_smoke.py` accepts deterministic controller scenarios, optional
 ELF-resolved memory assertions, isolated controller-pak seeds, and optional AI PCM

@@ -6433,6 +6433,5492 @@
             "pcm_sha256": "56ce1450b046e5a9f08c6476c075b0c5f99d706a51b5943f1b5cd0d63503a09c"
           }
         }
+      },
+      "timing_diagnostic": {
+        "scope": "Every-VI observations during isolated shared-sample relocation; sampling does not exclude between-VI transients.",
+        "report_sha256": "f3f662f610ff6e0117fab6d132f0a41babd4a85985d5770e995fce956ab45872",
+        "observed_frames": 1809,
+        "differences": {
+          "__osBaseCounter": {
+            "count": 1709,
+            "first": [
+              {
+                "frame": 1,
+                "baseline": 44336230,
+                "shifted": 44335542
+              },
+              {
+                "frame": 2,
+                "baseline": 44336230,
+                "shifted": 44335542
+              },
+              {
+                "frame": 3,
+                "baseline": 46768818,
+                "shifted": 45957756
+              }
+            ]
+          },
+          "gAudioFrameCounter": {
+            "count": 12,
+            "first": [
+              {
+                "frame": 3,
+                "baseline": 6,
+                "shifted": 5
+              },
+              {
+                "frame": 4,
+                "baseline": 6,
+                "shifted": 5
+              },
+              {
+                "frame": 703,
+                "baseline": 875,
+                "shifted": 874
+              }
+            ]
+          },
+          "gPendingAudioDmaCount": {
+            "count": 282,
+            "first": [
+              {
+                "frame": 593,
+                "baseline": 0,
+                "shifted": 1
+              },
+              {
+                "frame": 594,
+                "baseline": 0,
+                "shifted": 1
+              },
+              {
+                "frame": 601,
+                "baseline": 2,
+                "shifted": 3
+              }
+            ]
+          },
+          "gAudioUnderrunState": {
+            "count": 0,
+            "first": []
+          },
+          "gTargetAudioTaskOutputLen": {
+            "count": 0,
+            "first": []
+          },
+          "readyList": {
+            "count": 1153,
+            "first": [
+              {
+                "frame": 593,
+                "baseline": 2149016220,
+                "shifted": 2149016020
+              },
+              {
+                "frame": 594,
+                "baseline": 2149016220,
+                "shifted": 2149016020
+              },
+              {
+                "frame": 595,
+                "baseline": 2149016260,
+                "shifted": 2149016280
+              }
+            ]
+          }
+        },
+        "null_ready_list_frames": {
+          "baseline": [],
+          "shifted": []
+        }
+      }
+    },
+    "combined-formats-reload-money": {
+      "frames": [
+        2000,
+        2500,
+        3500
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Restart with isolated saved controller pak and verify both loaded save and live-player money",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Restart with isolated saved controller pak and verify both loaded save and live-player money",
+        "controllers": 1,
+        "frames": [
+          2000,
+          2500,
+          3500
+        ],
+        "stop_frame": 3600,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gGameSaveDataBuffer",
+            "offset": 4,
+            "width": 32,
+            "label": "saved_money",
+            "expected": 12345
+          },
+          {
+            "symbol": "gRacePlayers",
+            "offset": 12,
+            "width": 32,
+            "label": "player_money",
+            "expected": 12345
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "bcd4f92e5e6c93fffb33d6ebdc00b255704c7be2479b1a861e9d1d33a4e45fa9",
+            "bcd4f92e5e6c93fffb33d6ebdc00b255704c7be2479b1a861e9d1d33a4e45fa9",
+            "bce460f97f27476b2a7f30f489fc49d8a01f04477105159eed31905ba39dc1b8"
+          ],
+          "solid_frames": [],
+          "seed_mempak_sha256": "cf1b899fbfc8a9ffd1d72f4101764e4fbf7ed1a44466b5fd8f0895942ec8751a",
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "cf1b899fbfc8a9ffd1d72f4101764e4fbf7ed1a44466b5fd8f0895942ec8751a"
+          },
+          "observations": [
+            {
+              "frame": 2000,
+              "values": {
+                "saved_money": 12345,
+                "player_money": 12345
+              }
+            },
+            {
+              "frame": 2500,
+              "values": {
+                "saved_money": 12345,
+                "player_money": 12345
+              }
+            },
+            {
+              "frame": 3500,
+              "values": {
+                "saved_money": 12345,
+                "player_money": 12345
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "bcd4f92e5e6c93fffb33d6ebdc00b255704c7be2479b1a861e9d1d33a4e45fa9",
+            "bcd4f92e5e6c93fffb33d6ebdc00b255704c7be2479b1a861e9d1d33a4e45fa9",
+            "bce460f97f27476b2a7f30f489fc49d8a01f04477105159eed31905ba39dc1b8"
+          ],
+          "solid_frames": [],
+          "seed_mempak_sha256": "2796a8ffb58ab0f4a81680a4ca58fe3f9933f2bad50f4e2b7974110b8f64c463",
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "2796a8ffb58ab0f4a81680a4ca58fe3f9933f2bad50f4e2b7974110b8f64c463"
+          },
+          "observations": [
+            {
+              "frame": 2000,
+              "values": {
+                "saved_money": 12345,
+                "player_money": 12345
+              }
+            },
+            {
+              "frame": 2500,
+              "values": {
+                "saved_money": 12345,
+                "player_money": 12345
+              }
+            },
+            {
+              "frame": 3500,
+              "values": {
+                "saved_money": 12345,
+                "player_money": 12345
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-two-player": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Two-player setup and split-screen early gameplay through normal controller menus",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Two-player setup and split-screen early gameplay through normal controller menus",
+        "controllers": 2,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 1,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gPlayerCount",
+            "width": 8,
+            "expected": 2
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "3237df7106af937595cb616db113bf29d2d954e87a66abb42f38c74ef1c0a1b5",
+            "e3f3c0309ae0c0e79e5b0ee088d2eee6b0fe4c5b7ae40bf60e8bf93e12f5d5b2",
+            "add9e17b4dd1903c0355007564af7955e6de7f8943e88fe1b1b81c575100446a"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "1dad5297e38a356ad3646885f0622669ed7f2b268defc89e0e6bcc260c6207af"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gPlayerCount": 2
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gPlayerCount": 2
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gPlayerCount": 2
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "3237df7106af937595cb616db113bf29d2d954e87a66abb42f38c74ef1c0a1b5",
+            "e3f3c0309ae0c0e79e5b0ee088d2eee6b0fe4c5b7ae40bf60e8bf93e12f5d5b2",
+            "add9e17b4dd1903c0355007564af7955e6de7f8943e88fe1b1b81c575100446a"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "2dc45f1f86122d53d9f158bb5b9366ad09b4eec8876f43fcac475614dd822048"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gPlayerCount": 2
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gPlayerCount": 2
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gPlayerCount": 2
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-save-money": {
+      "frames": [
+        3950,
+        4900,
+        5100,
+        5500,
+        6000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Set temporary live-player money, then save it through normal Exit/Save confirmation",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Set temporary live-player money, then save it through normal Exit/Save confirmation",
+        "controllers": 1,
+        "frames": [
+          3950,
+          4900,
+          5100,
+          5500,
+          6000
+        ],
+        "stop_frame": 6100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "writes": [
+          {
+            "frame": 3900,
+            "symbol": "gRacePlayers",
+            "offset": 12,
+            "width": 32,
+            "value": 12345
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gGameSaveDataBuffer",
+            "offset": 4,
+            "width": 32,
+            "label": "money",
+            "frames": [
+              4900,
+              5100,
+              5500,
+              6000
+            ],
+            "expected": 12345
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "a23c1adf86cee007e8601fadc0457dcd17739aab900e924623375e3835f8b95e",
+            "6a9fdd418f56d6b9cb24af3df5ced69f7672bb3cc73b156b186eff98463c3813",
+            "a30dc4b0b2972b635fcf8d94539baef75173c37f7b2159d0708772677b42076a",
+            "5fce3a8dda6152770d7637326df05e144725cf70265bbfb5f5b0edb6b7789494",
+            "8f016c3969433635a097c9ae16a24ddab2f2d7f4cc65281f94b3bcea1283b16c"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "cf1b899fbfc8a9ffd1d72f4101764e4fbf7ed1a44466b5fd8f0895942ec8751a"
+          },
+          "observations": [
+            {
+              "frame": 3950,
+              "values": {}
+            },
+            {
+              "frame": 4900,
+              "values": {
+                "money": 12345
+              }
+            },
+            {
+              "frame": 5100,
+              "values": {
+                "money": 12345
+              }
+            },
+            {
+              "frame": 5500,
+              "values": {
+                "money": 12345
+              }
+            },
+            {
+              "frame": 6000,
+              "values": {
+                "money": 12345
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "a23c1adf86cee007e8601fadc0457dcd17739aab900e924623375e3835f8b95e",
+            "6a9fdd418f56d6b9cb24af3df5ced69f7672bb3cc73b156b186eff98463c3813",
+            "a30dc4b0b2972b635fcf8d94539baef75173c37f7b2159d0708772677b42076a",
+            "5fce3a8dda6152770d7637326df05e144725cf70265bbfb5f5b0edb6b7789494",
+            "8f016c3969433635a097c9ae16a24ddab2f2d7f4cc65281f94b3bcea1283b16c"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "2796a8ffb58ab0f4a81680a4ca58fe3f9933f2bad50f4e2b7974110b8f64c463"
+          },
+          "observations": [
+            {
+              "frame": 3950,
+              "values": {}
+            },
+            {
+              "frame": 4900,
+              "values": {
+                "money": 12345
+              }
+            },
+            {
+              "frame": 5100,
+              "values": {
+                "money": 12345
+              }
+            },
+            {
+              "frame": 5500,
+              "values": {
+                "money": 12345
+              }
+            },
+            {
+              "frame": 6000,
+              "values": {
+                "money": 12345
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-course-08": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Ninja Land load and early single-player gameplay; debugger bypasses course unlocks",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Ninja Land load and early single-player gameplay; debugger bypasses course unlocks",
+        "controllers": 1,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "writes": [
+          {
+            "frame": 4900,
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "value": 8
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "expected": 8
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "8531020dd4acc6aa5899167b30bd40b3871728eaea14181ee6e62df6d9225a1a",
+            "eae915f75954114bb67f67d69226e26659969594ebfdf5f804a8846b48896d10",
+            "e70280ebabe282b816210fd4d6847e17ab65a6d9dcf0ad9601f062527479fe0a"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "dc7ed97598170cd3289d9f8434740f274a6b725cae22b14bb66dd2ee5e80be78"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 8
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 8
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 8
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "8531020dd4acc6aa5899167b30bd40b3871728eaea14181ee6e62df6d9225a1a",
+            "eae915f75954114bb67f67d69226e26659969594ebfdf5f804a8846b48896d10",
+            "e70280ebabe282b816210fd4d6847e17ab65a6d9dcf0ad9601f062527479fe0a"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "b920376f80d03571513ee7876dde96716b84f8ad9a00e0017c899212254c1757"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 8
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 8
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 8
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-course-07": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Animal Land via the normal Skill Game / Trick Game controller menu path",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Animal Land via the normal Skill Game / Trick Game controller menu path",
+        "controllers": 1,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "expected": 7
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "6d29c36d75d4d39b59be29d2983d97c2357b5f2f3f2eb69b83e8d4d653f0306d",
+            "6157efbb0126ff0a14ddedd4e009d834f1c7a5e0d0b91fb0605f0ebee3514278",
+            "1c01dabc1d657b4e6e88f3cadb333fd8ff00bed1fdffb1ee6fcecca234303c54"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "29182cae000bf29dd1d0cbc4eca9119e69f64915c223328fd6008768d899a30d"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 7
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 7
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 7
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "6d29c36d75d4d39b59be29d2983d97c2357b5f2f3f2eb69b83e8d4d653f0306d",
+            "6157efbb0126ff0a14ddedd4e009d834f1c7a5e0d0b91fb0605f0ebee3514278",
+            "1c01dabc1d657b4e6e88f3cadb333fd8ff00bed1fdffb1ee6fcecca234303c54"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "fb09db7be67c7c492cfc79241872cbdc1c5039d6cf3ca10f348a586ae2ceaa1e"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 7
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 7
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 7
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-four-player": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Four-player setup and split-screen early gameplay through normal controller menus",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Four-player setup and split-screen early gameplay through normal controller menus",
+        "controllers": 4,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 1300,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 2952790016,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 1,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8000,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8200,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8400,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8600,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8800,
+            "player": 1,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 2,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6000,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6200,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6400,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6600,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6800,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7000,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7200,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7400,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7600,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7800,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8000,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8200,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8400,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8600,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8800,
+            "player": 2,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 3,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6000,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6200,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6400,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6600,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 6800,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7000,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7200,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7400,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7600,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 7800,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8000,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8200,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8400,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8600,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 8800,
+            "player": 3,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gPlayerCount",
+            "width": 8,
+            "expected": 4
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "b7200b2f939249d7127a57ae946e76decb640b1e13865cc0fbbfdd5c182ab6f6",
+            "7b3c6db47964d2a909fc2d081d95f58868f70aa17ac60b2f07597124b86b9cec",
+            "3e12902a5b03cb5d828f10a9d057fb618a48ced1328febaa8d0aca8c044b18ac"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "f804df5487754afd080af66a88893d1e4d0ba50c890790f607a3c677dc443070"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gPlayerCount": 4
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gPlayerCount": 4
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gPlayerCount": 4
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "b7200b2f939249d7127a57ae946e76decb640b1e13865cc0fbbfdd5c182ab6f6",
+            "7b3c6db47964d2a909fc2d081d95f58868f70aa17ac60b2f07597124b86b9cec",
+            "3e12902a5b03cb5d828f10a9d057fb618a48ced1328febaa8d0aca8c044b18ac"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "82cfdc6c645f30bc8b0da921c8b6290208a40273d9d8c26282fdbf8167ccf0d1"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gPlayerCount": 4
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gPlayerCount": 4
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gPlayerCount": 4
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-course-06": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Silver Mountain load and early single-player gameplay; debugger bypasses course unlocks",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Silver Mountain load and early single-player gameplay; debugger bypasses course unlocks",
+        "controllers": 1,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "writes": [
+          {
+            "frame": 4900,
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "value": 6
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "expected": 6
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "cac9e4026aa9a74aeb9da587adc6d04d06c00421ec48c461806faa8d6a8390b6",
+            "723db058de7b61815fee74d09910d9873ce05ffce82ed81126c8993cccf82537",
+            "d3955b0086ad1e2d6364745e12c130dcbb62ff54f6a9a0f73128513b4d0af98a"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "8a64a88cd3bf8cd62690ddd3b3f8f5b146ca77aa873820d8c21e53db8bacd6ea"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 6
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 6
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 6
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "cac9e4026aa9a74aeb9da587adc6d04d06c00421ec48c461806faa8d6a8390b6",
+            "723db058de7b61815fee74d09910d9873ce05ffce82ed81126c8993cccf82537",
+            "d3955b0086ad1e2d6364745e12c130dcbb62ff54f6a9a0f73128513b4d0af98a"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "33bfe8834ffb89b04df3a196a74f0a83069c3384c7158659b6f1c90982d001b0"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 6
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 6
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 6
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-course-09": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Rookie Mountain load and early single-player gameplay; debugger bypasses course unlocks",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Rookie Mountain load and early single-player gameplay; debugger bypasses course unlocks",
+        "controllers": 1,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "writes": [
+          {
+            "frame": 4900,
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "value": 9
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "expected": 9
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "cbe8e2c6457ee2244020c0e48a153136affb244c5da2f31450dfedb4fdeeebf0",
+            "053868bd3969ce25ee1ef7b689e02b57dabf44cb69779c95a338e59341ae40dd",
+            "ed35de32ea08d86d5a4087045a8e6ebd44ffef096803c5369d2df892747ebe2d"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "6e95023a12a01031a4ee851b0901f28413577a15bc2bc7c60dc8dc777fe736b5"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 9
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 9
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 9
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "cbe8e2c6457ee2244020c0e48a153136affb244c5da2f31450dfedb4fdeeebf0",
+            "053868bd3969ce25ee1ef7b689e02b57dabf44cb69779c95a338e59341ae40dd",
+            "ed35de32ea08d86d5a4087045a8e6ebd44ffef096803c5369d2df892747ebe2d"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "ac3072387560aa183268af6d37aa22aa29e73b057edc2781d1d9360208e674ed"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 9
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 9
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 9
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-course-05": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Quicksand Valley load and early single-player gameplay; debugger bypasses course unlocks",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Quicksand Valley load and early single-player gameplay; debugger bypasses course unlocks",
+        "controllers": 1,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "writes": [
+          {
+            "frame": 4900,
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "value": 5
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "expected": 5
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "1b0f626b14136fed55c92d963bc28394985c5f675f57bceb4b0f6b113f660b15",
+            "2dee2b6f1b02dc4f790b6e753bafa1eed80dcd6907831a8fbb861bdf5a5afbb0",
+            "621d4f1531cb3343cc6757fa2123bddac5b1ebfd0de9257bb8982bc24a9a9192"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "9254000ecc87b3fc9e57c83815b4e4cb7e40ec586a50ab308303bfdde2ce637c"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 5
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 5
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 5
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "1b0f626b14136fed55c92d963bc28394985c5f675f57bceb4b0f6b113f660b15",
+            "2dee2b6f1b02dc4f790b6e753bafa1eed80dcd6907831a8fbb861bdf5a5afbb0",
+            "621d4f1531cb3343cc6757fa2123bddac5b1ebfd0de9257bb8982bc24a9a9192"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "900099b8bec7ae2c81a6f74881f955385eea9512af3f192572fea7896f0f34d7"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 5
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 5
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 5
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-course-04": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Dizzy Land load and early single-player gameplay; debugger bypasses course unlocks",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Dizzy Land load and early single-player gameplay; debugger bypasses course unlocks",
+        "controllers": 1,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "writes": [
+          {
+            "frame": 4900,
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "value": 4
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "expected": 4
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "516469f7dad656ae31d9a98935c9227cbb52ba4bb72063773f8551324e207dba",
+            "7521ce804c80516b3204cca37169acea09d635d18c8b1db70047ed7f6582ae62",
+            "4bc39bec4f787233c8b26e8f192a9f757ffcfda9fa3f8fbd8fe6a6473d349b6c"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "eed5177e11d5208e3142afb01590dc25f95a2859aa800e2299a3922c89539c09"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 4
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 4
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 4
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "516469f7dad656ae31d9a98935c9227cbb52ba4bb72063773f8551324e207dba",
+            "7521ce804c80516b3204cca37169acea09d635d18c8b1db70047ed7f6582ae62",
+            "4bc39bec4f787233c8b26e8f192a9f757ffcfda9fa3f8fbd8fe6a6473d349b6c"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "70a1e20f54a8b77eabba1a237ef9f2a0706b9da0de5fa6706ddaae629a128868"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 4
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 4
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 4
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-course-03": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Grass Valley load and early single-player gameplay; debugger bypasses course unlocks",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Grass Valley load and early single-player gameplay; debugger bypasses course unlocks",
+        "controllers": 1,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "writes": [
+          {
+            "frame": 4900,
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "value": 3
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "expected": 3
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "79d330d2764c433e5e73705145a69065a0244808d6d6a63b1e678b9d6387f1a4",
+            "391e5b4310122e417b39f67a07e389b3c1e0dbfcd882cc1cce2a1ea9691af20a",
+            "3e5d863917d1932b3f828dea17fc1393c29416ffc913b722a16902e1daa9c5fb"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "f4b89886dabe9b7b91ead37e686b7108a4d8c6789a59c1f10f46c83ca9f88d7d"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 3
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 3
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 3
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "79d330d2764c433e5e73705145a69065a0244808d6d6a63b1e678b9d6387f1a4",
+            "391e5b4310122e417b39f67a07e389b3c1e0dbfcd882cc1cce2a1ea9691af20a",
+            "3e5d863917d1932b3f828dea17fc1393c29416ffc913b722a16902e1daa9c5fb"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "30c421b143159777fa127c6fa708a3930663a65a9161dd00c6d8ef841fd17efa"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 3
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 3
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 3
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-course-02": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Night Highway load and early single-player gameplay; debugger bypasses course unlocks",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Night Highway load and early single-player gameplay; debugger bypasses course unlocks",
+        "controllers": 1,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "writes": [
+          {
+            "frame": 4900,
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "value": 2
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "expected": 2
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "7fde0101c3597c109c9491b9c9332755a6cdf9895532f21511a33889ebf4713c",
+            "b36ba309999a3bbf212e563d8dcef4b910344669cf69464ffe608d0a68b3823e",
+            "a64a3a678b6a2c8bada425b27b637273a11dc4bbba4980da780c83f46427421a"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "7414fbb9941e7fdb776559cdce26e71a1ce0dacd7e428375301ec01dc11931a9"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 2
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 2
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 2
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "7fde0101c3597c109c9491b9c9332755a6cdf9895532f21511a33889ebf4713c",
+            "b36ba309999a3bbf212e563d8dcef4b910344669cf69464ffe608d0a68b3823e",
+            "a64a3a678b6a2c8bada425b27b637273a11dc4bbba4980da780c83f46427421a"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "59d2509761b38e6b1036da574f5cc3f76f8fc3c9e5081a8151e640f2c60cc3b0"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 2
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 2
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 2
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-course-01": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Sunset Rock load and early single-player gameplay; debugger bypasses course unlocks",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Sunset Rock load and early single-player gameplay; debugger bypasses course unlocks",
+        "controllers": 1,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "writes": [
+          {
+            "frame": 4900,
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "value": 1
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "expected": 1
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "aae29f283a49bc4b924de6d41b41084c909438dbaea86215e3d7538a5afce89d",
+            "16dde66990bfb5256c6ce93e780eacc8c57a996707c88abd3ea6b1c28c3e0dc9",
+            "f87ebde01e5f93c2437a9d5c4f62bfef138f28ef3cca2853cfb157b9f88eeb12"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "cbeba980d837ece3f2c68cf28dfabc55efa341c78073acfe945688c23745ab37"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 1
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 1
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 1
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "aae29f283a49bc4b924de6d41b41084c909438dbaea86215e3d7538a5afce89d",
+            "16dde66990bfb5256c6ce93e780eacc8c57a996707c88abd3ea6b1c28c3e0dc9",
+            "f87ebde01e5f93c2437a9d5c4f62bfef138f28ef3cca2853cfb157b9f88eeb12"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "21289c8c9728a4e93b65a3abb2b789e5abdd7198001b293e3d43b0b88201495b"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 1
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 1
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 1
+              }
+            }
+          ]
+        }
+      }
+    },
+    "combined-formats-course-00": {
+      "frames": [
+        6000,
+        7500,
+        9000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original-layout control and moved assets use the same palette and bounded snowboard renderers. Big Snowman load and early single-player gameplay; debugger bypasses course unlocks",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Big Snowman load and early single-player gameplay; debugger bypasses course unlocks",
+        "controllers": 1,
+        "frames": [
+          6000,
+          7500,
+          9000
+        ],
+        "stop_frame": 9100,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          },
+          {
+            "frame": 800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 1800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 2800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3000,
+            "player": 0,
+            "buttons": 1342177280,
+            "duration": 8
+          },
+          {
+            "frame": 3200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 3800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 4800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5000,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5200,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5400,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5600,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          },
+          {
+            "frame": 5800,
+            "player": 0,
+            "buttons": 128,
+            "duration": 8
+          }
+        ],
+        "writes": [
+          {
+            "frame": 4900,
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "value": 0
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceCourseIndex",
+            "width": 16,
+            "expected": 0
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "0cd23c8329e89e6483e95819b63d6639955a5e35c877c36be4cd29e46e08909d",
+            "f7dc5859d14b0cc7ae5a049d60af7d210630694928558893879bbf3dee7cd806",
+            "28981d566eeb4bf7e27d6b9725fb767a114ad9fb4208e3e9bafaaf7fb44c3013"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "f561b38f22944579e648fe6a029db22916deb41ddb2bb6dabc1a1ea59a39e7ef"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 0
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 0
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 0
+              }
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "59266076135a488fa20526688cfa2984f7e0cbc1bc9d77b223dcdd05f7a16540",
+          "screenshots": [
+            "0cd23c8329e89e6483e95819b63d6639955a5e35c877c36be4cd29e46e08909d",
+            "f7dc5859d14b0cc7ae5a049d60af7d210630694928558893879bbf3dee7cd806",
+            "28981d566eeb4bf7e27d6b9725fb767a114ad9fb4208e3e9bafaaf7fb44c3013"
+          ],
+          "solid_frames": [],
+          "saves": {
+            "SNOWBOARD KIDS.mpk": "3a80eef3b1afb25fcd6579eb5936b03debd55dffff5c2626cef577a7bc025753"
+          },
+          "observations": [
+            {
+              "frame": 6000,
+              "values": {
+                "gRaceCourseIndex": 0
+              }
+            },
+            {
+              "frame": 7500,
+              "values": {
+                "gRaceCourseIndex": 0
+              }
+            },
+            {
+              "frame": 9000,
+              "values": {
+                "gRaceCourseIndex": 0
+              }
+            }
+          ]
+        }
+      }
+    },
+    "internal-moved-music": {
+      "frames": [
+        120,
+        600,
+        1800
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Original renderer; all 17 music stream layouts moved. Boot and automatic title demo with AI PCM capture",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Boot and automatic title demo with AI PCM capture",
+        "controllers": 1,
+        "frames": [
+          120,
+          600,
+          1800
+        ],
+        "stop_frame": 1810,
+        "events": []
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736",
+        "test-audio.so": "8a12e6989e5ceda2752e6f8637f1a3d2f3910478872ebdcd335aa955aad1eaad"
+      },
+      "captures_identical": true,
+      "audio_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "58870ea67d49f778e7a7607eb270ad1d3a081a4733b337b2d607de2606dcfb3c",
+          "screenshots": [
+            "b545a40575404ca5419e0c2d8d31b1add7caad6db063470a22edf3db9ccd5b4f",
+            "3ee89239b6b98657853272d54d326ffc3c88c4f0e8a5c1a99468a5a74dfe5a11",
+            "308cc489d1494addc2dcdbdebebdbc2a06aae21ded00894cdfbae271e4f68074"
+          ],
+          "solid_frames": [],
+          "saves": {},
+          "observations": [
+            {
+              "frame": 120,
+              "values": {}
+            },
+            {
+              "frame": 600,
+              "values": {}
+            },
+            {
+              "frame": 1800,
+              "values": {}
+            }
+          ],
+          "audio": {
+            "sample_rate": 22047,
+            "stereo_frames": 728368,
+            "packets": 4418,
+            "nonzero_samples": 910990,
+            "pcm_sha256": "085201fdd92955cfa5a75dda46015eae1dfb536ae7a9b591b0c6c250b8344334"
+          }
+        },
+        "shifted": {
+          "rom_sha256": "9e3437a6d996ee4aee495853def1ad583e822e88fb7255b1341a0626d08efc7a",
+          "screenshots": [
+            "b545a40575404ca5419e0c2d8d31b1add7caad6db063470a22edf3db9ccd5b4f",
+            "3ee89239b6b98657853272d54d326ffc3c88c4f0e8a5c1a99468a5a74dfe5a11",
+            "308cc489d1494addc2dcdbdebebdbc2a06aae21ded00894cdfbae271e4f68074"
+          ],
+          "solid_frames": [],
+          "saves": {},
+          "observations": [
+            {
+              "frame": 120,
+              "values": {}
+            },
+            {
+              "frame": 600,
+              "values": {}
+            },
+            {
+              "frame": 1800,
+              "values": {}
+            }
+          ],
+          "audio": {
+            "sample_rate": 22047,
+            "stereo_frames": 728368,
+            "packets": 4418,
+            "nonzero_samples": 910990,
+            "pcm_sha256": "085201fdd92955cfa5a75dda46015eae1dfb536ae7a9b591b0c6c250b8344334"
+          }
+        }
+      }
+    },
+    "internal-moved-envelopes": {
+      "frames": [
+        120,
+        600,
+        1800
+      ],
+      "ram_bytes": 4194304,
+      "scope": "All 17 music stream layouts and envelope tables reordered; original renderer; boot/audio capture only.",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Boot and automatic title demo with AI PCM capture",
+        "controllers": 1,
+        "frames": [
+          120,
+          600,
+          1800
+        ],
+        "stop_frame": 1810,
+        "events": []
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736",
+        "test-audio.so": "8a12e6989e5ceda2752e6f8637f1a3d2f3910478872ebdcd335aa955aad1eaad"
+      },
+      "captures_identical": true,
+      "audio_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "58870ea67d49f778e7a7607eb270ad1d3a081a4733b337b2d607de2606dcfb3c",
+          "screenshots": [
+            "b545a40575404ca5419e0c2d8d31b1add7caad6db063470a22edf3db9ccd5b4f",
+            "3ee89239b6b98657853272d54d326ffc3c88c4f0e8a5c1a99468a5a74dfe5a11",
+            "308cc489d1494addc2dcdbdebebdbc2a06aae21ded00894cdfbae271e4f68074"
+          ],
+          "solid_frames": [],
+          "saves": {},
+          "observations": [
+            {
+              "frame": 120,
+              "values": {}
+            },
+            {
+              "frame": 600,
+              "values": {}
+            },
+            {
+              "frame": 1800,
+              "values": {}
+            }
+          ],
+          "audio": {
+            "sample_rate": 22047,
+            "stereo_frames": 728368,
+            "packets": 4418,
+            "nonzero_samples": 910990,
+            "pcm_sha256": "085201fdd92955cfa5a75dda46015eae1dfb536ae7a9b591b0c6c250b8344334"
+          }
+        },
+        "shifted": {
+          "rom_sha256": "4a0682304b76b81473cd99380eec49f579b2216e99cc2deb15621b650ce22f4e",
+          "screenshots": [
+            "b545a40575404ca5419e0c2d8d31b1add7caad6db063470a22edf3db9ccd5b4f",
+            "3ee89239b6b98657853272d54d326ffc3c88c4f0e8a5c1a99468a5a74dfe5a11",
+            "308cc489d1494addc2dcdbdebebdbc2a06aae21ded00894cdfbae271e4f68074"
+          ],
+          "solid_frames": [],
+          "saves": {},
+          "observations": [
+            {
+              "frame": 120,
+              "values": {}
+            },
+            {
+              "frame": 600,
+              "values": {}
+            },
+            {
+              "frame": 1800,
+              "values": {}
+            }
+          ],
+          "audio": {
+            "sample_rate": 22047,
+            "stereo_frames": 728368,
+            "packets": 4418,
+            "nonzero_samples": 910990,
+            "pcm_sha256": "085201fdd92955cfa5a75dda46015eae1dfb536ae7a9b591b0c6c250b8344334"
+          }
+        }
+      }
+    },
+    "expanded-title-replay-exit": {
+      "frames": [
+        550,
+        599,
+        620,
+        750,
+        1000
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Combined graphics, animation, sprites, tilemaps, collision, music streams, samples, ROM and RAM shifts. Original-layout control uses the same palette and bounded snowboard renderers. Title replay playback and Start exit; not post-race ghost replay.",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Verify title replay input playback, then exit it with the Start button",
+        "controllers": 1,
+        "frames": [
+          550,
+          599,
+          620,
+          750,
+          1000
+        ],
+        "stop_frame": 1010,
+        "events": [
+          {
+            "frame": 600,
+            "player": 0,
+            "buttons": 16,
+            "duration": 8
+          }
+        ],
+        "observe": [
+          {
+            "symbol": "gRaceDemoPlaybackEnabled",
+            "width": 8,
+            "frames": [
+              599
+            ],
+            "expected": 1
+          },
+          {
+            "symbol": "gRacePlayers",
+            "offset": 22,
+            "width": 8,
+            "frames": [
+              599
+            ],
+            "expected": 5,
+            "label": "replayInputSource"
+          },
+          {
+            "symbol": "gTitleDemoRaceIntroFadeStep",
+            "width": 8,
+            "frames": [
+              620
+            ],
+            "expected": 16
+          }
+        ]
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736"
+      },
+      "captures_identical": true,
+      "runs": {
+        "baseline": {
+          "rom_sha256": "5432d0d11ea61ec2893074134df0c13f46ca5b0d4026f8c3065d49f6770e09fe",
+          "screenshots": [
+            "441da7236f6ffdd8fb4cdfa2d9ce7b8d8df8cf2f7a8e82c530714d92266ce613",
+            "bf5e79dbbf7ffa0c4cedafd68a982a784810fa499b56694b886661f9e53cbc26",
+            "c679f7761427dd7ea1a063963db72bb0fcb483869f5ed8f4f33b6b4be2903399",
+            "c0dc725be62cdc9953c1ed01e323b7666dea93cc9d1a8d1cd8b7f1a9a230fe06",
+            "c546fbcd17692c9fa6bc2854cb9e6b0fff7f1d1170b5ba3bf4d1b3b4e821376a"
+          ],
+          "solid_frames": [
+            550
+          ],
+          "saves": {},
+          "observations": [
+            {
+              "frame": 550,
+              "values": {}
+            },
+            {
+              "frame": 599,
+              "values": {
+                "gRaceDemoPlaybackEnabled": 1,
+                "replayInputSource": 5
+              }
+            },
+            {
+              "frame": 620,
+              "values": {
+                "gTitleDemoRaceIntroFadeStep": 16
+              }
+            },
+            {
+              "frame": 750,
+              "values": {}
+            },
+            {
+              "frame": 1000,
+              "values": {}
+            }
+          ]
+        },
+        "shifted": {
+          "rom_sha256": "6826aec5010d170ecad59e80558c14f2073d88bd8adeafb91eb5aec83ecad702",
+          "screenshots": [
+            "441da7236f6ffdd8fb4cdfa2d9ce7b8d8df8cf2f7a8e82c530714d92266ce613",
+            "bf5e79dbbf7ffa0c4cedafd68a982a784810fa499b56694b886661f9e53cbc26",
+            "c679f7761427dd7ea1a063963db72bb0fcb483869f5ed8f4f33b6b4be2903399",
+            "c0dc725be62cdc9953c1ed01e323b7666dea93cc9d1a8d1cd8b7f1a9a230fe06",
+            "c546fbcd17692c9fa6bc2854cb9e6b0fff7f1d1170b5ba3bf4d1b3b4e821376a"
+          ],
+          "solid_frames": [
+            550
+          ],
+          "saves": {},
+          "observations": [
+            {
+              "frame": 550,
+              "values": {}
+            },
+            {
+              "frame": 599,
+              "values": {
+                "gRaceDemoPlaybackEnabled": 1,
+                "replayInputSource": 5
+              }
+            },
+            {
+              "frame": 620,
+              "values": {
+                "gTitleDemoRaceIntroFadeStep": 16
+              }
+            },
+            {
+              "frame": 750,
+              "values": {}
+            },
+            {
+              "frame": 1000,
+              "values": {}
+            }
+          ]
+        }
       }
     }
   }
