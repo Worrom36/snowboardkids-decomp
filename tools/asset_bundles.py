@@ -426,6 +426,12 @@ def pack_segment(root, row, compressed=True, mode="matching"):
         result = commands(safe_path(root, row['source']))
     else:
         m, path = materialize(root, row)
+        if mode == 'shiftable' and row['decoder'] == 'sample_bank':
+            from tools.sample_relocations import pack_sample_slice
+            return pack_sample_slice(root, row, m)
+        if mode == 'shiftable' and row['decoder'] == 'pointer_bank':
+            from tools.sample_relocations import bind_pointer_bank
+            m = bind_pointer_bank(root, m)
         # Accept pre-migration layout records without restoring a generic Splat type.
         if row['decoder'] in ASSET_TYPES or row['decoder'] == 'readable_asset':
             if not compressed:
@@ -454,7 +460,7 @@ def pack_segment(root, row, compressed=True, mode="matching"):
     return result
 
 
-def dependencies(root, row):
+def dependencies(root, row, include_group=True):
     result = [str(LAYOUT), row['source']]
     if row['decoder'] != 'course_display_list':
         path = root / row['source']
@@ -472,6 +478,11 @@ def dependencies(root, row):
                 for v in value:
                     walk(v)
         walk(load_yaml(path))
+    if include_group and row['decoder'] in ('sample_bank', 'pointer_bank'):
+        bank = row['name'] if row['decoder'] == 'pointer_bank' else load_yaml(root/row['source'])['bank_asset']
+        for sibling in load_yaml(root/LAYOUT)['segments']:
+            if sibling['decoder'] == 'sample_bank' and load_yaml(root/sibling['source'])['bank_asset'] == bank:
+                result.extend(dependencies(root, sibling, include_group=False))
     return sorted(set(result))
 
 
