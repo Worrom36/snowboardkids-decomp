@@ -29,6 +29,12 @@ fi
 BUILD_AND_VERIFY=1 QUIET=1 make -j8 BUILD_MODE="$mode" all "${extra_targets[@]}"
 if ((shift_tests)); then
     python3 -m unittest discover -s tools -p 'test_shift*.py'
+    PYTHONPATH="tools:.:${PYTHONPATH:-}" python3 -m unittest \
+        tools.test_readable_assets tools.test_asset_bundles \
+        tools.test_course_graphics tools.test_course_sprite_table \
+        tools.test_course_surface_data tools.test_course_display_list \
+        tools.test_huffman_asset tools.test_textconv \
+        tools.test_course_definitions tools.test_sk1_to_sk2_course
     QUIET=1 make shift-test BUILD_MODE="$mode"
     python3 tools/run_shift_tests.py --build-dir "$( [[ "$mode" == matching ]] && echo build || echo build/shiftable )"
     inventory_dir="$( [[ "$mode" == matching ]] && echo build || echo build/shiftable )"

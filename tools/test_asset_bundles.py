@@ -130,13 +130,15 @@ class BundleTests(unittest.TestCase):
                 migrate(root)
             layout = __import__('yaml').safe_load((root/LAYOUT).read_text())
             row = layout['segments'][0]
-            self.assertEqual(pack_segment(root,row),words((0xB8000000,0x12345678)))
+            # This migration-only fixture has no graphics resource bank. Inspect
+            # the migrated source; complete grouped packing is covered separately.
+            self.assertEqual(commands(root/row['source']),words((0xB8000000,0x12345678)))
             self.assertEqual(old.read_text(),original)
             new = root/row['source']
             new.write_text(original.replace('12345678','87654321'))
             with patch('tools.asset_name_migration.migrate_names'):
                 migrate(root,if_absent=True)
-            self.assertEqual(pack_segment(root,row),words((0xB8000000,0x87654321)))
+            self.assertEqual(commands(root/row['source']),words((0xB8000000,0x87654321)))
             with self.assertRaises(ValueError):
                 migrate(root)
 
@@ -145,7 +147,9 @@ class BundleTests(unittest.TestCase):
             root = Path(d)
             (root/'model.c').write_text('Gfx x[] = { {{0xB8000000, 0x00000000}}, };')
             row = dict(name='x',decoder='course_display_list',source='model.c',rom_start=0,rom_end=16)
-            with self.assertRaisesRegex(ValueError,'fixed ROM allocation'):
+            packed = ({'x': commands(root/'model.c')}, {}, [], b'')
+            with patch('tools.course_relocations.pack_graphics_group', return_value=packed), \
+                    self.assertRaisesRegex(ValueError,'fixed ROM allocation'):
                 pack_segment(root,row)
 
     def test_external_vertex_records_and_dependencies(self):
