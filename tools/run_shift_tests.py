@@ -345,6 +345,62 @@ def main():
     run(sys.executable, ROOT/'tools/n64crc.py', rom)
     print(f'Combined format runtime fixture (not runtime-validated): {rom}', flush=True)
 
+    from tools.sample_shift_fixture import prepare as prepare_samples, verify as verify_samples
+    sample_out = out/'samples'
+    sample_out.mkdir(exist_ok=True)
+    sample_source = prepare_samples(ROOT, rows, sample_out, (out/'baseline.ld').read_text(),
+                                    a.build_dir, linker, run)
+    sample_ld, sample_elf, sample_rom = (out/('internal-samples.'+suffix) for suffix in ('ld', 'elf', 'z64'))
+    sample_ld.write_text(sample_source)
+    run(linker, '-T', sample_ld, *extra, '--emit-relocs', '--no-check-sections', '-o', sample_elf)
+    print(f'Internal shared samples: {verify_samples(sample_elf, sample_out/"sample-fields.json")} wave targets', flush=True)
+    run(linker[:-2]+'objcopy', '-O', 'binary', sample_elf, sample_rom)
+    run(sys.executable, ROOT/'tools/n64crc.py', sample_rom)
+    print(f'Internal sample runtime fixture (not runtime-validated): {sample_rom}', flush=True)
+
+    from tools.course_music_shift_fixture import prepare as prepare_course_music, verify as verify_course_music
+    course_music_out = out/'course-music'
+    course_music_out.mkdir(exist_ok=True)
+    source = prepare_course_music(ROOT, rows, course_music_out, source, a.build_dir, linker, run)
+    course_source = (out/'baseline.ld').read_text()
+    for row in rows:
+        if row['decoder'] == 'music_sequence':
+            old = a.build_dir+'/'+row['object']
+            if course_source.count(old) != 1:
+                raise ValueError(f"{row['name']}: missing isolated music input")
+            course_source = course_source.replace(old, str(course_music_out/(row['name']+'.o')))
+    course_ld, course_elf, course_rom = (out/('internal-music.'+suffix) for suffix in ('ld', 'elf', 'z64'))
+    course_ld.write_text(course_source)
+    run(linker, '-T', course_ld, *extra, '--emit-relocs', '--no-check-sections', '-o', course_elf)
+    print(f'Internal music fields: {verify_course_music(course_elf, course_music_out/"course-music-fields.json", music_only=True)} assets', flush=True)
+    run(linker[:-2]+'objcopy', '-O', 'binary', course_elf, course_rom)
+    run(sys.executable, ROOT/'tools/n64crc.py', course_rom)
+    print(f'Internal music runtime fixture (not runtime-validated): {course_rom}', flush=True)
+    # The preceding fixture already substituted a moved pointer bank. Replace
+    # that input with the sample-bound bank, retaining the other permutations.
+    if source.count(str(out/'internal-audio.o')) != 1:
+        raise ValueError('SOUND_POINTER_BANK: missing combined pointer-bank input')
+    source = source.replace(str(out/'internal-audio.o'), str(sample_out/'SOUND_POINTER_BANK.o'))
+    for row in rows:
+        if row['decoder'] == 'sample_bank':
+            old = a.build_dir+'/'+row['object']
+            if source.count(old) != 1:
+                raise ValueError(f"{row['name']}: missing combined sample input")
+            source = source.replace(old, str(sample_out/(row['name']+'.o')))
+    final_ld, final_elf, final_rom = (out/('combined-course-music-samples.'+suffix) for suffix in ('ld', 'elf', 'z64'))
+    final_ld.write_text(source)
+    run(linker, '-T', final_ld, *extra, '--emit-relocs', '--no-check-sections', '-o', final_elf)
+    print(f'Combined collision/music fields: {verify_course_music(final_elf, course_music_out/"course-music-fields.json")} assets; '
+          f'{verify_samples(final_elf, sample_out/"sample-fields.json")} wave targets; '
+          f'{verify_formats(final_elf, format_out/"format-fields.json")} animation/sprite/tilemap assets; '
+          f'{verify_fields(final_elf, graphics_out/"graphics-fields.json")} graphics fields; '
+          f'{verify(remap_base, final_elf)}', flush=True)
+    check_ram_references(final_elf)
+    check_mips_literals(final_elf)
+    run(linker[:-2]+'objcopy', '-O', 'binary', final_elf, final_rom)
+    run(sys.executable, ROOT/'tools/n64crc.py', final_rom)
+    print(f'Combined collision/music/sample runtime fixture (not runtime-validated): {final_rom}', flush=True)
+
 
 if __name__ == '__main__':
     main()

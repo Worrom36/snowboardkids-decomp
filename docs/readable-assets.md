@@ -279,6 +279,21 @@ renderers with original asset layouts. This comparison isolates relocation from
 the edge-clamping correction. The earlier failed run remains in the runtime
 record as evidence of the CPU bindings that packed-field checks alone missed.
 
+`combined-course-music-samples.z64` extends that fixture with all ten collision
+coordinate tables and face groups, all 17 music stream layouts, and all 251
+shared audio samples. Collision surface order remains fixed because CPU course
+progress uses those indices; overlapping face ranges move together. Semantic
+checks follow the final encoded coordinate, face, track, drum, and sample
+references and preserve sharing. Independent `internal-samples.z64` and
+`internal-music.z64` fixtures separate audio changes from the other
+formats. Fixture generation is not runtime acceptance; record emulator results
+before treating these additional permutations as validated gameplay.
+The isolated shared-sample fixture passes its decoded target checks and boot
+screenshots, but exact PCM comparison currently fails after stereo frame 321860.
+It retains the original ROM extents and identical boot/code bytes through
+`0x101000`, so this case requires investigation beyond the ROM-padding boot
+timing difference. It is not recorded as a passing audio result.
+
 `tools/runtime_shift_smoke.py` accepts deterministic controller scenarios, optional
 ELF-resolved memory assertions, isolated controller-pak seeds, and optional AI PCM
 capture. It records emulator/plugin and ROM hashes, screenshots, observations,

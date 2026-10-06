@@ -6327,6 +6327,113 @@
           ]
         }
       }
+    },
+    "internal-shared-samples": {
+      "frames": [
+        120,
+        600,
+        1800
+      ],
+      "ram_bytes": 4194304,
+      "scope": "Reverse all 251 shared VADPCM samples with rebound wave references and unchanged ROM extents; boot/audio capture with original renderer.",
+      "emulator": {
+        "core_sha256": "d536ad63585b27cd9fa6d64af304b577fc943ff353fbcd845c90ac86cf3a7dfd",
+        "randomize_interrupt": false,
+        "video_plugin": "video-angrylion-plus",
+        "rsp_plugin": "rsp-z64",
+        "video_sha256": "477521df1b49f448dac965785eaab28b508f18474f900834f49f592b45028dfa",
+        "rsp_sha256": "9daf0d92abe16301539fa0fa403bdfe73797780beb2ea2caa6a6c00e41735d5e"
+      },
+      "scenario": {
+        "description": "Boot and automatic title demo with AI PCM capture",
+        "controllers": 1,
+        "frames": [
+          120,
+          600,
+          1800
+        ],
+        "stop_frame": 1810,
+        "events": []
+      },
+      "harness_sha256": {
+        "runtime_shift_driver.py": "48072ea4a3f8f8ebb3032153d781a81dd59bf322be94861b5ae6c218419f6b05",
+        "verify_linked_relocations.py": "cc3855529497df9395cfeeb117e5c0717550454cead885f0a8b22ce7b603a494",
+        "test-input.so": "ddd430702f0ed8c3a0feed5db0768ff4944edafe9d6b99f137cfdbc248c58736",
+        "test-audio.so": "8a12e6989e5ceda2752e6f8637f1a3d2f3910478872ebdcd335aa955aad1eaad"
+      },
+      "captures_identical": true,
+      "audio_identical": false,
+      "finding": "Screenshots and PCM duration match; PCM differs after stereo frame 321860. Boot/code bytes through 0x101000 are unchanged. Decoded sample targets pass semantic checks; runtime audio remains unresolved.",
+      "pcm_difference": {
+        "different_interleaved_samples": 60707,
+        "total_interleaved_samples": 1456736,
+        "maximum_absolute_difference": 2183,
+        "rms_difference": 67.85928768094759
+      },
+      "runs": {
+        "baseline": {
+          "rom_sha256": "58870ea67d49f778e7a7607eb270ad1d3a081a4733b337b2d607de2606dcfb3c",
+          "screenshots": [
+            "b545a40575404ca5419e0c2d8d31b1add7caad6db063470a22edf3db9ccd5b4f",
+            "3ee89239b6b98657853272d54d326ffc3c88c4f0e8a5c1a99468a5a74dfe5a11",
+            "308cc489d1494addc2dcdbdebebdbc2a06aae21ded00894cdfbae271e4f68074"
+          ],
+          "solid_frames": [],
+          "saves": {},
+          "observations": [
+            {
+              "frame": 120,
+              "values": {}
+            },
+            {
+              "frame": 600,
+              "values": {}
+            },
+            {
+              "frame": 1800,
+              "values": {}
+            }
+          ],
+          "audio": {
+            "sample_rate": 22047,
+            "stereo_frames": 728368,
+            "packets": 4418,
+            "nonzero_samples": 910990,
+            "pcm_sha256": "085201fdd92955cfa5a75dda46015eae1dfb536ae7a9b591b0c6c250b8344334"
+          }
+        },
+        "shifted": {
+          "rom_sha256": "f40225b17528fb5824438726fd67f24bdc6418884a821ee2bbe10010a38caadf",
+          "screenshots": [
+            "b545a40575404ca5419e0c2d8d31b1add7caad6db063470a22edf3db9ccd5b4f",
+            "3ee89239b6b98657853272d54d326ffc3c88c4f0e8a5c1a99468a5a74dfe5a11",
+            "308cc489d1494addc2dcdbdebebdbc2a06aae21ded00894cdfbae271e4f68074"
+          ],
+          "solid_frames": [],
+          "saves": {},
+          "observations": [
+            {
+              "frame": 120,
+              "values": {}
+            },
+            {
+              "frame": 600,
+              "values": {}
+            },
+            {
+              "frame": 1800,
+              "values": {}
+            }
+          ],
+          "audio": {
+            "sample_rate": 22047,
+            "stereo_frames": 728368,
+            "packets": 4431,
+            "nonzero_samples": 910989,
+            "pcm_sha256": "56ce1450b046e5a9f08c6476c075b0c5f99d706a51b5943f1b5cd0d63503a09c"
+          }
+        }
+      }
     }
   }
 }
