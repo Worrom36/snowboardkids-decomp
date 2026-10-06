@@ -147,6 +147,22 @@ def main():
     if result.returncode == 0 or 'exceeds original 4 MB RAM' not in result.stderr:
         raise ValueError('RAM exhaustion did not fail with the required diagnostic: '+result.stderr)
     print('RAM exhaustion correctly rejected', flush=True)
+    _, result = link('boot-transfer-overflow', 'text', 0x20000)
+    if result.returncode == 0 or 'exceeds IPL3 1 MB boot transfer' not in result.stderr:
+        raise ValueError('boot transfer overflow did not fail with the required diagnostic: '+result.stderr)
+    # Move CPU placement without moving its ROM source. All references can link
+    # correctly while the unmodified IPL3 still copies those bytes elsewhere.
+    source = (out/'baseline.ld').read_text()
+    marker = '.main entry_VRAM_END :'
+    if source.count(marker) != 1:
+        raise ValueError('expected one boot-loaded main section placement')
+    script = out/'boot-mapping-mismatch.ld'
+    script.write_text(source.replace(marker, '.main (entry_VRAM_END + 16) :'))
+    result = run(linker, '-T', script, *extra, '--emit-relocs', '--no-check-sections',
+                 '-o', out/'boot-mapping-mismatch.elf', success=False)
+    if result.returncode == 0 or 'violates IPL3 ROM-to-RAM mapping' not in result.stderr:
+        raise ValueError('boot mapping mismatch did not fail with the required diagnostic: '+result.stderr)
+    print('IPL3 transfer overflow and ROM-to-RAM mapping mismatch correctly rejected', flush=True)
     for boundary in ('main', 'SLASH_RACE_ANIMATIONS', '_609AA0'):
         for size in (16, 0x10000):
             elf, result = link(f'rom-{boundary}-{size:x}', growth=size, after=boundary)

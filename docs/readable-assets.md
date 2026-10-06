@@ -189,6 +189,10 @@ and unused tails. `./tools/build-and-verify.sh` retains the original SHA1 check.
 under `build/shiftable`, deterministic variable-size compression, flexible ROM
 placement, linked BSS and runtime buffers, and the original 4 MB RAM limit.
 An unchanged shiftable build is byte-identical to the matching ROM.
+The unmodified IPL3 copies exactly 1 MB from ROM `0x1000` to the header entry
+address. Linker assertions preserve that ROM-to-RAM mapping and reject a main
+image beyond the boot transfer window. Supporting a larger boot image would
+require an explicit loader extension; the build does not emit an unloaded tail.
 
 Shiftable packing checks the allocation constants shared with the runtime in
 `include/game/engine/runtime_memory.h`. Music must fit its 64 KB DMA destination;

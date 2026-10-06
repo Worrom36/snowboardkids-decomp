@@ -75,6 +75,9 @@ ASSERT((buffers_BSS_START & 15) == 0, "runtime buffers require 16-byte alignment
 ASSERT((gDepthBuffer & 63) == 0, "depth buffer requires 64-byte alignment")
 ASSERT((gFramebuffers & 63) == 0, "framebuffers require 64-byte alignment")
 ASSERT(entry_ROM_START == 0x1000 && entry_VRAM == 0x80000400, "hardware boot placement changed")
+/* Original IPL3 copies one MB from ROM 0x1000 to the header entry address. */
+ASSERT(main_VRAM - main_ROM_START == entry_VRAM - entry_ROM_START, "main violates IPL3 ROM-to-RAM mapping")
+ASSERT(main_ROM_END <= entry_ROM_START + 0x100000, "main exceeds IPL3 1 MB boot transfer")
 
 /* Typed views of the packed menu-effect data consumed by race intros. */
 gRaceIntroCourseVertices = passAwardLabelFlashTileOffsets + 0x24;
