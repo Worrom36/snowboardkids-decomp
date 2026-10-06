@@ -42,6 +42,8 @@ def main() -> None:
     checked_vram = 0
     for name, base_value in base.items():
         if name not in shifted:
+            if name.endswith(("_ROM_START", "_ROM_END", "_VRAM", "_VRAM_END")):
+                failures.append(f"missing shifted symbol: {name}")
             continue
         shifted_value = shifted[name]
         if name.endswith(("_ROM_START", "_ROM_END")):
@@ -54,6 +56,8 @@ def main() -> None:
             if shifted_value != base_value:
                 failures.append(f"{name}: VRAM moved from 0x{base_value:X} to 0x{shifted_value:X}")
 
+    if not checked_rom or not checked_vram:
+        failures.append("empty ROM or VRAM verification coverage")
     if failures:
         raise SystemExit("shift verification failed:\n  " + "\n  ".join(failures[:40]))
     print(f"shift map OK: checked {checked_rom} ROM symbols and {checked_vram} VRAM symbols")

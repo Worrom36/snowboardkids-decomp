@@ -13,10 +13,21 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--after", required=True, help="segment name without _ROM_END")
+    parser.add_argument("--layout", action="store_true")
+    parser.add_argument("--build-dir", default="build/shiftable")
+    parser.add_argument("--after", help="segment name without _ROM_END")
     parser.add_argument("--pad-size", type=parse_int, default=0x10)
     args = parser.parse_args()
 
+    if args.layout:
+        source = args.input.read_text().replace("build/", args.build_dir.rstrip("/") + "/")
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(source)
+        return
+    if not args.after:
+        parser.error("--after is required for ROM padding")
+    if args.after in {"header", "ipl3", "entry"}:
+        parser.error("padding before the end of main would alter hardware boot placement")
     if args.pad_size <= 0 or args.pad_size % 16 != 0:
         parser.error("--pad-size must be a positive multiple of 16")
 

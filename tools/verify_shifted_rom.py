@@ -42,11 +42,18 @@ def main() -> None:
     data_start = main_start + (base_symbols["main_DATA_START"] - main_vram)
     base_rom = args.base_rom.read_bytes()
     shifted_rom = args.shifted_rom.read_bytes()
-    boundaries = {
-        value
-        for name, value in base_symbols.items()
-        if name.endswith(("_ROM_START", "_ROM_END")) and cutoff <= value < len(base_rom)
-    }
+    boundaries = {}
+    for name, value in base_symbols.items():
+        if name.endswith(("_ROM_START", "_ROM_END")) and cutoff <= value < len(base_rom):
+            if name not in shifted_symbols:
+                parser.error(f"missing shifted target symbol: {name}")
+            # At the padding boundary the preceding end and following start
+            # intentionally diverge. Only starts identify the moved storage.
+            if name == f"{args.after}_ROM_END":
+                continue
+            boundaries.setdefault(value, set()).add(shifted_symbols[name])
+    shifted_data_start = shifted_symbols["main_ROM_START"] + (
+        shifted_symbols["main_DATA_START"] - shifted_symbols["main_VRAM"])
 
     checked = 0
     failures = []
@@ -57,15 +64,21 @@ def main() -> None:
         value = struct.unpack_from(">I", base_rom, base_offset)[0]
         if value not in boundaries:
             continue
-        shifted_offset = base_offset + (args.pad_size if base_offset >= cutoff else 0)
+        shifted_offset = shifted_data_start + (base_offset - data_start)
         shifted_value = struct.unpack_from(">I", shifted_rom, shifted_offset)[0]
-        expected = value + args.pad_size
+        targets = boundaries[value]
+        if len(targets) != 1:
+            failures.append(f"ROM 0x{base_offset:X}: ambiguous target identity for 0x{value:X}")
+            continue
+        expected = next(iter(targets))
         checked += 1
         if shifted_value != expected:
             failures.append(
                 f"ROM 0x{base_offset:X}: pointer 0x{value:X} expected 0x{expected:X}, got 0x{shifted_value:X}"
             )
 
+    if not checked:
+        failures.append("no relocated boundary words were checked")
     if failures:
         raise SystemExit("ROM relocation verification failed:\n  " + "\n  ".join(failures[:40]))
     print(f"shifted ROM OK: checked {checked} relocated boundary word(s) in main")

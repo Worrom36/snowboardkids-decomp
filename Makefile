@@ -26,7 +26,11 @@ CYAN    := \033[0;36m
 
 # Directories
 
-BUILD_DIR = build
+BUILD_MODE ?= matching
+ifeq ($(filter $(BUILD_MODE),matching shiftable),)
+  $(error BUILD_MODE must be matching or shiftable)
+endif
+BUILD_DIR = $(if $(filter shiftable,$(BUILD_MODE)),build/shiftable,build)
 ASM_DIRS  = asm asm/data
 BIN_DIRS  = assets
 SRC_DIRS  = src
@@ -186,7 +190,7 @@ $(BUILD_DIR)/src/menu/race_setup/race_setup_menu.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .data 16 \
 		--undefine-symbol gControllerPakRumbleCheckPromptState
 
-LD_SCRIPT      = $(BASENAME).ld
+LD_SCRIPT      = $(if $(filter shiftable,$(BUILD_MODE)),$(BUILD_DIR)/$(BASENAME).ld,$(BASENAME).ld)
 LINKER_SCRIPTS = linker_scripts/hardware_regs.ld linker_scripts/libultra_syms.ld \
                  linker_scripts/game_syms.ld \
                  linker_scripts/race_setup_menu_syms.ld \
@@ -250,7 +254,7 @@ ULTRA_IDO_AS_FILES := \
 	src/ultra/os/writebackdcacheall.s
 ULTRA_IDO_AS_O_FILES := $(patsubst %.s,$(BUILD_DIR)/%.o,$(ULTRA_IDO_AS_FILES))
 
-O_FILES := $(shell grep -E 'build/(asm|assets|src)/.+\.o' $(LD_SCRIPT) -o 2>/dev/null | sort | uniq)
+O_FILES := $(patsubst build/%,$(BUILD_DIR)/%,$(shell grep -E 'build/(asm|assets|src)/.+\.o' $(BASENAME).ld -o 2>/dev/null | sort | uniq))
 
 TARGET = $(BUILD_DIR)/$(BASENAME)
 SHIFT_BUILD_DIR ?= $(BUILD_DIR)/shift
@@ -263,7 +267,12 @@ SHIFT_TARGET = $(SHIFT_BUILD_DIR)/$(BASENAME)
 
 default: all
 
-all: course-definitions dirs $(TARGET).z64 verify
+all: course-definitions dirs $(TARGET).z64 $(if $(filter matching,$(BUILD_MODE)),verify)
+
+ifeq ($(BUILD_MODE),shiftable)
+$(LD_SCRIPT): $(BASENAME).ld $(TOOLS_DIR)/make_shiftable_linker.py
+	$(V)$(PYTHON) $(TOOLS_DIR)/make_shiftable_linker.py $< $@ --layout --build-dir $(BUILD_DIR)
+endif
 
 course-definitions:
 	$(V)$(PYTHON) $(TOOLS_DIR)/generate_course_definitions.py --check
