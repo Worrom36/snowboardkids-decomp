@@ -1,0 +1,7 @@
+{
+  "description": "Boot and automatic title demo with AI PCM capture",
+  "controllers": 1,
+  "frames": [120, 600, 1800],
+  "stop_frame": 1810,
+  "events": []
+}

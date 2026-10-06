@@ -192,7 +192,10 @@ palettes, tilemap tables, and course/character resource objects. Character
 graphics commands export stable symbols used by menu and race model tables.
 All 19 course/character resource groups are checked against the original
 payloads, including 5,886 graphics reference fields. Changing compressed sizes
-automatically moves subsequent ROM assets.
+automatically moves subsequent ROM assets. ADPCM codebook coefficient arrays
+retain the eight-byte alignment required by direct RSP DMA; invalid matching
+offsets are rejected. The internal-audio fixture reorders pointer-bank objects
+while retaining the original ROM extent to isolate decoded audio relocation.
 
 Original offsets remain extraction metadata. Parts can carry an explicit `id`;
 relocation records identify their source object and field, target object, address
@@ -243,13 +246,53 @@ the CPU exception vectors. Unexpected unrelocated RAM high halves or constructed
 CPU addresses fail the shift tests; the inventory records each fixed case and
 its uses alongside the compiled data-field audit.
 
-The combined character fixture passed an initial Mupen64Plus 2.6.0/Rice check
-with 4 MB RAM: captures at frames 120, 600, and 1800 were byte-identical to the
-original ROM. This covers boot and automatic title-demo rendering, with dummy
-audio and no gameplay input. `tools/runtime_shift_smoke.py` repeats that comparison
-with a supplied local emulator installation and X display, retaining logs,
-screenshots, ROM hashes, and a JSON report. The remaining runtime acceptance
-items above have not been performed.
+`tools/runtime_shift_smoke.py` accepts deterministic controller scenarios, optional
+ELF-resolved memory assertions, isolated controller-pak seeds, and optional AI PCM
+capture. It records emulator/plugin and ROM hashes, screenshots, observations,
+and audio WAV files. All-blank renderer output is rejected. Interrupt randomization
+is disabled so unchanged-ROM audio repeats are deterministic. PCM comparison
+requires an LLE RSP; the capture plugin rejects HLE audio processing.
+
+The combined all-graphics fixture passed Mupen64Plus 2.6.0 with Angrylion Plus and
+z64 RSP in 4 MB RAM through fresh-pak setup, menus, character/board selection,
+and early gameplay in all ten course environments. Each course comparison checks
+three captures and the linked course-index symbol. Animal Land uses its normal
+Skill Game / Trick Game path; the other generated course scenarios bypass unlocks
+with a temporary debugger write before asset loading. These checks cover loading
+and early gameplay, not full course completion. Rice's board-preview comparison
+differs after internal model relocation; the same fixture passes Angrylion/z64.
+
+Generate temporary course scenarios with
+`python3 tools/runtime_course_scenarios.py --out /tmp/sbk-courses`, then run:
+
+```sh
+DISPLAY=:92 LIBGL_ALWAYS_SOFTWARE=1 python3 tools/runtime_shift_smoke.py \
+  build/snowboardkids.z64 build/shiftable/shift-tests/combined-all-graphics.z64 \
+  --baseline-elf build/shiftable/shift-tests/baseline.elf \
+  --shifted-elf build/shiftable/shift-tests/combined-all-graphics.elf \
+  --emulator-root /path/to/local/emulator-prefix --out /tmp/sbk-course-result \
+  --scenario /tmp/sbk-courses/course-00.json \
+  --video-plugin video-angrylion-plus --rsp-plugin rsp-z64 --timeout 300
+```
+
+An existing X display and locally installed Mupen64Plus core, development headers,
+and named plugins are required. The harness compiles its test controller/audio
+plugins locally. Use a new output directory for each comparison. Add
+`--capture-audio --scenario config/shift-tests/boot-audio.json` for AI PCM checks.
+The unchanged-ROM repeat and text/RAM-only shift pass exact PCM comparison.
+ROM-padding and combined shifts still differ in audio timing; combined audio
+acceptance remains unresolved. The independent internal-audio fixture passes exact
+PCM comparison after all pointer-bank body objects move. The combined graphics
+fixture also passes two- and four-player split-screen comparisons and an Exit/Save/restart
+round trip: both saved and live-player money reload as the unique fixture value.
+Use `save-money.json`, then `reload-money.json` with `--baseline-mempak` and
+`--shifted-mempak` pointing to the respective isolated save images. These scenarios
+change only emulator RAM and temporary pak files. Full races, explicit replay
+controls, and hardware validation remain acceptance items until separately recorded.
+Recorded ROM/plugin hashes, capture hashes, memory assertions, and audio results
+are retained in `docs/shift-runtime-results.json`, including the unresolved audio
+comparisons. Temporary screenshots, logs, PCM, and controller-pak files remain in
+the individual run directories rather than in the source tree.
 
 ## Coverage and validation
 
