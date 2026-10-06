@@ -1,6 +1,8 @@
 from pathlib import Path
 import tempfile
 import unittest
+import subprocess
+import sys
 
 from tools.check_rom_addresses import source_files
 
@@ -26,6 +28,34 @@ class GeneratedRomReferenceTests(unittest.TestCase):
             (root/'snowboardkids.ld').write_text('SECTIONS {}')
             with self.assertRaisesRegex(ValueError, 'unexpectedly empty'):
                 list(source_files(root))
+
+    def test_interior_api_operand_and_generated_legacy_symbol_are_rejected(self):
+        scanner = Path(__file__).with_name('check_rom_addresses.py')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ('src', 'asm/data', 'config/courses'):
+                (root/name).mkdir(parents=True)
+            (root/'snowboardkids.yaml').write_text('start: 0x1000\nstart: 0x200000\nstart: 0x800000\n')
+            (root/'config/rom_address_allowlist.txt').write_text('# path token reason\n')
+            (root/'snowboardkids.ld').write_text('build/asm/data/active.data.o(.data);\n')
+            source, assembly = root/'src/new.c', root/'asm/data/active.data.s'
+            source.write_text('dmaReadRom(asset_ROM_START + 16, buffer, 0x154123);\n')
+            assembly.write_text('.word 0\n')
+
+            def scan():
+                return subprocess.run([sys.executable, str(scanner), '--root', str(root)],
+                                      text=True, capture_output=True)
+
+            self.assertEqual(scan().returncode, 0)
+            source.write_text('dmaReadRom(0x154123, buffer, 16);\n')
+            result = scan()
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('src/new.c:1: hardcoded ROM address 0x154123', result.stdout)
+            source.write_text('dmaReadRom(asset_ROM_START + 16, buffer, 16);\n')
+            assembly.write_text('.word D_154123\n')
+            result = scan()
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('asm/data/active.data.s:1: hardcoded ROM address D_154123', result.stdout)
 
 
 if __name__ == '__main__':

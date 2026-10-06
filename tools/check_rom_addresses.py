@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Reject hardcoded references to known base-ROM segment boundaries."""
+"""Reject hardcoded ROM boundaries and interior operands of ROM-consuming APIs."""
 
 import argparse
 import re
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tools.rom_reference_context import literal_operands
 
 
 HEX_RE = re.compile(r"\b0x0*([0-9A-Fa-f]{4,8})\b")
@@ -17,7 +21,7 @@ def strip_comments(text: str) -> str:
     return re.sub(r"//.*", "", text)
 
 
-def load_boundaries(root: Path) -> set[int]:
+def load_boundaries(root: Path, include_end=False) -> set[int]:
     paths = [root / "snowboardkids.yaml", *(root / "config" / "courses").glob("*.yaml")]
     boundaries = set()
     for path in paths:
@@ -26,7 +30,10 @@ def load_boundaries(root: Path) -> set[int]:
         boundaries.update(int(value, 16) for value in YAML_LIST_RE.findall(text))
     # The highest marker is the exclusive end/declared capacity of the ROM, not
     # a readable runtime address. It is also a common fixed-point/flag value.
-    boundaries.discard(max(boundaries))
+    if not boundaries:
+        raise ValueError('ROM scan: extraction boundary coverage is unexpectedly empty')
+    if not include_end:
+        boundaries.discard(max(boundaries))
     return boundaries
 
 
@@ -71,9 +78,12 @@ def main() -> None:
     args = parser.parse_args()
     root = args.root.resolve()
     allowlist_path = args.allowlist or root / "config" / "rom_address_allowlist.txt"
-    boundaries = load_boundaries(root)
+    boundaries = load_boundaries(root, include_end=True)
+    rom_end = max(boundaries)
+    boundaries.remove(rom_end)
     allowlist = load_allowlist(allowlist_path)
-    findings = []
+    findings = set()
+    operand_checks = 0
 
     for path in source_files(root):
         relative = path.relative_to(root).as_posix()
@@ -84,19 +94,29 @@ def main() -> None:
                 token = match.group(0)
                 value = int(match.group(1), 16)
                 if value >= 0x10000 and value in boundaries and (relative, token) not in allowlist:
-                    findings.append((relative, line_number, token, original.strip()))
+                    findings.add((relative, line_number, token, original.strip()))
             for match in LEGACY_RE.finditer(line):
                 token = match.group(0)
                 value = int(match.group(1), 16)
                 safe_alias = re.search(rf"\b{re.escape(token)}\s*=.*_ROM_(?:START|END)\b", line)
-                if value in boundaries and not safe_alias and (relative, token) not in allowlist:
-                    findings.append((relative, line_number, token, original.strip()))
+                if 0x1000 <= value < rom_end and not safe_alias and (relative, token) not in allowlist:
+                    findings.add((relative, line_number, token, original.strip()))
+
+        text = '\n'.join(original_lines)
+        for position, token, api in literal_operands(text, 0x1000, rom_end):
+            if (relative, token) not in allowlist:
+                line_number = text.count('\n', 0, position)+1
+                findings.add((relative, line_number, token, original_lines[line_number-1].strip()))
+        operand_checks += len(re.findall(r'\b(?:dmaReadRom|loadCompressedRomAsset|loadRawRomAsset)\s*\(',
+                                        strip_comments(text)))
 
     if findings:
-        for relative, line_number, token, line in findings:
-            print(f"{relative}:{line_number}: hardcoded ROM boundary {token}: {line}")
-        raise SystemExit(f"found {len(findings)} hardcoded ROM boundary reference(s)")
-    print(f"ROM address scan OK: {len(boundaries)} known boundaries, no forbidden references")
+        for relative, line_number, token, line in sorted(findings):
+            print(f"{relative}:{line_number}: hardcoded ROM address {token}: {line}")
+        raise SystemExit(f"found {len(findings)} hardcoded ROM address reference(s)")
+    if not operand_checks:
+        raise ValueError('ROM scan: address-consuming API coverage is unexpectedly empty')
+    print(f"ROM address scan OK: {len(boundaries)} boundaries, {operand_checks} ROM API sites, no forbidden references")
 
 
 if __name__ == "__main__":
