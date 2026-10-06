@@ -50,6 +50,9 @@ def main():
     baseline, result = link('baseline')
     if result.returncode:
         raise ValueError(result.stderr)
+    sys.path.insert(0, str(ROOT))
+    from tools.check_ram_references import inspect as check_ram_references
+    print(f'CPU data coverage: {check_ram_references(baseline)["counts"]}', flush=True)
     try:
         verify(baseline, baseline)
     except ValueError as exc:
@@ -63,6 +66,7 @@ def main():
             if result.returncode:
                 raise ValueError(result.stderr)
             counts = verify(baseline, elf)
+            check_ram_references(elf)
             if section == 'text' and size == 0x800 and not counts.get('changed_HI16'):
                 raise ValueError('text fixture did not cross a HI16 carry boundary')
             print(f'{section} +0x{size:X}: {counts}', flush=True)
@@ -80,6 +84,23 @@ def main():
     else:
         raise ValueError('corrupt linked reference was not detected')
     print('Unchanged and corrupt relocation fixtures correctly rejected', flush=True)
+    parsed = Elf(baseline)
+    symbols = {name: value for i, section in enumerate(parsed.sections) if section[1] == 2
+               for name, value, kind, index in parsed.symbols(i) if name}
+    main_section = parsed.sections[parsed.names.index('.main')]
+    position = main_section[4]+symbols['gMenuRenderModeResetDl']-main_section[3]
+    contents = bytearray(parsed.data)
+    contents[position:position+4] = (0x80001000).to_bytes(4, 'big')
+    uncovered = out/'uncovered-cpu-pointer.elf'
+    uncovered.write_bytes(contents)
+    try:
+        check_ram_references(uncovered)
+    except ValueError as exc:
+        if 'uncovered CPU word' not in str(exc):
+            raise
+    else:
+        raise ValueError('uncovered CPU pointer was not detected')
+    print('Uncovered CPU pointer correctly rejected', flush=True)
     _, result = link('ram-exhaustion', 'bss', 0x2000)
     if result.returncode == 0 or 'exceeds original 4 MB RAM' not in result.stderr:
         raise ValueError('RAM exhaustion did not fail with the required diagnostic: '+result.stderr)

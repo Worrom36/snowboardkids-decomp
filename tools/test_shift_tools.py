@@ -34,6 +34,20 @@ class ShiftToolsTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn(b'empty', result.stderr)
 
+    def test_graphics_and_sample_stream_padding_rejected(self):
+        from tools.asset_bundles import ROOT, LAYOUT, load_yaml
+        from tools.course_relocations import graphics_groups
+        graphic = graphics_groups(ROOT)[0][1][0]['name']
+        sample = next(r['name'] for r in load_yaml(ROOT/LAYOUT)['segments'] if r['decoder'] == 'sample_bank')
+        for boundary, diagnostic in ((graphic, b'graphics DMA stream'), (sample, b'contiguous sample stream')):
+            with self.subTest(boundary=boundary), tempfile.TemporaryDirectory() as d:
+                source = Path(d)/'in.ld'
+                source.write_text(f'    {boundary}_ROM_END = __romPos;')
+                result = subprocess.run([sys.executable, str(TOOLS/'make_shiftable_linker.py'),
+                                         str(source), str(Path(d)/'out.ld'), '--after', boundary], capture_output=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(diagnostic, result.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()
