@@ -482,7 +482,7 @@ def write_makefile(root, layout):
         lines += [f'{obj}: {dep} $(wildcard tools/*assets.py tools/*asset*.py tools/*relocations.py tools/course_*common.py)',
                   '\t@mkdir -p $(dir $@)',
                   f"\t$(V)$(PYTHON) tools/asset_bundles.py pack {row['name']} --mode $(BUILD_MODE) --out $(@:.o=.bin)"]
-        if row['decoder'] == 'course_display_list':
+        if row['decoder'] in ('course_display_list', 'embedded_model'):
             lines.append('\t$(V)$(AS) $(ASFLAGS) -no-pad-sections -o $@ $(@:.o=.s)')
         else:
             lines.append('\t$(V)$(LD) -r -b binary -o $@ $(@:.o=.bin)')
@@ -534,8 +534,17 @@ def main():
         data = pack_segment(root, row, mode=a.mode)
         a.out.parent.mkdir(parents=True, exist_ok=True)
         a.out.write_bytes(data)
-        if row['decoder'] == 'course_display_list':
-            a.out.with_suffix('.s').write_text(f'.section .data\n.balign 8\n.globl {a.name}\n{a.name}:\n.incbin "{a.out.resolve()}"\n')
+        if row['decoder'] in ('course_display_list', 'embedded_model'):
+            assembly = f'.section .data\n.balign 8\n.globl {a.name}\n{a.name}:\n.incbin "{a.out.resolve()}"\n'
+            if row['decoder'] == 'embedded_model':
+                from tools.graphics_relocations import pack_model
+                manifest, path = materialize(root, row)
+                _, exports = pack_model(manifest, path.parent, mode=a.mode)
+                for symbol, value in exports.items():
+                    if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', symbol):
+                        raise ValueError(f'{a.name}: invalid exported symbol {symbol!r}')
+                    assembly += f'.globl {symbol}\n.set {symbol}, 0x{value:08X}\n'
+            a.out.with_suffix('.s').write_text(assembly)
         deps = dependencies(root,row)
         a.out.with_suffix('.d').write_text(f"{a.out.with_suffix('.o')}: {' '.join(deps)}\n"+
                                           ''.join(f'{p}:\n' for p in deps))

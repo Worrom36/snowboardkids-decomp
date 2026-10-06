@@ -115,6 +115,8 @@ def extract_asset(blob, spec, path):
         m = pointer_bank_manifest(m)
     elif family == "embedded_model":
         m.update(parse_embedded_model(data, spec["root_offsets"], path))
+        from tools.graphics_relocations import model_manifest
+        m = model_manifest(m, path.parent)
     elif family == "music_sequence":
         m.update(parse_music(data))
         from tools.structured_relocations import music_manifest
@@ -158,7 +160,11 @@ def pack_payload(m, base, mode="matching"):
     elif m["format"] == "sample_bank":
         payload = pack_samples(m, base)
     elif m["format"] == "embedded_model":
-        payload = pack_embedded_model(m, base)
+        if mode == 'shiftable':
+            from tools.graphics_relocations import pack_model
+            payload, _ = pack_model(m, base)
+        else:
+            payload = pack_embedded_model(m, base)
     elif m["format"] == "music_sequence":
         if mode == 'shiftable':
             from tools.structured_relocations import pack_music as pack_relocated_music

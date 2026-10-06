@@ -57,23 +57,25 @@ def parse_embedded_model(data, roots, path):
     return m
 
 
+def encode_embedded_part(p, base):
+    if p["type"] == "vertices":
+        return b"".join(struct.pack(">hhhHhhBBBB", *(v[k] for k in VERTEX_FIELDS)) for v in p["vertices"])
+    if p["type"] == "texture":
+        return image_bytes(p, base)
+    if p["type"] == "palette":
+        return struct.pack(f">{p['colors']}H", *p["values"])
+    if p["type"] == "display_list":
+        source = re.sub(r"/\*.*?\*/|//[^\n]*", "", (base / p["path"]).read_text(), flags=re.S)
+        body = source[source.index("= {")+3:source.rindex("}")]
+        words = re.findall(r"\{\{\s*0x([0-9A-Fa-f]{8}),\s*0x([0-9A-Fa-f]{8})\s*\}\}\s*,", body)
+        remainder = re.sub(r"\{\{\s*0x[0-9A-Fa-f]{8},\s*0x[0-9A-Fa-f]{8}\s*\}\}\s*,", "", body)
+        if remainder.strip():
+            raise ValueError("display-list sources require exact pairs of 32-bit hex words")
+        return bytes.fromhex("".join(a+b for a,b in words))
+    raise ValueError(f"unsupported embedded model part {p['type']}")
+
+
 def pack_embedded_model(m, base):
-    def encode(p):
-        if p["type"] == "vertices":
-            return b"".join(struct.pack(">hhhHhhBBBB", *(v[k] for k in VERTEX_FIELDS)) for v in p["vertices"])
-        if p["type"] == "texture":
-            return image_bytes(p, base)
-        if p["type"] == "palette":
-            return struct.pack(f">{p['colors']}H", *p["values"])
-        if p["type"] == "display_list":
-            source = re.sub(r"/\*.*?\*/|//[^\n]*", "", (base / p["path"]).read_text(), flags=re.S)
-            body = source[source.index("= {")+3:source.rindex("}")]
-            words = re.findall(r"\{\{\s*0x([0-9A-Fa-f]{8}),\s*0x([0-9A-Fa-f]{8})\s*\}\}\s*,", body)
-            remainder = re.sub(r"\{\{\s*0x[0-9A-Fa-f]{8},\s*0x[0-9A-Fa-f]{8}\s*\}\}\s*,", "", body)
-            if remainder.strip():
-                raise ValueError("display-list sources require exact pairs of 32-bit hex words")
-            return bytes.fromhex("".join(a+b for a,b in words))
-        raise ValueError(f"unsupported embedded model part {p['type']}")
-    result = pack_parts(m["parts"], m["decompressed_size"], encode)
+    result = pack_parts(m["parts"], m["decompressed_size"], lambda part: encode_embedded_part(part, base))
     trace_course_graphics(result, m["root_offsets"])
     return result
