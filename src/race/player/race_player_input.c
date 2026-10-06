@@ -169,16 +169,16 @@ void playRaceInputHistoryFrame(RacePlayer *player) {
     u8 *buttonHistory;
 
     playerAlias = player;
-    if (playerAlias->replayInputSource == 5) {
+    if (playerAlias->replayInputSource == RACE_PLAYER_INPUT_REPLAY) {
         playRaceReplayInputFrame(playerAlias);
         return;
     }
 
-    if (playerAlias->replayInputSource == 1) {
+    if (playerAlias->replayInputSource == RACE_PLAYER_INPUT_HISTORY_07) {
         history = (RaceInputHistoryBuffer *)getRelocatableHeapBlockBase(gAssetHandles[0x7]);
     }
 
-    if (playerAlias->replayInputSource == 2) {
+    if (playerAlias->replayInputSource == RACE_PLAYER_INPUT_HISTORY_2B) {
         history = (RaceInputHistoryBuffer *)getRelocatableHeapBlockBase(gAssetHandles[0x2B]);
     }
 
@@ -239,7 +239,7 @@ void updateRacePlayerInput(RacePlayer *player) {
         index = player->playerIndex;
         player->disabledInputFlags = gRacePlayers[index].inputFlags;
 
-        if (player->replayInputSource == 0) {
+        if (player->replayInputSource == RACE_PLAYER_INPUT_LIVE) {
             player->inputFlags = gPlayerInputHeld[index];
             player->stickX = gPlayerStickX[index];
             player->stickY = gPlayerStickY[index];

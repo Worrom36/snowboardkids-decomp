@@ -55,10 +55,10 @@ void initTitleDemoRaceIntro(void) {
     s32 three = 3;
     s32 four = 4;
     s32 six = 6;
-    s32 five0 = 5;
-    s32 five1 = 5;
-    s32 five2 = 5;
-    s32 five3 = 5;
+    s32 five0 = RACE_PLAYER_INPUT_REPLAY;
+    s32 five1 = RACE_PLAYER_INPUT_REPLAY;
+    s32 five2 = RACE_PLAYER_INPUT_REPLAY;
+    s32 five3 = RACE_PLAYER_INPUT_REPLAY;
     s32 playerOne;
 
     gRaceCourseIndex.signedValue = 0;
@@ -113,7 +113,7 @@ void initTitleDemoRaceIntro(void) {
     players = gRacePlayers;
     players[3].replayInputSource = five3;
 
-    if (players[0].replayInputSource == 5) {
+    if (players[0].replayInputSource == RACE_PLAYER_INPUT_REPLAY) {
         LOAD_ASSET(_24C8E0, 0x2B);
     }
     loadRaceCourseAssets();

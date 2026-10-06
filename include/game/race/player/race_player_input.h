@@ -12,6 +12,17 @@
 
 typedef u8 RacePlayerOrder[RACE_PLAYER_COUNT];
 
+/* Recorded-input racers can have isCpu == 0, including title/menu demos.
+ * gRaceDemoPlaybackEnabled alone does not identify all recorded playback.
+ * Item-grant/refill mods should exclude replayInputSource != RACE_PLAYER_INPUT_LIVE.
+ * These constants describe the s8 field; enum storage would change its layout. */
+typedef enum RacePlayerInputSource {
+    RACE_PLAYER_INPUT_LIVE = 0,
+    RACE_PLAYER_INPUT_HISTORY_07 = 1, /* History buffer in asset slot 0x07. */
+    RACE_PLAYER_INPUT_HISTORY_2B = 2, /* History buffer in asset slot 0x2B. */
+    RACE_PLAYER_INPUT_REPLAY = 5 /* Delegates to playRaceReplayInputFrame. */
+} RacePlayerInputSource;
+
 typedef struct RaceScoreAttackRingTrigger {
     /* 0x00 */ struct RaceScoreAttackRingTrigger *next;
     /* 0x04 */ Vec3i position;
@@ -47,7 +58,7 @@ typedef struct RacePlayer {
     /* 0x013 */ s8 isActive;
     /* 0x014 */ s8 soundDisabled;
     /* 0x015 */ s8 unk15;
-    /* 0x016 */ s8 replayInputSource;
+    /* 0x016 */ s8 replayInputSource; /* RacePlayerInputSource */
     /* 0x017 */ s8 unk17;
     /* 0x018 */ s16 unk18;
     /* 0x01A */ u8 actionTriggerChance;
@@ -171,7 +182,7 @@ typedef struct RacePlayer {
     /* 0x502 */ s16 coursePathIndex;
     /* 0x504 */ s32 coursePathOffset;
     /* 0x508 */ s8 lapDigit;
-    /* 0x509 */ s8 rankIndex;
+    /* 0x509 */ s8 rankIndex; /* Zero-based: 0 is first, 3 is fourth. */
     /* 0x50A */ char pad50A[2];
     /* 0x50C */ union {
         s16 *anglePtr;

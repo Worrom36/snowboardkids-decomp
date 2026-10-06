@@ -601,6 +601,7 @@ void updateRacePlayer(RacePlayer *player) {
     player->groundMarkerSources[7] = player->groundMarkerSources[3];
     player->unk310 = player->unk25C;
 
+    /* Fixed CPU target-speed addition, independent of rank and course. */
     if (player->isCpu != 0) {
         player->unk310 += 0x6000;
     }
@@ -3869,6 +3870,8 @@ void updateRacePlayerMode05SpinoutStun(RacePlayer *player) {
         player->stateFlags |= 0x1012000;
         player->targetGroundOffset = 0;
         player->stateTimer = stateTimer;
+        /* Rank-scaled recovery timer for humans and CPUs. With zero-based rank,
+         * integer truncation gives 60/53/45/38 updates for a base of 60. */
         player->stateTimer = stateTimer - ((player->stateTimer * player->rankIndex) / 8);
         player->rumbleTimer = 1;
         player->rumblePatternId = 0;
@@ -3983,6 +3986,8 @@ void updateRacePlayerMode06TerrainFall(RacePlayer *player) {
         if (player->soundDisabled == 0) {
             spawnRaceItemBreakParticles(player->playerIndex, player->unk330);
         }
+        /* Rank-scaled recovery timer for humans and CPUs. With zero-based rank,
+         * integer truncation gives 60/53/45/38 updates for a base of 60. */
         player->stateTimer -= (player->stateTimer * player->rankIndex) / 8;
         player->rumbleTimer = 2;
         player->rumblePatternId = 0;
@@ -4091,6 +4096,8 @@ void updateRacePlayerMode28TerrainFallWithItemEffect(RacePlayer *player) {
         case 2:
             if (stepRaceMotionAnimationUntilEnd(player) != 0) {
                 player->updateState++;
+                /* Rank-scaled recovery timer for humans and CPUs. With zero-based rank,
+                 * integer truncation gives 60/53/45/38 updates for a base of 60. */
                 player->stateTimer = 0x3C - ((player->rankIndex * 0x3C) / 8);
                 setRaceMotionAnimation(player, 0x20);
             }
@@ -4198,6 +4205,8 @@ void updateRacePlayerMode09TerrainCrash(RacePlayer *player) {
         case 2:
             if (stepRaceMotionAnimationUntilEnd(player) != 0) {
                 player->updateState++;
+                /* Rank-scaled recovery timer for humans and CPUs. With zero-based rank,
+                 * integer truncation gives 60/53/45/38 updates for a base of 60. */
                 player->stateTimer = 0x3C - ((player->rankIndex * 0x3C) / 8);
                 setRaceMotionAnimation(player, 0x20);
             }
@@ -4347,6 +4356,8 @@ void updateRacePlayerMode12LaunchRecover(RacePlayer *player) {
         player->stateFlags |= 0x1022000;
         player->targetGroundOffset = 0;
         player->unk80 = 0;
+        /* Rank-scaled recovery timer for humans and CPUs. With zero-based rank,
+         * integer truncation gives 60/53/45/38 updates for a base of 60. */
         player->stateTimer = 0x1E - ((player->rankIndex * 0x1E) / 8);
         player->rumbleTimer = 1;
         player->rumblePatternId = 0;
@@ -4549,6 +4560,8 @@ void updateRacePlayerMode23ItemSteal(RacePlayer *player) {
         player->velocity.y = 0;
         createCallbackTaskWithUserIdPreservingArgs(initRaceUiItemStealTrailEffect, 0, 0x64, (u16)player->playerIndex);
         timer = player->stateTimer;
+        /* Rank-scaled recovery timer for humans and CPUs. With zero-based rank,
+         * integer truncation gives 60/53/45/38 updates for a base of 60. */
         player->stateTimer = timer - ((player->stateTimer * player->rankIndex) / 8);
         player->rumbleTimer = 4;
         player->rumblePatternId = 0;
@@ -4614,6 +4627,8 @@ void updateRacePlayerMode24HeavyKnockdown(RacePlayer *player) {
             player->targetGroundOffset = 0;
             stepRaceMotionLoopingAnimation(player);
             timer = player->stateTimer;
+            /* Rank-scaled recovery timer for humans and CPUs. With zero-based rank,
+             * integer truncation gives 60/53/45/38 updates for a base of 60. */
             player->stateTimer = (timer ^ 0) - ((timer * player->rankIndex) / 8);
             player->velocity.y = 0;
             player->rumbleTimer = 6;
@@ -4685,6 +4700,8 @@ void updateRacePlayerMode25SpinHit(RacePlayer *player) {
         );
         stateTimer = player->stateTimer;
         player->stateTimer = stateTimer;
+        /* Rank-scaled recovery timer for humans and CPUs. With zero-based rank,
+         * integer truncation gives 60/53/45/38 updates for a base of 60. */
         player->stateTimer = player->stateTimer - ((stateTimer * player->rankIndex) / 8);
         player->rumbleTimer = 4;
         player->rumblePatternId = 0;
@@ -5155,6 +5172,8 @@ void updateRacePlayerMode07SpiralExit(RacePlayer *player) {
         player->updateTimer = 0;
         player->stateFlags = 0;
 
+        /* Rank-dependent course-object exit displacement: add 0/1/2/4 times
+         * current X/Z velocity for first through fourth, for humans and CPUs. */
         if (player->rankIndex == 1) {
             player->pos.x += player->velocity.x;
             player->pos.z += player->velocity.z;

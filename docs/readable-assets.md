@@ -223,3 +223,46 @@ blender --background --python tools/check_model_previews_blender.py -- \
 
 This imports every GLB in the export report, checks model/animation presence, and
 renders the pan, a character, a snowboard, and a course for visual inspection.
+
+
+## Reported RT64 texture source associations
+
+The external texture-pack investigation dated 2026-09-19 reports complete
+word-swapped RDRAM image-byte matches against decompressed asset banks. Its
+`texture-pack/identify_sources.py`, dumps, and generated reports remain external
+and have not been reproduced here. These are reported source associations, not
+new runtime symbols. All offsets below are relative to the decompressed bank;
+palette entry numbers and palette byte offsets are distinguished explicitly.
+
+| Bank | Image offset | Reported image | Palette association |
+| --- | --- | --- | --- |
+| `BIG_SNOWMAN_COURSE_MODEL_RESOURCES` | `0x5B80` | 16×32 scenery figure, previously mistaken for a player face; exact placed object unconfirmed | Matching palette also at `0x6F20` |
+| `QUICKSAND_VALLEY_COURSE_MODEL_RESOURCES` | `0x6980` | 32×32 LIFT IN sign | Matching palette at `0x6C60` |
+| `SILVER_MOUNTAIN_COURSE_MODEL_RESOURCES` | `0x2600` | 32×16 wood-like artwork | Matching palette at `0x6E20` |
+| `RACE_EFFECT_SPRITES` | `0x1FE0` | Star image, sprite entry 18 | Palette entry 7 |
+| `RACE_EFFECT_SPRITES` | `0x4EE0` | Fragment-like image, sprite entry 41 | Palette entry 12 |
+| `SNOWBOARD_TEXTURES` | `0x4258` | Sprite entry 9, declared 64×57 | Palette entry 9 |
+
+The source confirms that `renderRacePlayerHitEffect` selects animation groups
+through `gRacePlayerHitEffectSpriteOffsets = {14, 18, 22, 26}`. Entry 18 starts
+one group, not every hit effect. `initRaceUiBurstTextParticle` loads entries
+39–42, including entry 41, for its normal texture animation.
+
+The report identifies a 64×64 board-renderer load for the snowboard image whose
+sprite table declares 64×57. Preserve both dimensions when identifying the atlas
+or exporting replacements: the additional seven sampled rows are not automatically
+authored board artwork. Do not resize the source image or change sampling based
+on this association alone.
+
+## Unresolved paint-menu border fragment
+
+The external improvement report reviewed on 2026-10-05 describes a panel-border
+fragment at native X=0..8 in the paint color list, outside logical menu bounds
+16..304 (`gMenuViewportWidth=288`, `gMenuViewportCenterX=160`). Its producer is
+still unidentified. `drawShopMenuSelectedModePanel` and the character-select
+course frame/list callbacks are candidate border emitters, not proven sources.
+
+Before naming or correcting a source function, capture the draw commands for
+the fragment and the callback that emitted them, including coordinate transforms
+and viewport/scissor state. No border behavior change is justified by the
+current report alone.

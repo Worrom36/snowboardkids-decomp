@@ -105,16 +105,16 @@ void initMainMenuDemoRaceIntro(void) {
     }
     players[0].unk15 = 0;
     players[0].soundDisabled = 0;
-    players[0].replayInputSource = 5;
+    players[0].replayInputSource = RACE_PLAYER_INPUT_REPLAY;
     players[1].unk15 = 0;
     players[1].soundDisabled = 0;
-    players[1].replayInputSource = 5;
+    players[1].replayInputSource = RACE_PLAYER_INPUT_REPLAY;
     players[2].unk15 = 0;
     players[2].soundDisabled = 0;
-    players[2].replayInputSource = 5;
+    players[2].replayInputSource = RACE_PLAYER_INPUT_REPLAY;
     players[3].unk15 = 0;
     players[3].soundDisabled = 0;
-    players[3].replayInputSource = 5;
+    players[3].replayInputSource = RACE_PLAYER_INPUT_REPLAY;
     loadCompressedRomAsset(gMainMenuDemoRaceIntroEntries[gMainMenuDemoRaceIntroIndex].romStart, gMainMenuDemoRaceIntroEntries[gMainMenuDemoRaceIntroIndex].romEnd, 0x2B);
     loadRaceCourseAssets();
     loadRaceCharacterAssets();

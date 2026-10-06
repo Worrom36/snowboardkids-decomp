@@ -1589,6 +1589,7 @@ void updateRacePickupIdle(RacePickupActor *arg0) {
 
             // arg0->variant distinguishes the two item box colors: one branch resolves a held
             // item (itemEffectType), the other an immediate action/ability (actionEffectType).
+            // Rank-weighted item/action selection is separate from speed and recovery assistance.
             // Both roll tables are indexed by [rankIndex][rollIndex], where rollIndex comes
             // from randomNextObject walking a per-player counter through the shared byte table.
             // Each player advances their own counter by 1 every time they draw an item/action,

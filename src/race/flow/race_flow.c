@@ -65,9 +65,9 @@ typedef union {
 } RaceResultsReadyState;
 
 typedef struct {
-    /* 0x00 */ u8 stickX;
-    /* 0x01 */ u8 stickY;
-} RaceCourseCharacterEntry;
+    /* 0x00 */ u8 boardTuningIndex;
+    /* 0x01 */ u8 snowboardTextureIndex;
+} RaceCpuBoardConfig;
 
 typedef struct {
     u8 characterIds[10 * 4];
@@ -105,7 +105,7 @@ RaceCourseCharacterIdTable D_800DC4C4 = {
         0, 1, 4, 2,
     },
 };
-RaceCourseCharacterEntry D_800DC4EC[8] = {
+RaceCpuBoardConfig D_800DC4EC[8] = {
     { 1,  0 },
     { 1,  1 },
     { 1,  2 },
@@ -115,7 +115,7 @@ RaceCourseCharacterEntry D_800DC4EC[8] = {
     { 1,  6 },
     { 0,  0 },
 };
-RaceCourseCharacterEntry D_800DC4FC[8] = {
+RaceCpuBoardConfig D_800DC4FC[8] = {
     { 1, 0 },
     { 1, 1 },
     { 1, 2 },
@@ -125,7 +125,7 @@ RaceCourseCharacterEntry D_800DC4FC[8] = {
     { 1, 6 },
     { 0, 0 },
 };
-RaceCourseCharacterEntry D_800DC50C[8] = {
+RaceCpuBoardConfig D_800DC50C[8] = {
     { 4, 0 },
     { 4, 1 },
     { 4, 2 },
@@ -135,7 +135,7 @@ RaceCourseCharacterEntry D_800DC50C[8] = {
     { 4, 6 },
     { 0, 0 },
 };
-RaceCourseCharacterEntry D_800DC51C[8] = {
+RaceCpuBoardConfig D_800DC51C[8] = {
     { 4, 0 },
     { 4, 1 },
     { 4, 2 },
@@ -145,7 +145,7 @@ RaceCourseCharacterEntry D_800DC51C[8] = {
     { 4, 6 },
     { 0, 0 },
 };
-RaceCourseCharacterEntry D_800DC52C[8] = {
+RaceCpuBoardConfig D_800DC52C[8] = {
     { 7, 0 },
     { 7, 1 },
     { 7, 2 },
@@ -155,7 +155,7 @@ RaceCourseCharacterEntry D_800DC52C[8] = {
     { 7, 6 },
     { 0, 0 },
 };
-RaceCourseCharacterEntry D_800DC53C[8] = {
+RaceCpuBoardConfig D_800DC53C[8] = {
     { 8, 0 },
     { 8, 1 },
     { 8, 2 },
@@ -165,7 +165,7 @@ RaceCourseCharacterEntry D_800DC53C[8] = {
     { 8, 6 },
     { 0, 0 },
 };
-RaceCourseCharacterEntry D_800DC54C[8] = {
+RaceCpuBoardConfig D_800DC54C[8] = {
     { 8, 0 },
     { 8, 1 },
     { 8, 2 },
@@ -175,7 +175,7 @@ RaceCourseCharacterEntry D_800DC54C[8] = {
     { 8, 6 },
     { 0, 0 },
 };
-RaceCourseCharacterEntry D_800DC55C[8] = {
+RaceCpuBoardConfig D_800DC55C[8] = {
     { 0, 0 },
     { 0, 1 },
     { 0, 2 },
@@ -185,7 +185,7 @@ RaceCourseCharacterEntry D_800DC55C[8] = {
     { 0, 6 },
     { 0, 0 },
 };
-RaceCourseCharacterEntry D_800DC56C[8] = {
+RaceCpuBoardConfig D_800DC56C[8] = {
     { 8,  0 },
     { 8,  1 },
     { 8,  2 },
@@ -195,7 +195,7 @@ RaceCourseCharacterEntry D_800DC56C[8] = {
     { 8,  6 },
     { 0,  0 },
 };
-RaceCourseCharacterEntry D_800DC57C[8] = {
+RaceCpuBoardConfig D_800DC57C[8] = {
     { 1, 0 },
     { 1, 1 },
     { 1, 2 },
@@ -205,11 +205,16 @@ RaceCourseCharacterEntry D_800DC57C[8] = {
     { 1, 6 },
     { 0, 0 },
 };
-RaceCourseCharacterEntry *D_800DC58C[10] = {
+/* Fixed course/character board setup, independent of dynamic rank assistance.
+ * Silver Mountain (6): tuning 8; Animal Land (7): tuning 0;
+ * Ninja Land (8): tuning 8, except character 5 uses 14. */
+RaceCpuBoardConfig *gRaceCpuBoardConfigsByCourse[10] = {
     D_800DC4EC, D_800DC4FC, D_800DC50C, D_800DC51C, D_800DC52C,
     D_800DC53C, D_800DC54C, D_800DC55C, D_800DC56C, D_800DC57C,
 };
-u8 D_800DC5B4[12] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 10, 0, 0 };
+/* Shared action/item trigger chance: indices 0..8 use 100; Rookie Mountain (9)
+ * uses 10. Animal Land (7) is the Trick Game course. */
+u8 gRaceCourseActionAndItemTriggerChances[12] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 10, 0, 0 };
 u16 D_800DC5C0[16] = {
     0x0000, 0x0068, 0x00CD, 0x0135, 0x019C, 0x0203, 0x0268, 0x02CE,
     0x0335, 0x03A0, 0x040C, 0x0466, 0x7FFF, 0x0000, 0x0000, 0x0000,
@@ -592,7 +597,7 @@ void initRaceSceneFlow(void) {
     s32 k;
     s32 pad;
     s32 duplicate;
-    RaceCourseCharacterEntry *characterEntry;
+    RaceCpuBoardConfig *characterEntry;
     RaceInputHistoryBuffer *history;
     u16 *replayRecordFlag;
 
@@ -610,14 +615,14 @@ void initRaceSceneFlow(void) {
     gRacePlayers[1].isCpu = 1;
     gRacePlayers[2].isCpu = 1;
     gRacePlayers[3].isCpu = 1;
-    gRacePlayers[0].actionTriggerChance = D_800DC5B4[gRaceCourseIndex.signedValue];
-    gRacePlayers[1].actionTriggerChance = D_800DC5B4[gRaceCourseIndex.signedValue];
-    gRacePlayers[2].actionTriggerChance = D_800DC5B4[gRaceCourseIndex.signedValue];
-    gRacePlayers[3].actionTriggerChance = D_800DC5B4[gRaceCourseIndex.signedValue];
-    gRacePlayers[0].itemTriggerChance = D_800DC5B4[gRaceCourseIndex.signedValue];
-    gRacePlayers[1].itemTriggerChance = D_800DC5B4[gRaceCourseIndex.signedValue];
-    gRacePlayers[2].itemTriggerChance = D_800DC5B4[gRaceCourseIndex.signedValue];
-    gRacePlayers[3].itemTriggerChance = D_800DC5B4[gRaceCourseIndex.signedValue];
+    gRacePlayers[0].actionTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[1].actionTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[2].actionTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[3].actionTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[0].itemTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[1].itemTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[2].itemTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[3].itemTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
     if (gPlayerCount != 1) {
         gRacePlayers[0].actionTriggerChance = 0;
         gRacePlayers[1].actionTriggerChance = 0;
@@ -662,9 +667,9 @@ void initRaceSceneFlow(void) {
                 break;
             }
         }
-        characterEntry = &D_800DC58C[gRaceCourseIndex.signedValue][gRacePlayers[i].characterId & 0xFFFFFFFFu];
-        gRacePlayers[i].characterVariant = characterEntry->stickX;
-        gRacePlayers[i].snowboardTextureIndex = characterEntry->stickY;
+        characterEntry = &gRaceCpuBoardConfigsByCourse[gRaceCourseIndex.signedValue][gRacePlayers[i].characterId & 0xFFFFFFFFu];
+        gRacePlayers[i].characterVariant = characterEntry->boardTuningIndex;
+        gRacePlayers[i].snowboardTextureIndex = characterEntry->snowboardTextureIndex;
     }
     if (gRaceSplitscreenMode == 0) {
         gRacePlayers[0].isActive = 1;
@@ -686,7 +691,7 @@ void initRaceSceneFlow(void) {
     }
     for (i = 0; i < 4; i++) {
         gRacePlayers[i].unk15 = 0;
-        gRacePlayers[i].replayInputSource = 0;
+        gRacePlayers[i].replayInputSource = RACE_PLAYER_INPUT_LIVE;
         gRacePlayers[i].soundDisabled = 0;
     }
 
@@ -756,7 +761,7 @@ void initRaceSceneFlow(void) {
                 gRacePlayers[1].isActive = 1;
                 gRacePlayers[1].isCpu = 0;
                 gRacePlayers[1].soundDisabled = 1;
-                gRacePlayers[1].replayInputSource = 1;
+                gRacePlayers[1].replayInputSource = RACE_PLAYER_INPUT_HISTORY_07;
                 gRacePlayers[1].characterId = history->characterId;
                 gRacePlayers[1].characterVariant = history->characterVariant;
                 gRacePlayers[1].snowboardTextureIndex = history->unkC;
@@ -2253,10 +2258,10 @@ void initRaceGhostReplayFlow(void) {
     initCallbackTaskScheduler(2);
     for (one = 0; one < RACE_PLAYER_COUNT; one++) {
         gRacePlayers[one].unk15 = 0;
-        gRacePlayers[one].replayInputSource = 0;
+        gRacePlayers[one].replayInputSource = RACE_PLAYER_INPUT_LIVE;
         gRacePlayers[one].soundDisabled = 0;
     }
-    gRacePlayers[0].replayInputSource = 2;
+    gRacePlayers[0].replayInputSource = RACE_PLAYER_INPUT_HISTORY_2B;
     gMenuFlowState = 0;
     resetRaceCameras();
     resetAllViewports();
@@ -2291,7 +2296,7 @@ void updateRaceGhostReplayFlow(void) {
         if (loadNextRaceReplayCourseGridEntry() != 0) {
             if (gCurrentGameTask->callbackData1 != 0xB) {
                 gCurrentGameTask->callbackData1++;
-                gRacePlayers[0].replayInputSource = 2;
+                gRacePlayers[0].replayInputSource = RACE_PLAYER_INPUT_HISTORY_2B;
                 gRacePlayers[0].unk15 = 0;
                 gViewportStates[0].overlayAlpha = 0;
             } else {

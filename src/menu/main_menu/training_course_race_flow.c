@@ -132,7 +132,7 @@ void initTrainingCourseRace(void) {
 
     for (i = 0; i < RACE_PLAYER_COUNT; i++) {
         gRacePlayers[i].unk15 = 0;
-        gRacePlayers[i].replayInputSource = 0;
+        gRacePlayers[i].replayInputSource = RACE_PLAYER_INPUT_LIVE;
         gRacePlayers[i].soundDisabled = 0;
     }
 
