@@ -29,16 +29,20 @@ System packages:
 * git
 * python3
 * pip3
+* clang
+* wget and tar (toolchain download)
 * binutils-mips-linux-gnu
 
 On Debian/Ubuntu:
 ```sh
-sudo apt install make git python3 pip3 binutils-mips-linux-gnu
+sudo apt install make git python3 python3-venv python3-pip clang wget binutils-mips-linux-gnu
 ```
 
 On macOS using homebrew. Note that calls below to `make` should use `gmake` instead to run the homebrew version.
 ```sh
-brew install make tehzz/n64-dev/mips64-elf-binutils
+brew install make python llvm wget tehzz/n64-dev/mips64-elf-binutils
+export PATH="$(brew --prefix llvm)/bin:$PATH"
+export MAKE=gmake
 ```
 
 Build the toolchain:
@@ -52,17 +56,23 @@ Install Python dependencies in virtual environment:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements-build.txt
 ```
+
+For optional matching helpers, asm-differ, the permuter, m2c, and task-runner
+workflows, also install `python3 -m pip install -r requirements.txt`. Existing
+development environments can continue using that requirements file.
+
+The build selects `tools/ido-recomp/linux` or `tools/ido-recomp/macos` for the
+host. Set `IDO_DIR` to use another installed IDO 5.3 toolchain. Linux is verified;
+the updated macOS selection still needs validation on macOS.
 
 ## Building
 
 Copy your big-endian Snowboard Kids rom into the root of the repository. Rename it to `snowboardkids.z64`. Then run:
 
 ```bash
-make clean
-make extract
-make
+./tools/build-and-verify.sh
 ```
 
 If everything works correctly you should see:

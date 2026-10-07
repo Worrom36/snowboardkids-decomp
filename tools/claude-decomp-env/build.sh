@@ -84,7 +84,9 @@ AS="${CROSS}as"
 OBJDUMP="${CROSS}objdump"
 OBJCOPY="${CROSS}objcopy"
 NM="${CROSS}nm"
-CC="$PROJECT_ROOT/tools/ido-recomp/linux/cc"
+ido_platform=$(uname -s | tr '[:upper:]' '[:lower:]')
+[ "$ido_platform" != darwin ] || ido_platform=macos
+CC="${IDO_DIR:-$PROJECT_ROOT/tools/ido-recomp/$ido_platform}/cc"
 ASM_PROC="$PROJECT_ROOT/tools/asm-processor/build.py"
 
 ASFLAGS=(-G 0 -I "$PROJECT_ROOT/include" -mips3 -mabi=32)

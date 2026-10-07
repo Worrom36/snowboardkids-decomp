@@ -13,7 +13,7 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libdbus-1-dev gobject-introspection libgirepository1.0-dev libcups2-dev binutils-mips-linux-gnu
+          sudo apt-get install -y clang wget binutils-mips-linux-gnu
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -50,26 +50,11 @@ jobs:
         run: |
           python3 -m venv .venv
           .venv/bin/pip install -U pip
-          .venv/bin/pip install -r requirements.txt
+          .venv/bin/pip install -r requirements-build.txt
         working-directory: main
 
-      - name: Run make extract
-        run: PATH="$(pwd)/.venv/bin:$PATH" make extract
-        working-directory: main
-
-      # Verify project builds
-
-      - name: Run make
-        run: PATH="$(pwd)/.venv/bin:$PATH" make
-        working-directory: main
-
-      - name: Verify ROM shiftability
-        run: |
-          PATH="$(pwd)/.venv/bin:$PATH" ./tools/build-shift-test.sh
-          PATH="$(pwd)/.venv/bin:$PATH" SHIFT_AFTER=_1467B0 ./tools/build-shift-test.sh
-          PATH="$(pwd)/.venv/bin:$PATH" SHIFT_AFTER=BIG_SNOWMAN_COURSE_GRAPHICS ./tools/build-shift-test.sh
-          PATH="$(pwd)/.venv/bin:$PATH" SHIFT_AFTER=_27E290 ./tools/build-shift-test.sh
-          PATH="$(pwd)/.venv/bin:$PATH" SHIFT_AFTER=_593D10 ./tools/build-shift-test.sh
+      - name: Build and verify ROM
+        run: PATH="$(pwd)/.venv/bin:$PATH" ./tools/build-and-verify.sh
         working-directory: main
 
       - name: Generate objdiff report

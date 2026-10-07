@@ -1,10 +1,5 @@
-# splat
-splat64[mips]==0.39.1
-sortedcontainers
-pypng==0.20220715.0
-
-# tools/progress.py deps
-mapfile_parser>=2.12.1
+# Build plus optional decompilation tools
+-r requirements-build.txt
 
 # permuter
 toml

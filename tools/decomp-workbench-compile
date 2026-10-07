@@ -10,7 +10,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SOURCE="$(realpath "$1")"
 OUTPUT="$(realpath "$2")"
-IDO_DIR="${DECOMP_WORKBENCH_IDO_DIR:-$PROJECT_ROOT/tools/ido-recomp/linux}"
+ido_platform=$(uname -s | tr '[:upper:]' '[:lower:]')
+[ "$ido_platform" != darwin ] || ido_platform=macos
+IDO_DIR="${DECOMP_WORKBENCH_IDO_DIR:-${IDO_DIR:-$PROJECT_ROOT/tools/ido-recomp/$ido_platform}}"
 read -r -a EXTRA_CFLAGS <<< "${DECOMP_WORKBENCH_CFLAGS:-}"
 
 CROSS="mips-linux-gnu-"

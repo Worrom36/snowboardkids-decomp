@@ -62,7 +62,10 @@ else
 endif
 
 AS      = $(CROSS)as
-CC      = $(TOOLS_DIR)/ido-recomp/linux/cc
+IDO_PLATFORM := $(if $(filter Darwin,$(shell uname -s)),macos,linux)
+IDO_DIR ?= $(abspath $(TOOLS_DIR)/ido-recomp/$(IDO_PLATFORM))
+export IDO_DIR
+CC      = $(IDO_DIR)/cc
 CC_CHECK = clang
 CLANG_FORMAT ?= clang-format
 CLANG_TIDY ?= clang-tidy

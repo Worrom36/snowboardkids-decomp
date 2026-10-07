@@ -37,7 +37,9 @@ case "$opt" in
 esac
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-ido="$root/tools/ido-recomp/linux"
+ido_platform=$(uname -s | tr '[:upper:]' '[:lower:]')
+[ "$ido_platform" != darwin ] || ido_platform=macos
+ido="${IDO_DIR:-$root/tools/ido-recomp/$ido_platform}"
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
