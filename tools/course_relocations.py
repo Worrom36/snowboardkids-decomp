@@ -177,17 +177,20 @@ def graphics_groups(root):
 
 def pack_graphics_group(root, row, mode='shiftable'):
     from tools.asset_bundles import commands, load_yaml, LAYOUT, materialize
-    rows = {r['name']: r for r in load_yaml(root/LAYOUT)['segments']}
-    matches = [(b, g) for b, g in graphics_groups(root) if any(s['name'] == row['name'] for s in g)]
+    # Extraction addresses also identify streams during explicit name migration.
+    rows = {r['rom_start']: r for r in load_yaml(root/LAYOUT)['segments']}
+    matches = [(b, g) for b, g in graphics_groups(root) if any(s['start'] == row['rom_start'] for s in g)]
     if len(matches) != 1:
         raise ValueError(f"{row['name']}: expected exactly one graphics resource group")
     bank, group = matches[0]
     streams = []
     for spec in group:
-        path = root/rows[spec['name']]['source']
+        source_row = rows[spec['start']]
+        name = source_row['name']
+        path = root/source_row['source']
         data = commands(path)
-        ids = command_ids(path.read_text(), data, spec['end']-spec['start'], spec['name'])
-        streams.append(dict(name=spec['name'], offset=spec['start']-bank['graphics_start'], data=data, ids=ids,
+        ids = command_ids(path.read_text(), data, spec['end']-spec['start'], name)
+        streams.append(dict(name=name, offset=spec['start']-bank['graphics_start'], data=data, ids=ids,
                             kinds=word_kinds(path.read_text(), ids, spec)))
-    manifest, path = materialize(root, rows[bank['name']])
+    manifest, path = materialize(root, rows[bank['start']])
     return layout_graphics(bank['name'], streams, manifest, path.parent, mode)

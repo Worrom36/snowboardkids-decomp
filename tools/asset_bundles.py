@@ -92,6 +92,27 @@ def owner(s):
     return f'assets/{family}/{name.lstrip("_").lower()}'
 
 
+def initialize(root):
+    """Create fresh bundles, or check existing ones without migrating edits."""
+    from tools.semantic_assets import upgrade, validate_structure
+    if not (root / LAYOUT).exists():
+        migrate(root)
+        upgrade(root, load_yaml(root / 'tools/asset_registry.yaml'))
+        return
+
+    from tools.asset_name_migration import registry
+    layout = load_yaml(root / LAYOUT)
+    names = {row['rom_start']: row['name'] for row in layout['segments']}
+    try:
+        if (layout.get('schema_version') != 2 or
+                any(row['decoder'] == 'readable_asset' for row in layout['segments']) or
+                any(names.get(entry['rom_start']) != entry['name'] for entry in registry(root))):
+            raise ValueError('asset layout needs migration')
+        validate_structure(root)
+    except (ValueError, FileNotFoundError) as exc:
+        raise ValueError(f'{exc}; run the explicit migrate-assets target before rebuilding') from exc
+
+
 def migrate(root, if_absent=False):
     if (root / LAYOUT).exists():
         if if_absent:
@@ -235,26 +256,45 @@ def index_models(root, layout):
     if layout.get('schema_version',1)>=2:
         raise ValueError('Semantic model catalog is authoritative; edit its manifests instead of rebuilding the old catalog.')
     from tools.course_graphics_common import trace_course_graphics
+    from tools.course_relocations import pack_graphics_group
     _, specs = source_segments(root)
     rows = {r['name']:r for r in layout['segments']}
     bundles = {r['bundle']:load_yaml(root/r['bundle']) for r in layout['segments']}
     for bundle in bundles.values():
         bundle['models'] = []
+
+    graphics, symbols = {}, {}
+    for bank in specs:
+        if bank['type'] not in ('model_resources', 'course_model_resources'):
+            continue
+        group = [s for s in specs if s['type'] == 'course_display_list' and
+                 bank['graphics_start'] <= s['start'] < bank['graphics_end']]
+        packed, exports = pack_graphics_group(root, rows[group[0]['name']], mode='matching')
+        graphics[bank['name']] = (group, b''.join(packed[s['name']] for s in group))
+        symbols.update(exports)
+
+    def table_rows(body):
+        result = []
+        for row in re.findall(r'\{([^{}]+)\}', body):
+            fields = []
+            for field in row.split(','):
+                value = re.sub(r'\([su]32\)', '', field).strip()
+                fields.append(symbols[value] if value in symbols else int(value, 0))
+            result.append(fields)
+        return result
+
     scroll_source = (root/'src/race/ui/race_ui_effects.c').read_text()
     scroll_body = re.search(r'gRaceCourseScrollingTextureInit\[[^]]+\]\s*=\s*\{(.*?)\};',scroll_source,re.S)[1]
-    scroll_rows = [[int(v,0) for v in re.findall(r'0x[0-9A-Fa-f]+|\d+',line)]
-                   for line in re.findall(r'\{([^{}]+)\}',scroll_body)]
+    scroll_rows = table_rows(scroll_body)
     scroll_courses = ['quicksand_valley','quicksand_valley','night_highway','animal_land',
                       'dizzy_land','dizzy_land','sunset_rock','sunset_rock']
     effect_source = (root/'src/race/course/race_course_effects.c').read_text()
     water_layer_body = re.search(r'gCourseWaterLayerEntries\[\]\s*=\s*\{(.*?)\};',effect_source,re.S)[1]
-    water_layers = [[int(v,0) for v in re.findall(r'0x[0-9A-Fa-f]+|\d+',line)]
-                    for line in re.findall(r'\{([^{}]+)\}',water_layer_body)]
+    water_layers = table_rows(water_layer_body)
     for bank in specs:
         if bank['type'] not in ('model_resources','course_model_resources'):
             continue
-        gfx = [s for s in specs if s['type']=='course_display_list' and bank['graphics_start']<=s['start']<bank['graphics_end']]
-        data = b''.join(pack_segment(root,rows[s['name']],False) for s in gfx)
+        gfx, data = graphics[bank['name']]
         common = dict(resource=bank['name'],graphics=[s['name'] for s in gfx],
                       graphics_start=bank['graphics_start'],graphics_end=bank['graphics_end'])
         destination = rows[bank['name']]['bundle']
@@ -349,6 +389,7 @@ def index_models(root, layout):
 def organize_shared_resources(root, rows, bundles):
     """A uniquely consumed range belongs beside its model, not in a bank bucket."""
     from tools.course_graphics_common import trace_course_graphics, collect_course_texture_references
+    from tools.vertex_relocations import annotate_vertices
     row = rows.get('SHARED_RACE_MODEL_RESOURCES')
     if row is None:
         return
@@ -396,8 +437,11 @@ def organize_shared_resources(root, rows, bundles):
                 end = start+1
                 while end<len(vertices) and owning(vertex_users,p['offset']+16*end)==owner:
                     end+=1
-                part = dict(type='vertices',offset=p['offset']+16*start)
-                parts.append(record(part,'vertices',vertices[start:end],owner))
+                part = dict(type='vertices',offset=p['offset']+16*start,
+                            vertices=[dict(vertex) for vertex in vertices[start:end]])
+                # The new part has its own relative vertex address space.
+                annotate_vertices(part)
+                parts.append(record(part,'vertices',part['vertices'],owner))
                 start = end
         elif p['type']=='palette':
             parts.append(record(p,'values',p['values'],owning(palette_users,p['offset'])))
@@ -566,7 +610,7 @@ def verify(root, layout, rom):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('action', choices=['migrate', 'pack', 'verify', 'previews', 'index-models', 'make-rules'])
+    p.add_argument('action', choices=['init', 'migrate', 'pack', 'verify', 'previews', 'index-models', 'make-rules'])
     p.add_argument('name', nargs='?')
     p.add_argument('--mode', choices=('matching', 'shiftable'), default='matching')
     p.add_argument('--root', type=Path, default=ROOT)
@@ -574,6 +618,9 @@ def main():
     p.add_argument('--if-absent', action='store_true')
     a = p.parse_args()
     root = a.root.resolve()
+    if a.action == 'init':
+        initialize(root)
+        return
     if a.action == 'migrate':
         migrate(root, a.if_absent)
         return

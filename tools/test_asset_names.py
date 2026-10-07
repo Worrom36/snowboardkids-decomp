@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from tools.asset_name_migration import migrate_names, registry, rewriters
-from tools.asset_bundles import LAYOUT, dump, pack_segment
+from tools.asset_bundles import LAYOUT, dump, initialize, pack_segment
 from tools.course_surface_data_common import load_yaml
 
 
@@ -29,9 +29,10 @@ class AssetNameTests(unittest.TestCase):
 
     def fixture(self,root):
         (root/LAYOUT).parent.mkdir(parents=True)
-        (root/'assets/_123.c').write_text('Gfx _123[] = { {{0xB8000000, 0x12345678}}, };')
-        row = dict(name='_123',rom_start=0x123,rom_end=0x12b,decoder='course_display_list',
-                   source='assets/_123.c',bundle='assets/asset.yaml',object='assets/_123.o')
+        (root/'assets/_123.yaml').write_bytes(dump(dict(format='embedded_model', schema_version=2,
+            decompressed_size=8, root_offsets=[0], parts=[dict(type='raw', offset=0, size=8, data='b800000012345678')])))
+        row = dict(name='_123',rom_start=0x123,rom_end=0x12b,decoder='embedded_model', compression='none',
+                   source='assets/_123.yaml',bundle='assets/asset.yaml',object='assets/_123.o')
         (root/LAYOUT).write_bytes(dump(dict(schema_version=2,segments=[row])))
         (root/'assets/asset.yaml').write_bytes(dump(dict(id='test',models=[])))
         return row
@@ -44,7 +45,7 @@ class AssetNameTests(unittest.TestCase):
             with patch('tools.asset_name_migration.registry',return_value=[dict(old='_123',name='MODEL',rom_start=0x123)]):
                 migrate_names(root)
                 migrated=load_yaml(root/LAYOUT)['segments'][0]
-                self.assertEqual(migrated['source'],'assets/MODEL.c')
+                self.assertEqual(migrated['source'],'assets/MODEL.yaml')
                 self.assertEqual(migrated['object'],'assets/MODEL.o')
                 self.assertEqual(pack_segment(root,migrated),baseline)
                 migrate_names(root)
@@ -54,9 +55,22 @@ class AssetNameTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
             self.fixture(root)
-            (root/'assets/MODEL.c').write_text('existing edit')
+            (root/'assets/MODEL.yaml').write_text('existing edit')
             with patch('tools.asset_name_migration.registry',return_value=[dict(old='_123',name='MODEL',rom_start=0x123)]):
                 with self.assertRaisesRegex(ValueError,'conflicting'):
                     migrate_names(root)
-            self.assertTrue((root/'assets/_123.c').exists())
-            self.assertEqual((root/'assets/MODEL.c').read_text(),'existing edit')
+            self.assertTrue((root/'assets/_123.yaml').exists())
+            self.assertEqual((root/'assets/MODEL.yaml').read_text(),'existing edit')
+
+    def test_initialization_rejects_old_names_without_touching_edits(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.fixture(root)
+            before = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+            with patch('tools.asset_name_migration.registry', return_value=[
+                    dict(old='_123', name='MODEL', rom_start=0x123)]):
+                with self.assertRaisesRegex(ValueError, 'explicit migrate-assets'):
+                    initialize(root)
+            after = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+            self.assertEqual(before, after)
+            self.assertFalse((root/'asset-backups').exists())

@@ -75,6 +75,8 @@ def migrate_names(root):
         targets[target] = source
     (root/'build').mkdir(exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix='asset-names-',dir=root/'build'))
+    if (root/'snowboardkids.yaml').exists():
+        shutil.copy2(root/'snowboardkids.yaml', stage/'snowboardkids.yaml')
     for target,source in targets.items():
         dest = stage/target
         dest.parent.mkdir(parents=True,exist_ok=True)

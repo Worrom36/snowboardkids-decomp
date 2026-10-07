@@ -231,9 +231,6 @@ TIDY_C_FILES := $(filter-out %.inc.c $(TIDY_C_FRAGMENT_FILES),$(PROJECT_C_FILES)
 TEXTCONV = $(PYTHON) $(TOOLS_DIR)/textconv.py
 CHARMAP = $(TOOLS_DIR)/charmap.txt
 TEXTCONV_DIR = $(BUILD_DIR)/textconv
-COURSE_SURFACE_DATA_PACK = $(PYTHON) $(TOOLS_DIR)/course_surface_data_pack.py
-COURSE_MODEL_RESOURCES_PACK = $(PYTHON) $(TOOLS_DIR)/course_model_resources_pack.py
-COURSE_SPRITE_TABLE_PACK = $(PYTHON) $(TOOLS_DIR)/course_sprite_table_pack.py
 
 BIN_FILES   := $(foreach dir,$(BIN_DIRS),$(wildcard $(dir)/*.bin))
 BIN_O_FILES := $(patsubst %.bin,$(BUILD_DIR)/%.o,$(BIN_FILES))
@@ -289,8 +286,7 @@ extract: check
 	$(PRINTF) "[$(CYAN) splat  $(NO_COL)]  Extracting $(BASENAME).yaml\n"
 	$(V)$(SPLAT) $(BASENAME).yaml
 	$(V)$(PYTHON) $(TOOLS_DIR)/asset_inventory.py --source-views-only
-	$(V)$(PYTHON) $(TOOLS_DIR)/asset_bundles.py migrate --if-absent
-	$(V)$(PYTHON) $(TOOLS_DIR)/semantic_assets.py
+	$(V)$(PYTHON) $(TOOLS_DIR)/asset_bundles.py init
 
 .PHONY: asset-report verify-assets asset-previews migrate-assets
 asset-report:
@@ -385,78 +381,18 @@ $(BUILD_DIR)/%.o: %.bin
 	$(PRINTF) "[$(PINK) linker $(NO_COL)]  $<\n"
 	$(V)$(LD) -r -b binary -o $@ $<
 
-# Editable compressed course collision/path data -> *.o
-# Packers refresh dependencies when manifests change their source paths.
+# Extraction and migration initialize these rules; cleaning must not rebuild them.
+ifeq ($(filter clean extract migrate-assets,$(MAKECMDGOALS)),)
 -include $(wildcard $(BUILD_DIR)/assets/readable/*.d $(BUILD_DIR)/assets/course_model_resources/*.d $(BUILD_DIR)/assets/course_sprite_tables/*.d)
 -include $(wildcard $(BUILD_DIR)/assets/course_display_lists/*.d $(BUILD_DIR)/assets/course_surface_data/*.d)
-# Explicit scatter rules take precedence over the legacy pattern rules below.
 -include assets/layout/bundles.mk
+endif
 
 # Build alternate renderers only when the edited assets require them.
 ifeq ($(BUILD_MODE),shiftable)
 $(TARGET).elf: $(if $(filter 1,$(ASSET_RUNTIME_INDEX_REMAP)),$(addprefix $(BUILD_DIR)/runtime-indices/,menu_renderer.o menu_render_utils.o))
 $(TARGET).elf: $(if $(filter 1,$(ASSET_RUNTIME_SNOWBOARD_SIZE)),$(BUILD_DIR)/runtime-indices/race_player_model_renderer.o)
 endif
-
-$(BUILD_DIR)/assets/readable/%.o: assets/readable/%.yaml \
-        $(TOOLS_DIR)/readable_asset_pack.py $(TOOLS_DIR)/readable_assets.py \
-        $(TOOLS_DIR)/asset_images.py $(TOOLS_DIR)/course_sprite_table_common.py \
-		$(TOOLS_DIR)/animation_assets.py \
-		$(TOOLS_DIR)/audio_assets.py $(TOOLS_DIR)/asset_parts.py \
-		$(TOOLS_DIR)/model_assets.py \
-		$(TOOLS_DIR)/music_assets.py \
-        $(TOOLS_DIR)/course_graphics_common.py $(TOOLS_DIR)/huffman_asset.py
-	@mkdir -p $(dir $@)
-	$(V)$(PYTHON) $(TOOLS_DIR)/readable_asset_pack.py $< --out $(BUILD_DIR)/assets/readable/$*.bin
-	$(V)$(LD) -r -b binary -o $@ $(BUILD_DIR)/assets/readable/$*.bin
-
-$(BUILD_DIR)/assets/course_surface_data/%.o: assets/course_surface_data/%.yaml \
-		$(TOOLS_DIR)/course_surface_data_pack.py \
-		$(TOOLS_DIR)/course_surface_data_common.py \
-		$(TOOLS_DIR)/huffman_asset.py
-	@mkdir -p $(dir $@)
-	$(PRINTF) "[$(GREEN) course $(NO_COL)]  $<\n"
-	$(V)$(COURSE_SURFACE_DATA_PACK) $< --out $(BUILD_DIR)/assets/course_surface_data/$*.bin
-	$(V)$(LD) -r -b binary -o $@ $(BUILD_DIR)/assets/course_surface_data/$*.bin
-
-# Editable compressed course vertices and remaining segment-3 resources.
-$(BUILD_DIR)/assets/course_model_resources/%.o: assets/course_model_resources/%.yaml \
-		$(TOOLS_DIR)/asset_images.py $(TOOLS_DIR)/asset_parts.py \
-		$(TOOLS_DIR)/course_model_resources_pack.py \
-		$(TOOLS_DIR)/course_graphics_common.py \
-		$(TOOLS_DIR)/huffman_asset.py
-	@mkdir -p $(dir $@)
-	$(PRINTF) "[$(GREEN) course $(NO_COL)]  $<\n"
-	$(V)$(COURSE_MODEL_RESOURCES_PACK) $< --out $(BUILD_DIR)/assets/course_model_resources/$*.bin
-	$(V)$(LD) -r -b binary -o $@ $(BUILD_DIR)/assets/course_model_resources/$*.bin
-
-# Editable compressed course-specific sprite tables.
-$(BUILD_DIR)/assets/course_sprite_tables/%.o: assets/course_sprite_tables/%.yaml \
-		$(TOOLS_DIR)/asset_images.py $(TOOLS_DIR)/asset_parts.py \
-		$(TOOLS_DIR)/course_sprite_table_pack.py \
-		$(TOOLS_DIR)/course_sprite_table_common.py \
-		$(TOOLS_DIR)/course_graphics_common.py \
-		$(TOOLS_DIR)/huffman_asset.py
-	@mkdir -p $(dir $@)
-	$(PRINTF) "[$(GREEN) course $(NO_COL)]  $<\n"
-	$(V)$(COURSE_SPRITE_TABLE_PACK) $< --out $(BUILD_DIR)/assets/course_sprite_tables/$*.bin
-	$(V)$(LD) -r -b binary -o $@ $(BUILD_DIR)/assets/course_sprite_tables/$*.bin
-
-# Editable F3DEX command streams from the course segment-2 graphics bundles.
-# GNU as preserves command streams whose lengths are not multiples of IDO's
-# normal 16-byte data-section alignment.
-$(BUILD_DIR)/assets/course_display_lists/%.o: assets/course_display_lists/%.c
-	@mkdir -p $(dir $@)
-	$(PRINTF) "[$(GREEN) course $(NO_COL)]  $<\n"
-	$(V)$(CC_CHECK) $(CC_CHECK_FLAGS) $(CC_CHECK_WARNINGS) \
-		$(CC_CHECK_INCLUDES) $(C_DEFINES) $(CC_CHECK_MIPS_DEFINES) $<
-	$(V)cd $(dir $@) && $(abspath $(CC)) \
-		$(filter-out -c -I. -Iinclude -Iinclude/PR -Isrc/ultra/audio -Isrc/ultra/libc,$(CFLAGS)) $(C_OPT) \
-		-I$(abspath .) -I$(abspath include) -I$(abspath include/PR) \
-		-I$(abspath src/ultra/audio) -I$(abspath src/ultra/libc) \
-		-S $(abspath $<)
-	$(V)$(AS) $(ASFLAGS) -no-pad-sections -o $@ $(dir $@)$(notdir $*).s
-	$(V)$(RM) $(dir $@)$(notdir $*).s
 
 # *.o -> *.elf
 $(TARGET).elf: $(LD_SCRIPT) $(LINKER_SCRIPTS) $(O_FILES)

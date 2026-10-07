@@ -73,6 +73,8 @@ def name_characters(root):
     backup = Path(tempfile.mkdtemp(prefix='character-names-',dir=backup_parent))
     stage = Path(tempfile.mkdtemp(prefix='character-names-',dir=root/'build'))
     shutil.copytree(root/'assets',stage/'assets')
+    if (root/'snowboardkids.yaml').exists():
+        shutil.copy2(root/'snowboardkids.yaml', stage/'snowboardkids.yaml')
     for old,new in renames.items():
         (stage/'assets/characters'/old).rename(stage/'assets/characters'/new)
     pattern = re.compile(r'\b('+'|'.join(renames)+r')\b')
@@ -129,6 +131,7 @@ def upgrade(root, registry):
     backup = Path(tempfile.mkdtemp(prefix='semantic-',dir=backup_parent))
     stage = Path(tempfile.mkdtemp(prefix='semantic-',dir=root/'build'))
     shutil.copytree(root/'assets',stage/'assets')
+    shutil.copy2(root/'snowboardkids.yaml', stage/'snowboardkids.yaml')
     # The staging tree is disposable; the current canonical tree is untouched
     # until every rebuilt segment equals its pre-migration bytes.
     migrate_tree(root,stage,layout,registry)
@@ -324,7 +327,9 @@ def migrate_tree(original_root, root, layout, registry):
         final_bundles[str(path)] = dict(schema_version=2,id='models/scenery/'+name,models=[dict(name=name,preview=name+'.glb')],animations=[])
         return key
     source = (original_root/'src/race/course/race_course_effects.c').read_text()
-    pointers = re.findall(r'0x0200[\dA-Fa-f]{4}|gRaceCourseSceneryFogPanelDisplayList',initializer(source,'gRaceCourseObjectDisplayLists'))
+    from tools.course_relocations import pack_graphics_group
+    _, graphics_symbols = pack_graphics_group(original_root, rows['SHARED_RACE_GRAPHICS'], mode='matching')
+    pointers = [value.strip() for value in initializer(source,'gRaceCourseObjectDisplayLists').split(',') if value.strip()]
     for course,spec in registry['courses'].items():
         base = Path('assets/courses')/course
         b = dict(schema_version=2,id='courses/'+course,models=[dict(name='preview',preview='preview.glb')],animations=[],
@@ -354,10 +359,11 @@ def migrate_tree(original_root, root, layout, registry):
             if model_id==-1:
                 break
             pointer = pointers[model_id]
-            if pointer.startswith('0x'):
-                key = model_for_root(int(pointer,16)&0xFFFFFF)
-            else:
+            if pointer == 'gRaceCourseSceneryFogPanelDisplayList':
                 key = next(k for k in final_defs if k.endswith('/fog_panel'))
+            else:
+                address = graphics_symbols[pointer] if pointer in graphics_symbols else int(pointer, 0)
+                key = model_for_root(address&0xFFFFFF)
             placement = dict(model=key,position=[signed32(v)/65536 for v in (x,y,z)],rotation_y=angle)
             b['scenery'].append(placement)
             components.append(placement)
