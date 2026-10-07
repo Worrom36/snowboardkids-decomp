@@ -21,7 +21,8 @@ git clone --recurse-submodules -j8 https://github.com/cdlewis/snowboardkids-deco
 
 # Dependencies
 
-This project has been tested on Debian/Ubuntu (x86) and macOS. Your mileage may vary on other systems.
+The current build is verified on Linux (x86-64). The macOS setup below needs
+validation with the updated toolchain selection.
 
 System packages:
 
@@ -99,7 +100,7 @@ Contributions are most welcome! There are a variety of ways you can assist:
 * Fix compiler warnings
 * Clean up code: you'll see plenty of hastily decompiled functions that use pointer arithmetic rather than proper struct access. We need help cleaning up these functions.
 * Document code: some functions/variables have useful names (rather than func_XXX or D_XXX) but most don't. Some that do are incorrectly named. We need lots of help investigating and documenting what all these functions do.
-* Support building the project on more platforms such as Windows or ARM Linux. Currently the build is only verified as working on Linux (x86) and macOS which limits who can contribute.
+* Support building the project on more platforms such as Windows or ARM Linux. The current build is verified on Linux; testing the macOS setup would also help.
 
 If you have any additional questions, please reach out on Discord (linked in the header). However please note that, since this is a clean room decompilation, we cannot accept contributions based on leaked source code or from those with proprietary knowledge about the game or related subjects.
 

@@ -1,24 +1,25 @@
 # Readable asset extraction
 
-`make extract` now decodes every top-level asset segment in the supported US ROM.
+The extraction step of `./tools/build-and-verify.sh` decodes every top-level
+asset segment in the supported US ROM.
 It generates editable, semantically grouped N64 asset bundles using Splat
 extensions and exact packers. `make asset-previews` separately exports
-self-contained Blender-importable GLBs. The final ROM fill region remains padding. Game code and assets already defined in C retain their existing
-source definitions.
+self-contained Blender-importable GLBs. The final ROM fill region remains
+padding. Game code and assets already defined in C retain their source definitions.
 
 Splat segments declare their actual type directly: `sprite_table`, `tilemap`,
 `race_animation`, `scene_animation`, `embedded_model`, `replay`, `pointer_bank`,
 `sample_bank`, or `music_sequence`. These use thin format-specific adapters over
 shared extraction code; there is no `asset_format` selector in the ROM config.
-Existing bundle layouts migrate their decoder names automatically without moving
-editable files or changing linker object identities.
+Existing bundle layouts are checked during extraction. Outdated layouts require
+the explicit migration command below before building.
 
 Known asset identities are recorded with ROM starts and source evidence in
 `tools/asset_names.yaml`. The six characters' graphics, model-resource and race
 animation banks, shared race banks, snowboard banks, item/effect/UI sprites, pan
 display list and sound pointer bank use semantic segment and symbol names.
-Extraction automatically migrates old names, filenames, model references and
-linker object paths. It compares every packed section against the existing edited
+Explicit migration updates old names, filenames, model references and linker
+object paths. It compares every packed section against the existing edited
 tree before switching, retaining a backup under `asset-backups/asset-names-*/`.
 Conflicting destinations are rejected; repeated migration is a no-op.
 
@@ -28,19 +29,19 @@ geometry and is not named after that one contained model. Numeric vertex and
 display-list offsets remain offsets, not inferred semantic identities.
 
 ```sh
-make extract
+./tools/build-and-verify.sh
 make verify-assets
 make asset-report
 make asset-previews
-./tools/build-and-verify.sh
 ```
 
-`make extract` requires the ROM with the SHA1 in `snowboardkids.yaml`. On first
+Extraction requires the ROM with the SHA1 in `snowboardkids.yaml`. On first
 extraction it creates the bundles. Subsequent extraction preserves existing bundle
 sources. Preview export and inventory reports are explicit `asset-previews` and
-`asset-report` targets, not part of a ROM rebuild. `make clean` preserves **all assets**; it
-only removes build/assembly artifacts. Build edits with `make`; intentional edits
-will naturally change the original-ROM checksum. GLBs are never ROM build inputs.
+`asset-report` targets, not part of a ROM rebuild. Cleaning preserves all assets
+and removes only build/assembly artifacts. Use the wrapper with `--mode shiftable`
+for intentional edits that change the original-ROM checksum. GLBs are never ROM
+build inputs.
 
 All generated Nintendo data remains ignored under `assets/` and `build/`.
 No sibling SK2 checkout is required to extract or rebuild.
