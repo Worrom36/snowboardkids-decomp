@@ -1,3 +1,0 @@
-# path token reason
-linker_scripts/game_syms.ld D_369000 Legacy name for the symbol-derived physical depth-buffer address; not a ROM pointer.
-src/engine/system_runtime.c D_369000 Symbol-derived physical depth-buffer address used by RDP commands; not a ROM pointer.

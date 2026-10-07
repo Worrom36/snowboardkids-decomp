@@ -147,7 +147,7 @@ class BundleTests(unittest.TestCase):
             root = Path(d)
             (root/'model.c').write_text('Gfx x[] = { {{0xB8000000, 0x00000000}}, };')
             row = dict(name='x',decoder='course_display_list',source='model.c',rom_start=0,rom_end=16)
-            packed = ({'x': commands(root/'model.c')}, {}, [], b'')
+            packed = ({'x': commands(root/'model.c')}, {})
             with patch('tools.course_relocations.pack_graphics_group', return_value=packed), \
                     self.assertRaisesRegex(ValueError,'fixed ROM allocation'):
                 pack_segment(root,row)

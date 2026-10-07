@@ -419,13 +419,17 @@ def organize_shared_resources(root, rows, bundles):
     path.write_bytes(dump(original))
 
 
-def pack_segment(root, row, compressed=True, mode="matching"):
+def pack_segment(root, row, compressed=True, mode="matching", symbols=None):
+    """Pack a segment, optionally collecting its graphics bank symbols for assembly."""
     from tools.asset_runtime_limits import validate_runtime_size, validate_wave_count
     if mode not in ("matching", "shiftable"):
         raise ValueError(f"unknown asset build mode: {mode}")
     if row['decoder'] == 'course_display_list':
         from tools.course_relocations import pack_graphics_group
-        result = pack_graphics_group(root, row, mode)[0][row['name']]
+        packed, exports = pack_graphics_group(root, row, mode)
+        result = packed[row['name']]
+        if symbols is not None:
+            symbols.update(exports)
     else:
         m, path = materialize(root, row)
         if mode == 'shiftable' and row['decoder'] == 'sample_bank':
@@ -587,18 +591,17 @@ def main():
         row = next(r for r in layout['segments'] if r['name'] == a.name)
         if a.out is None:
             p.error('pack requires --out')
-        data = pack_segment(root, row, mode=a.mode)
+        symbols = {}
+        data = pack_segment(root, row, mode=a.mode, symbols=symbols)
         a.out.parent.mkdir(parents=True, exist_ok=True)
         a.out.write_bytes(data)
         if row['decoder'] in ('course_display_list', 'embedded_model'):
             assembly = f'.section .data\n.balign 8\n.globl {a.name}\n{a.name}:\n.incbin "{a.out.resolve()}"\n'
             if row['decoder'] == 'course_display_list':
-                from tools.course_relocations import pack_graphics_group, command_ids
-                _, all_exports, records, _ = pack_graphics_group(root, row, a.mode)
+                from tools.course_relocations import command_ids
                 source = root/row['source']
-                identities = command_ids(source.read_text(), commands(source), row['rom_end']-row['rom_start'], a.name)
-                exports = {a.name+'_'+identity: all_exports[a.name+'_'+identity] for identity in identities}
-                a.out.with_suffix('.relocations.json').write_text(json.dumps(records, indent=2)+'\n')
+                identities = command_ids(source.read_text(), data, row['rom_end']-row['rom_start'], a.name)
+                exports = {a.name+'_'+identity: symbols[a.name+'_'+identity] for identity in identities}
             else:
                 from tools.graphics_relocations import pack_model
                 manifest, path = materialize(root, row)

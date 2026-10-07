@@ -51,7 +51,7 @@ def command_ids(source, data, original_size, name):
 
 
 def layout_graphics(name, streams, manifest, base, mode='shiftable'):
-    """Return per-stream bytes, exported command symbols, and resolved records.
+    """Return per-stream bytes and exported command symbols.
 
     Streams carry name, original offset, data, and ordered stable command IDs.
     References use the format-defined VTX, DL and SETTIMG operands only.
@@ -92,7 +92,7 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
     for source in bindings:
         if source not in address_sources:
             raise ValueError(f'{name}/{source}+4: binding has no supported address operand')
-    packed, records = {}, []
+    packed = {}
     for stream in streams:
         data = bytearray(stream['data'])
         for i, identity in enumerate(stream['ids']):
@@ -118,7 +118,6 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
                     target = originals[old]
                 if word_types[target] != 'command':
                     raise ValueError(f'{name}/{source}+4: display-list target {target} is data')
-                addend = 0
                 value = 0x02000000+locations[target]
             else:
                 kinds = ('vertices',) if opcode == 4 else ('texture', 'palette')
@@ -144,10 +143,7 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
                 if addend >= len(resource_data[target]):
                     raise ValueError(f'{name}/{source}+4: offset exceeds {target}')
                 value = 0x03000000+resource_offsets[target]+addend
-                target = m['name']+'/'+target
             struct.pack_into('>I', data, i*8+4, value)
-            records.append(dict(source=source, field=4, target=target, kind='segmented',
-                                addend=addend, value=value, location=locations[source]+4))
         packed[stream['name']] = bytes(data)
     if bindings:
         raise ValueError(f'{name}: unused graphics bindings {sorted(bindings)}')
@@ -168,7 +164,7 @@ def layout_graphics(name, streams, manifest, base, mode='shiftable'):
             nodes.append(DisplayListNode(offset, offset+8))
     graph = CourseGraphicsGraph(nodes, [])
     validate_texture_loads(name, whole, graph, m['parts'], resource_offsets, resource_data, len(resources), 3)
-    return packed, exports, records, resources
+    return packed, exports
 
 
 def graphics_groups(root):
