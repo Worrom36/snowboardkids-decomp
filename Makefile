@@ -1,4 +1,24 @@
 BASENAME  = snowboardkids
+.DEFAULT_GOAL := all
+VERSION ?= us
+ifneq ($(VERSION),$(filter $(VERSION),us jp))
+  $(error VERSION must be us or jp)
+endif
+ifeq ($(strip $(VERSION)),)
+  $(error VERSION must be us or jp)
+endif
+ifneq ($(words $(VERSION)),1)
+  $(error VERSION must be us or jp)
+endif
+
+# Keep the established US paths for asset tools and existing workflows.
+VERSION_SUFFIX = $(if $(filter jp,$(VERSION)),.jp,)
+CONFIG = $(BASENAME)$(VERSION_SUFFIX).yaml
+BASE_ROM = $(BASENAME)$(VERSION_SUFFIX).z64
+SHA1_FILE = $(BASENAME)$(VERSION_SUFFIX).sha1
+BASE_LD_SCRIPT = $(BASENAME)$(VERSION_SUFFIX).ld
+MATCHING_BUILD_DIR = build$(if $(filter jp,$(VERSION)),/jp,)
+VERSION_DEFINE = -DVERSION_$(if $(filter jp,$(VERSION)),JP,US)=1
 
 ifndef QUIET
   PRINTF = @printf
@@ -30,9 +50,12 @@ BUILD_MODE ?= matching
 ifeq ($(filter $(BUILD_MODE),matching shiftable),)
   $(error BUILD_MODE must be matching or shiftable)
 endif
-BUILD_DIR = $(if $(filter shiftable,$(BUILD_MODE)),build/shiftable,build)
-ASM_DIRS  = asm asm/data
-BIN_DIRS  = assets
+ifeq ($(VERSION):$(BUILD_MODE),jp:shiftable)
+  $(error BUILD_MODE=shiftable currently supports VERSION=us only)
+endif
+BUILD_DIR = $(if $(filter shiftable,$(BUILD_MODE)),build/shiftable,$(MATCHING_BUILD_DIR))
+ASM_DIRS  = asm$(VERSION_SUFFIX) asm$(VERSION_SUFFIX)/data
+BIN_DIRS  = assets$(VERSION_SUFFIX)
 SRC_DIRS  = src
 TOOLS_DIR = tools
 
@@ -92,7 +115,7 @@ ULTRA_AS_INCLUDES = -I$(abspath include) -I$(abspath include/compiler/ido) -I$(a
 ULTRA_AS_ISA = mips2
 ULTRA_AS_OPT = -O1
 ULTRA_AS_POST =
-C_DEFINES    = -DLANGUAGE_C -D_LANGUAGE_C -D_MIPS_SZLONG=32 -DNDEBUG \
+C_DEFINES    = $(VERSION_DEFINE) -DLANGUAGE_C -D_LANGUAGE_C -D_MIPS_SZLONG=32 -DNDEBUG \
                -DCOMPILING_LIBULTRA -DBUILD_VERSION=VERSION_I -DF3DEX_GBI
 CC_CHECK_MIPS_DEFINES = -DMIPSEB -D_MIPS_FPSET=16 -D_MIPS_ISA_MIPS2=2 \
                         -D_MIPS_ISA=_MIPS_ISA_MIPS2 -D_ABIO32=1 \
@@ -193,14 +216,18 @@ $(BUILD_DIR)/src/menu/race_setup/race_setup_menu.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .data 16 \
 		--undefine-symbol gControllerPakRumbleCheckPromptState
 
-LD_SCRIPT      = $(if $(filter shiftable,$(BUILD_MODE)),$(BUILD_DIR)/$(BASENAME).ld,$(BASENAME).ld)
-LINKER_SCRIPTS = linker_scripts/hardware_regs.ld linker_scripts/libultra_syms.ld \
+LD_SCRIPT      = $(if $(filter shiftable,$(BUILD_MODE)),$(BUILD_DIR)/$(BASENAME).ld,$(BASE_LD_SCRIPT))
+LINKER_SCRIPTS = linker_scripts/hardware_regs.ld linker_scripts/n64_os_syms.ld linker_scripts/libultra_syms.ld \
                  linker_scripts/game_syms.ld \
                  linker_scripts/race_setup_menu_syms.ld \
                  linker_scripts/controller_subsystem_syms.ld \
                  linker_scripts/race_motion_syms.ld \
                  linker_scripts/training_course_ui_syms.ld \
                  linker_scripts/course_select_menu_player_syms.ld
+ifeq ($(VERSION),jp)
+LINKER_SCRIPTS = linker_scripts/hardware_regs.ld linker_scripts/n64_os_syms.ld \
+                 undefined_funcs_auto.jp.txt undefined_syms_auto.jp.txt
+endif
 LDFLAGS        = -T $(LD_SCRIPT) -Map $(TARGET).map \
                  $(foreach ld,$(LINKER_SCRIPTS),-T $(ld)) \
                  --no-check-sections
@@ -254,7 +281,7 @@ ULTRA_IDO_AS_FILES := \
 	src/ultra/os/writebackdcacheall.s
 ULTRA_IDO_AS_O_FILES := $(patsubst %.s,$(BUILD_DIR)/%.o,$(ULTRA_IDO_AS_FILES))
 
-O_FILES := $(patsubst build/%,$(BUILD_DIR)/%,$(shell grep -E 'build/(asm|assets|src)/.+\.o' $(BASENAME).ld -o 2>/dev/null | sort | uniq))
+O_FILES := $(patsubst $(MATCHING_BUILD_DIR)/%,$(BUILD_DIR)/%,$(shell grep -E '$(MATCHING_BUILD_DIR)/[^ ()]+\.o' $(BASE_LD_SCRIPT) -o 2>/dev/null | sort | uniq))
 
 TARGET = $(BUILD_DIR)/$(BASENAME)
 
@@ -262,7 +289,7 @@ TARGET = $(BUILD_DIR)/$(BASENAME)
 
 default: all
 
-all: course-definitions dirs $(TARGET).z64 $(if $(filter matching,$(BUILD_MODE)),verify)
+all: $(if $(filter us,$(VERSION)),course-definitions) dirs $(TARGET).z64 $(if $(filter matching,$(BUILD_MODE)),verify)
 
 ifeq ($(BUILD_MODE),shiftable)
 $(LD_SCRIPT): $(BASENAME).ld $(TOOLS_DIR)/make_shiftable_linker.py assets/layout/bundles.mk
@@ -283,12 +310,18 @@ dirs:
 	@mkdir -p $(BUILD_DIR)/src
 
 extract: check
-	$(PRINTF) "[$(CYAN) splat  $(NO_COL)]  Extracting $(BASENAME).yaml\n"
-	$(V)$(SPLAT) $(BASENAME).yaml
+	$(PRINTF) "[$(CYAN) splat  $(NO_COL)]  Extracting $(CONFIG)\n"
+	$(V)$(SPLAT) $(CONFIG)
+ifeq ($(VERSION),us)
 	$(V)$(PYTHON) $(TOOLS_DIR)/asset_inventory.py --source-views-only
 	$(V)$(PYTHON) $(TOOLS_DIR)/asset_bundles.py init
+endif
 
 .PHONY: asset-report verify-assets asset-previews migrate-assets
+ifeq ($(VERSION),jp)
+asset-report verify-assets asset-previews migrate-assets decompilation-summary:
+	$(error $@ currently supports VERSION=us only)
+else
 asset-report:
 	$(V)$(PYTHON) $(TOOLS_DIR)/asset_inventory.py
 
@@ -301,6 +334,7 @@ asset-previews:
 migrate-assets:
 	$(V)$(PYTHON) $(TOOLS_DIR)/asset_bundles.py migrate --if-absent
 	$(V)$(PYTHON) $(TOOLS_DIR)/semantic_assets.py
+endif
 
 #################
 ## COMPILATION ##
@@ -317,7 +351,7 @@ $(ULTRA_IDO_AS_O_FILES): $(BUILD_DIR)/%.o: %.s
 $(BUILD_DIR)/%.o: %.s
 	@mkdir -p $(dir $@)
 	$(PRINTF) "[$(GREEN)   as   $(NO_COL)]  $<\n"
-	$(V)$(CPP) $(CPPFLAGS) -I include $< | $(AS) $(ASFLAGS) -o $@
+	$(V)$(CPP) $(CPPFLAGS) $(VERSION_DEFINE) -I include $< | $(AS) $(ASFLAGS) -o $@
 
 $(TEXTCONV_DIR)/%.c: %.c $(TOOLS_DIR)/textconv.py $(CHARMAP)
 	@mkdir -p $(dir $@)
@@ -382,10 +416,12 @@ $(BUILD_DIR)/%.o: %.bin
 	$(V)$(LD) -r -b binary -o $@ $<
 
 # Extraction and migration initialize these rules; cleaning must not rebuild them.
+ifeq ($(VERSION),us)
 ifeq ($(filter clean extract migrate-assets,$(MAKECMDGOALS)),)
 -include $(wildcard $(BUILD_DIR)/assets/readable/*.d $(BUILD_DIR)/assets/course_model_resources/*.d $(BUILD_DIR)/assets/course_sprite_tables/*.d)
 -include $(wildcard $(BUILD_DIR)/assets/course_display_lists/*.d $(BUILD_DIR)/assets/course_surface_data/*.d)
 -include assets/layout/bundles.mk
+endif
 endif
 
 # Build alternate renderers only when the edited assets require them.
@@ -412,13 +448,13 @@ $(TARGET).z64: $(TARGET).bin
 
 # SHA1 verification
 verify: $(TARGET).z64
-	$(PRINTF) "[$(GREEN) verify $(NO_COL)]  Checking $(BASENAME).sha1\n"
-	$(V)shasum --check $(BASENAME).sha1
+	$(PRINTF) "[$(GREEN) verify $(NO_COL)]  Checking $(SHA1_FILE)\n"
+	$(V)shasum --check $(SHA1_FILE)
 
 # Check baserom exists
 .PHONY: check
 check:
-	@if [ ! -f $(BASENAME).z64 ]; then echo "Error: $(BASENAME).z64 not found" >&2; exit 1; fi
+	@if [ ! -f $(BASE_ROM) ]; then echo "Error: $(BASE_ROM) not found" >&2; exit 1; fi
 
 check-clang-format-version:
 	@command -v $(CLANG_FORMAT) >/dev/null 2>&1 || { echo "Error: $(CLANG_FORMAT) was not found" >&2; exit 1; }
@@ -442,9 +478,11 @@ format: check-clang-format-version
 format-check: check-clang-format-version
 	$(CLANG_FORMAT) --dry-run --Werror -style=file $(FORMAT_FILES)
 
+ifeq ($(VERSION),us)
 decompilation-summary: all
 	$(PYTHON) -m mapfile_parser objdiff_report --quiet
 	$(PYTHON) $(TOOLS_DIR)/decompilation_summary.py
+endif
 
 # Tidy is diagnostic-only: automatic fixes can alter matching code generation.
 tidy: check-clang-tidy-version
@@ -456,9 +494,13 @@ tidy: check-clang-tidy-version
 
 clean:
 	$(PRINTF) "[$(YELLOW) clean  $(NO_COL)]  Removing generated files\n"
-	$(V)rm -rf asm
-	$(V)rm -rf build
-	$(V)rm -f *auto.txt
+	$(V)rm -rf asm$(VERSION_SUFFIX)
+ifeq ($(VERSION),us)
+	$(V)rm -rf $(filter-out build/jp,$(wildcard build/*))
+else
+	$(V)rm -rf $(BUILD_DIR)
+endif
+	$(V)rm -f $(BASE_LD_SCRIPT) $(BASENAME)$(VERSION_SUFFIX).d undefined_funcs_auto$(VERSION_SUFFIX).txt undefined_syms_auto$(VERSION_SUFFIX).txt
 
 ### Settings
 .SECONDARY:

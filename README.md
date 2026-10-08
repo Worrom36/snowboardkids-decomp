@@ -70,20 +70,40 @@ the updated macOS selection still needs validation on macOS.
 
 ## Building
 
-Copy your big-endian Snowboard Kids rom into the root of the repository. Rename it to `snowboardkids.z64`. Then run:
+Place your ROM in the repository root using the filename below:
+
+| Version | Filename | SHA1 |
+| --- | --- | --- |
+| North America (`us`) | `snowboardkids.z64` | `1583bacc9046a360df8ea4d536942155247e154c` |
+| Japan (`jp`) | `snowboardkids.jp.z64` | `96480c8fa7285d9e850f6ba002e56bcb7ada9796` |
+
+Build and verify the ROM:
 
 ```bash
-./tools/build-and-verify.sh
+./tools/build-and-verify.sh              # North America (default)
+./tools/build-and-verify.sh --version jp
 ```
 
-If everything works correctly you should see:
+The output is `build/snowboardkids.z64` for US or
+`build/jp/snowboardkids.z64` for JP. A successful build prints the output path
+followed by `OK`, confirming that its SHA1 matches the original ROM.
+
+For incremental builds, extract once, then run make. Use `VERSION=us` or
+`VERSION=jp` on both commands:
 
 ```bash
-build/snowboardkids.z64: OK
+make VERSION=jp extract
+make VERSION=jp -j8
 ```
+
+JP currently builds from extracted assembly; C decompilation is in progress
+for US. Readable asset tools, progress reporting, and `--mode shiftable` support
+US only.
 
 ## Reverse-engineering notes
 
+- [Multi-version development](docs/versions.md) covers version-specific paths,
+  diff commands, and matching Japanese functions.
 - [Readable asset extraction](docs/readable-assets.md) explains semantic asset
   bundles, Blender-friendly GLB models/animations, PNGs, text, replays, audio,
   safe migration, and byte-exact rebuilding. Start with

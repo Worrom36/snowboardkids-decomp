@@ -1,4 +1,12 @@
 snowboardkids.z64
+snowboardkids.jp.z64
+asm.jp/
+assets.jp/
+snowboardkids.jp.d
+snowboardkids.jp.ld
+undefined_funcs_auto.jp.txt
+undefined_syms_auto.jp.txt
+.splat_cache.jp
 asm
 assets
 asset-backups/

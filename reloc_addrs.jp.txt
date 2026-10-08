@@ -1,0 +1,1 @@
+// Japanese relocation overrides. Add verified Japanese ROM offsets here.

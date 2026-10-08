@@ -1,0 +1,56 @@
+name: Snobo Kids (Japan)
+sha1: 96480c8fa7285d9e850f6ba002e56bcb7ada9796
+options:
+  basename: snowboardkids.jp
+  target_path: snowboardkids.jp.z64
+  elf_path: build/jp/snowboardkids.elf
+  base_path: .
+  platform: n64
+  compiler: IDO
+  asm_path: asm.jp
+  asset_path: assets.jp
+  src_path: src/jp
+  build_path: build/jp
+  ld_script_path: snowboardkids.jp.ld
+  ld_dependencies: True
+  symbol_addrs_path: symbol_addrs.jp.txt
+  reloc_addrs_path: reloc_addrs.jp.txt
+  cache_path: .splat_cache.jp
+  undefined_funcs_auto_path: undefined_funcs_auto.jp.txt
+  undefined_syms_auto_path: undefined_syms_auto.jp.txt
+  # Preserve the half-width katakana title as bytes, not UTF-8 assembly text.
+  header_encoding: word
+  o_as_suffix: True
+  use_legacy_include_asm: False
+  mips_abi_float_regs: o32
+  find_file_boundaries: True
+  disassemble_all: True
+  libultra_symbols: True
+  hardware_regs: True
+
+# Initial matching scaffold, not a port of the US C sources. Split main's asm
+# into smaller asm/C subsegments as Japanese function boundaries are mapped.
+segments:
+  - [0x0, header, header]
+  - [0x40, bin, ipl3]
+  - name: entry
+    type: code
+    start: 0x1000
+    vram: 0x80000400
+    subsegments:
+      - [0x1000, asm, entrypoint]
+  - name: main
+    type: code
+    start: 0x1050
+    vram: 0x80000450
+    subalign: 4
+    bss_size: 0x7DAC0
+    subsegments:
+      - [0x1050, asm, main]
+      - [0xB12C0, databin, rspboot]
+      - [0xB1390, databin, aspMain]
+      - [0xB21B0, databin, f3dlx]
+      - [0xB35E0, databin, main_data]
+      - {type: bss, vram: 0x800E1CE0, name: main_bss}
+  - [0xE28E0, bin, assets]
+  - [0x800000]

@@ -1,0 +1,5 @@
+/* Fixed N64 boot/OS variables, shared by all ROM versions. */
+osTvType = 0x80000300;
+osRomBase = 0x80000308;
+osResetType = 0x8000030C;
+osAppNMIBuffer = 0x8000031C;

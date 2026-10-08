@@ -1,0 +1,3 @@
+// Japanese addresses only. Do not copy US addresses into this file.
+entrypoint = 0x80000400; // type:func rom:0x1000 size:0x50
+main = 0x80098FE0; // type:func rom:0x99BE0

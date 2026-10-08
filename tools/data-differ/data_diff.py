@@ -504,33 +504,33 @@ Examples:
     )
 
     parser.add_argument(
+        "--version", choices=("us", "jp"), default=os.environ.get("VERSION", "us"),
+        help="ROM version (default: VERSION environment variable or us)"
+    )
+
+    parser.add_argument(
         "--target-rom",
-        default="snowboardkids.z64",
-        help="Path to target ROM file (default: snowboardkids.z64)"
+        help="Path to target ROM file (default: selected version's baserom)"
     )
 
     parser.add_argument(
         "--compiled-rom",
-        default="build/snowboardkids.z64",
-        help="Path to compiled ROM file (default: build/snowboardkids.z64)"
+        help="Path to compiled ROM file (default: selected version's build)"
     )
 
     parser.add_argument(
         "--elf",
-        default="build/snowboardkids.elf",
-        help="Path to compiled ELF file (default: build/snowboardkids.elf)"
+        help="Path to compiled ELF file (default: selected version's build)"
     )
 
     parser.add_argument(
         "--symbol-addrs",
-        default="symbol_addrs.txt",
-        help="Path to symbol_addrs.txt (default: symbol_addrs.txt)"
+        help="Path to symbol addresses (default: selected version's symbols)"
     )
 
     parser.add_argument(
         "--map-file",
-        default="build/snowboardkids.map",
-        help="Path to linker map file (default: build/snowboardkids.map)"
+        help="Path to linker map file (default: selected version's build)"
     )
 
     parser.add_argument(
@@ -546,6 +546,15 @@ Examples:
     )
 
     args = parser.parse_args()
+    if args.version not in ("us", "jp"):
+        parser.error("VERSION must be us or jp")
+    suffix = ".jp" if args.version == "jp" else ""
+    build_dir = "build/jp" if args.version == "jp" else "build"
+    args.target_rom = args.target_rom or f"snowboardkids{suffix}.z64"
+    args.compiled_rom = args.compiled_rom or f"{build_dir}/snowboardkids.z64"
+    args.elf = args.elf or f"{build_dir}/snowboardkids.elf"
+    args.symbol_addrs = args.symbol_addrs or f"symbol_addrs{suffix}.txt"
+    args.map_file = args.map_file or f"{build_dir}/snowboardkids.map"
 
     # Validate arguments
     if args.find_first_mismatch and args.symbol:
@@ -691,7 +700,7 @@ Examples:
 
         # Try asm/data files
         if size is None:
-            asm_data_dir = Path("asm/data")
+            asm_data_dir = Path(f"asm{suffix}/data")
             if asm_data_dir.exists():
                 asm_size = parse_asm_data_size(str(asm_data_dir), symbol_name)
                 if asm_size is not None:
