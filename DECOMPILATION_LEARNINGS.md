@@ -1100,3 +1100,9 @@ above can possibly work, so read them before spending a variant.
   `ptr[12]` / `ptr[32]` indexing to reach two arrays off one shared base),
   expect those artifacts to be load-bearing and restrict cleanup to renames
   unless you can re-derive the exact address-math scheduling by hand.
+
+- When splitting C `.rodata` out of a raw `databin` range, assign the remaining
+  read-only tail to `rodatabin`. Splat groups output by section type: a trailing
+  `databin` can be linked before the C constants despite appearing after them
+  in the YAML, shifting both constants and subsequent data. Verify the section
+  addresses and full ROM checksum after the split.
