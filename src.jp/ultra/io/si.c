@@ -1,6 +1,8 @@
 #include "PR/os_internal.h"
 #include "PRinternal/siint.h"
 
+#ident "$Revision: 1.17 $"
+
 int __osSiDeviceBusy(void) {
     register u32 stat = IO_READ(SI_STATUS_REG);
 

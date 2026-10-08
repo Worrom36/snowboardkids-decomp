@@ -3,6 +3,8 @@
 #include "PR/sptask.h"
 #include "PRinternal/osint.h"
 
+#ident "$Revision: 1.17 $"
+
 int __osSpDeviceBusy(void) {
     register u32 stat = IO_READ(SP_STATUS_REG);
 

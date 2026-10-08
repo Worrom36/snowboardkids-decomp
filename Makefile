@@ -411,8 +411,7 @@ $(BUILD_DIR)/runtime-indices/race_player_model_renderer.o: $(TEXTCONV_DIR)/$(SRC
 ifeq ($(VERSION),jp)
 $(BUILD_DIR)/src.jp/math/spatial_math.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 8
-$(BUILD_DIR)/src.jp/menu/renderer/menu_render_utils.o \
-$(BUILD_DIR)/src.jp/race/course/race_surface_cues.o: C_OBJ_POSTPROCESS = \
+$(BUILD_DIR)/src.jp/menu/renderer/menu_render_utils.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 4
 $(BUILD_DIR)/src.jp/race/player/race_player_update.o \
 $(BUILD_DIR)/src.jp/race/player/race_player_update_updateRacePlayerTrickSubstateNoop.o: C_OBJ_POSTPROCESS = \

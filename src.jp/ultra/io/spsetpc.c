@@ -1,5 +1,7 @@
 #include "PR/rcp.h"
 
+#ident "$Revision: 1.17 $"
+
 s32 __osSpSetPc(u32 pc) {
     register u32 status = IO_READ(SP_STATUS_REG);
 
