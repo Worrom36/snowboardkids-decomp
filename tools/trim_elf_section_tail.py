@@ -15,11 +15,12 @@ SHN_UNDEF = 0
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Remove verified zero padding from the logical end of an ELF32 section."
+        description="Adjust zero padding at the logical end of an ELF32 section."
     )
     parser.add_argument("file", help="ELF object to update")
     parser.add_argument("section", help="section name to trim")
-    parser.add_argument("byte_count", type=int, help="number of tail bytes to remove")
+    parser.add_argument("byte_count", type=int, help="number of zero padding bytes to remove or append")
+    parser.add_argument("--pad", action="store_true", help="append zero padding instead of trimming")
     parser.add_argument(
         "--undefine-symbol",
         action="append",
@@ -85,6 +86,24 @@ def main():
         target_header_offset, target_header, _ = sections[target_index]
         target_offset = target_header[4]
         target_size = target_header[5]
+        if args.pad:
+            if (struct.unpack_from(endian + "H", data, 0x10)[0] != 1
+                    or target_header[1] != 1 or args.undefine_symbol):
+                parser.error("padding requires a PROGBITS section in a relocatable object and cannot undefine symbols")
+            # Put the enlarged section at EOF, preserving every other section
+            # and all section-relative symbols and relocations unchanged.
+            alignment = max(target_header[8], 1)
+            new_offset = (len(data) + alignment - 1) // alignment * alignment
+            contents = data[target_offset:target_offset + target_size]
+            data.extend(bytes(new_offset - len(data)))
+            data.extend(contents + bytes(args.byte_count))
+            struct.pack_into(endian + "II", data, target_header_offset + 0x10,
+                             new_offset, target_size + args.byte_count)
+            elf.seek(0)
+            elf.write(data)
+            elf.truncate()
+            print(f"Padded {args.byte_count} zero bytes onto {args.section} in {args.file}")
+            return 0
         if args.byte_count > target_size:
             print("Error: trim exceeds section size", file=sys.stderr)
             return 1

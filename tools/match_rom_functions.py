@@ -31,6 +31,7 @@ class Function:
     size: int
     file: str
     body: bytes
+    implementation: str = 'asm'
 
 
 def code_layout(config):
@@ -68,6 +69,10 @@ def read_region(root, version):
         raise ValueError('a MIPS readelf is required')
     output = subprocess.check_output([readelf, '-sW', str(elf)], text=True)
     ranges = code_layout(config)
+    kinds = {sub[0]: sub[1] for segment in config['segments'] if isinstance(segment, dict)
+             for sub in segment.get('subsegments', []) if isinstance(sub, list)}
+    nonmatching = {int(fields[1], 16) for line in output.splitlines()
+                   if len(fields := line.split()) == 8 and fields[7].endswith('.NON_MATCHING')}
     functions = {}
     for line in output.splitlines():
         fields = line.split()
@@ -81,7 +86,8 @@ def read_region(root, version):
             if start <= offset < end:
                 if offset % 4 or size % 4 or offset + size > end:
                     raise ValueError(f'{version}: invalid function extent: {name}')
-                f = Function(name, offset, address, size, file, rom[offset:offset + size])
+                implementation = 'asm' if address in nonmatching else kinds[start]
+                f = Function(name, offset, address, size, file, rom[offset:offset + size], implementation)
                 old = functions.get(offset)
                 if old and old.size != size:
                     raise ValueError(f'{version}: conflicting aliases at {offset:#x}')
@@ -336,6 +342,7 @@ def make_report(root):
         g = jp[j] if j is not None else None
         rows.append(dict(us_name=f.name, us_rom=f.rom, us_vram=f.vram, size=f.size, file=f.file,
                          jp_name=g.name if g else None, jp_rom=g.rom if g else None,
+                         jp_file=g.file if g else None, jp_implementation=g.implementation if g else None,
                          jp_vram=g.vram if g else None, delta=g.rom-f.rom if g else None,
                          method=methods[i] if g else None,
                          status='matched' if g else 'conflict' if i in conflicts else
@@ -343,6 +350,9 @@ def make_report(root):
                          'unconfirmed' if candidates[i] else 'unmatched',
                          candidates=[jp[n].rom for n in candidates[i]]))
     counts = Counter(row['method'] for row in rows if row['status'] == 'matched')
+    splits = assembly_splits(boundaries, rows, jp, max(r[1] for r in jp_ranges))
+    config = yaml.safe_load((root / 'snowboardkids.jp.yaml').read_text())
+    splits = preserve_c_splits(splits, config)
     return dict(schema_version=1, rom_sha1=dict(us=us_sha, jp=jp_sha),
                 summary=dict(us_functions=len(us), jp_functions=len(jp), matched=len(matches),
                              methods=dict(counts), matched_bytes=sum(us[i].size for i in matches),
@@ -350,9 +360,21 @@ def make_report(root):
                              supported_boundaries=sum(b['status']=='supported' for b in boundaries),
                              total_boundaries=len(boundaries), conflicts=len(conflicts)),
                 functions=rows, boundaries=boundaries,
-                assembly_splits=assembly_splits(boundaries, rows, jp, max(r[1] for r in jp_ranges)),
+                assembly_splits=splits,
                 unmatched_jp=[dict(name=f.name, rom=f.rom, size=f.size)
                               for j, f in enumerate(jp) if j not in set(matches.values())])
+
+
+def preserve_c_splits(proposals, config):
+    """Once C is integrated, export the current layout without reverting it.
+
+    Newly inferred file boundaries remain available separately in the report.
+    """
+    main = next(s for s in config['segments'] if isinstance(s, dict) and s.get('name') == 'main')
+    text = [s for s in main['subsegments'] if isinstance(s, list) and s[1] in ('asm', 'c', 'hasm')]
+    if not any(s[1] == 'c' for s in text):
+        return proposals
+    return [dict(start=s[0], type=s[1], name=s[2], reason='existing-layout') for s in text]
 
 
 def markdown(report):
@@ -370,6 +392,8 @@ def markdown(report):
              'They establish correspondence, not byte equality. File names describe US layout; '
              'they do not prove original JP compilation units. All addresses below are ROM offsets.', '',
              'The JSON companion records every function, candidate, and supporting anchor.', '',
+             f"**{sum(r['jp_implementation'] == 'c' for r in report['functions'])} matched JP functions "
+             'are compiled from C.** The split export preserves existing C subsegments.', '',
              '| US file | US start | JP start / interval | JP − US | Evidence | Functions mapped |',
              '| --- | ---: | --- | ---: | --- | ---: |']
     for b in report['boundaries']:
@@ -391,8 +415,9 @@ def main():
     args.output.write_text(json.dumps(report, indent=2)+'\n')
     args.output.with_suffix('.md').write_text(markdown(report))
     args.output.with_suffix('.splits.yaml').write_text(
-        '# Proposed JP main CPU text subsegments; unresolved tails have no US identity.\n' +
-        ''.join(f"- [0x{s['start']:X}, asm, {s['name']}]\n" for s in report['assembly_splits']))
+        '# JP main CPU text subsegments; existing C integration is preserved.\n' +
+        ''.join(f"- [0x{s['start']:X}, {s.get('type', 'asm')}, {s['name']}]\n"
+                for s in report['assembly_splits']))
     print(json.dumps(report['summary'], indent=2))
 
 

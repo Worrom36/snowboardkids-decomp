@@ -165,6 +165,11 @@ $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/drvrnew.o: C_OPT = -O3
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/drvrnew.o: IDO_CC = $(IDO_DIRECT)
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/reverb.o: C_OPT = -O3
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/reverb.o: IDO_CC = $(IDO_DIRECT)
+ifeq ($(VERSION),jp)
+# Partial JP reverb translation units use the same compiler as the US file.
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/reverb_%.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/reverb_%.o: IDO_CC = $(IDO_DIRECT)
+endif
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/resample.o: C_OPT = -O3
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/resample.o: IDO_CC = $(IDO_DIRECT)
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/auxbus.o: C_OPT = -O3
@@ -404,6 +409,41 @@ $(BUILD_DIR)/runtime-indices/race_player_model_renderer.o: $(TEXTCONV_DIR)/$(SRC
 		$(C_DEFINES) $(CC_CHECK_MIPS_DEFINES) -DSBK_SNOWBOARD_TEXTURE_SIZE -iquote $(SRC_DIR)/race/player $<
 	$(V)$(IDO_CC) $(CFLAGS) $(C_OPT) -DSBK_SNOWBOARD_TEXTURE_SIZE -I$(SRC_DIR)/race/player -o $@ $<
 	$(V)$(RM_MDEBUG)
+
+# Match original JP text extents at partial-file boundaries. IDO pads C
+# objects to 16 bytes; preserve only the padding present in the original ROM.
+ifeq ($(VERSION),jp)
+$(BUILD_DIR)/src.jp/race/effects/snowboard_trail_effects.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 4 --pad
+$(BUILD_DIR)/src.jp/menu/renderer/menu_render_utils.o \
+$(BUILD_DIR)/src.jp/race/course/race_surface_cues.o \
+$(BUILD_DIR)/src.jp/race/player/race_player_movement_addRacePlayerScore.o \
+$(BUILD_DIR)/src.jp/libmus/player.o \
+$(BUILD_DIR)/src.jp/ultra/audio/load.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 4
+$(BUILD_DIR)/src.jp/ending/ending_credits_slash.o \
+$(BUILD_DIR)/src.jp/ending/ending_credits_slash_noopEndingCreditsSlashAlt.o \
+$(BUILD_DIR)/src.jp/ending/ending_credits_tommy.o \
+$(BUILD_DIR)/src.jp/race/player/race_player_update.o \
+$(BUILD_DIR)/src.jp/race/player/race_player_update_updateRacePlayerTrickSubstateNoop.o \
+$(BUILD_DIR)/src.jp/libmus/player_Fenvoff.o \
+$(BUILD_DIR)/src.jp/libmus/player_MusIntInitEnvelope.o \
+$(BUILD_DIR)/src.jp/libmus/player_MusIntMemSet.o \
+$(BUILD_DIR)/src.jp/ultra/gu/mtxutil.o \
+$(BUILD_DIR)/src.jp/ultra/gu/mtxutil_guMtxL2F.o \
+$(BUILD_DIR)/src.jp/ultra/audio/reverb.o \
+$(BUILD_DIR)/src.jp/ultra/audio/reverb_alFxParam.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 8
+$(BUILD_DIR)/src.jp/menu/main_menu/main_menu_scene_model.o \
+$(BUILD_DIR)/src.jp/menu/main_menu/main_menu_scene_model_applyMainMenuSceneModelAnimationFrame.o \
+$(BUILD_DIR)/src.jp/math/fixed_point_math.o \
+$(BUILD_DIR)/src.jp/libmus/player_Fendit.o \
+$(BUILD_DIR)/src.jp/libmus/player_Fgoto.o \
+$(BUILD_DIR)/src.jp/ultra/audio/sl.o \
+$(BUILD_DIR)/src.jp/ultra/io/contpfs.o \
+$(BUILD_DIR)/src.jp/ultra/audio/env.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 12
+endif
 
 # Patch ll.o for modern binutils, matching the upstream libultra build.
 $(BUILD_DIR)/$(SRC_DIR)/ultra/libc/ll.o: $(SRC_DIR)/ultra/libc/ll.c

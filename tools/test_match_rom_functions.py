@@ -2,7 +2,7 @@ import struct
 import unittest
 
 from match_rom_functions import (Function, assembly_splits, code_layout,
-                                 infer_boundaries, match_functions, normalized)
+                                 infer_boundaries, match_functions, normalized, preserve_c_splits)
 
 RAM = [(0x80000400, 0x80160000)]
 
@@ -143,6 +143,15 @@ class RegionMatcherTests(unittest.TestCase):
         splits = assembly_splits(boundaries, functions, jp, 0x1090)
         self.assertEqual([(s['start'], s['name']) for s in splits],
                          [(0x1050, 'known'), (0x1068, 'unresolved/001068'), (0x1080, 'next')])
+
+    def test_split_export_preserves_integrated_c(self):
+        config = {'segments': [dict(name='main', subsegments=[
+            [0x1050, 'asm', 'prefix'], [0x1080, 'c', 'matched'],
+            [0x1100, 'asm', 'suffix'], [0x1200, 'databin', 'data']])]}
+        proposals = [dict(start=0x1050, name='whole_file', reason='supported-start')]
+        result = preserve_c_splits(proposals, config)
+        self.assertEqual([(s['start'], s['type'], s['name']) for s in result],
+                         [(0x1050, 'asm', 'prefix'), (0x1080, 'c', 'matched'), (0x1100, 'asm', 'suffix')])
 
 
 if __name__ == '__main__':

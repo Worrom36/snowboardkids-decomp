@@ -10,6 +10,8 @@ Normalized matches preserve instructions except recognized RAM address operands.
 
 The JSON companion records every function, candidate, and supporting anchor.
 
+**120 matched JP functions are compiled from C.** The split export preserves existing C subsegments.
+
 | US file | US start | JP start / interval | JP − US | Evidence | Functions mapped |
 | --- | ---: | --- | ---: | --- | ---: |
 | menu/main_menu/controller_subsystem | `0x1050` | `0x1050` | +0x0 | supported | 1/2 |

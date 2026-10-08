@@ -69,6 +69,21 @@ The JSON report records supporting anchors and unresolved functions; rerunning
 it after extraction must reproduce the same function map and split proposals.
 The tool never edits the configuration itself.
 
+## Shared C implementations
+
+The exact-byte match list has 120 functions compiled from C in `src.jp`.
+[The integration checklist](../reports/jp-exact-functions.md) records their
+source files and the 17 entries whose US implementations are handwritten assembly.
+Each C translation unit covers a contiguous matched range. Later ranges from
+the same US file use a function-name suffix; intervening code remains assembly.
+These partial C files do not establish additional original file boundaries.
+
+JP C uses the corresponding US compiler settings, including `-O3` function
+ordering where applicable. Per-object padding adjustments preserve the exact
+original text extents without altering instructions. Symbol names and addresses
+are recorded in `symbol_addrs.jp.txt`. The matcher reports C implementation
+status and preserves integrated C subsegments in its split export.
+
 ## Matching a Japanese function
 
 1. Find the corresponding JP subsegment in `reports/region-functions.md` or
