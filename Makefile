@@ -227,6 +227,7 @@ LINKER_SCRIPTS = linker_scripts/hardware_regs.ld linker_scripts/n64_os_syms.ld l
                  linker_scripts/course_select_menu_player_syms.ld
 ifeq ($(VERSION),jp)
 LINKER_SCRIPTS = linker_scripts/hardware_regs.ld linker_scripts/n64_os_syms.ld \
+                 linker_scripts/game_syms.jp.ld \
                  undefined_funcs_auto.jp.txt undefined_syms_auto.jp.txt
 endif
 LDFLAGS        = -T $(LD_SCRIPT) -Map $(TARGET).map \
@@ -410,27 +411,12 @@ $(BUILD_DIR)/runtime-indices/race_player_model_renderer.o: $(TEXTCONV_DIR)/$(SRC
 ifeq ($(VERSION),jp)
 $(BUILD_DIR)/src.jp/math/spatial_math.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 8
-$(BUILD_DIR)/src.jp/race/effects/snowboard_trail_effects.o: C_OBJ_POSTPROCESS = \
-	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 4 --pad
 $(BUILD_DIR)/src.jp/menu/renderer/menu_render_utils.o \
-$(BUILD_DIR)/src.jp/race/course/race_surface_cues.o \
-$(BUILD_DIR)/src.jp/race/player/race_player_movement_addRacePlayerScore.o \
-$(BUILD_DIR)/src.jp/libmus/player.o: C_OBJ_POSTPROCESS = \
+$(BUILD_DIR)/src.jp/race/course/race_surface_cues.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 4
-$(BUILD_DIR)/src.jp/ending/ending_credits_slash.o \
-$(BUILD_DIR)/src.jp/ending/ending_credits_slash_noopEndingCreditsSlashAlt.o \
-$(BUILD_DIR)/src.jp/ending/ending_credits_tommy.o \
 $(BUILD_DIR)/src.jp/race/player/race_player_update.o \
-$(BUILD_DIR)/src.jp/race/player/race_player_update_updateRacePlayerTrickSubstateNoop.o \
-$(BUILD_DIR)/src.jp/libmus/player_Fenvoff.o \
-$(BUILD_DIR)/src.jp/libmus/player_MusIntInitEnvelope.o \
-$(BUILD_DIR)/src.jp/libmus/player_MusIntMemSet.o: C_OBJ_POSTPROCESS = \
+$(BUILD_DIR)/src.jp/race/player/race_player_update_updateRacePlayerTrickSubstateNoop.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 8
-$(BUILD_DIR)/src.jp/menu/main_menu/main_menu_scene_model.o \
-$(BUILD_DIR)/src.jp/menu/main_menu/main_menu_scene_model_applyMainMenuSceneModelAnimationFrame.o \
-$(BUILD_DIR)/src.jp/libmus/player_Fendit.o \
-$(BUILD_DIR)/src.jp/libmus/player_Fgoto.o: C_OBJ_POSTPROCESS = \
-	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 12
 endif
 
 # Patch ll.o for modern binutils, matching the upstream libultra build.
