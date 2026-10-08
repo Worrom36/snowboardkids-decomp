@@ -92,9 +92,31 @@ def owner(s):
     return f'assets/{family}/{name.lstrip("_").lower()}'
 
 
+def migrate_source_paths(root):
+    """Update existing editable bundle references after the src.us move.
+
+    Replace only paths with an existing destination. Preserve all other bytes,
+    including user edits, comments, and formatting in ignored asset manifests.
+    """
+    pattern = re.compile(r'(?<![\w./-])((?:\.\./)*)src/([\w./-]+)')
+    changed = 0
+    for path in (root / 'assets').rglob('asset.yaml'):
+        source = path.read_text()
+        def replace(match):
+            if (root / 'src.us' / match[2]).is_file():
+                return match[1] + 'src.us/' + match[2]
+            return match[0]
+        updated = pattern.sub(replace, source)
+        if source != updated:
+            path.write_text(updated)
+            changed += 1
+    return changed
+
+
 def initialize(root):
     """Create fresh bundles, or check existing ones without migrating edits."""
     from tools.semantic_assets import upgrade, validate_structure
+    migrate_source_paths(root)
     if not (root / LAYOUT).exists():
         migrate(root)
         upgrade(root, load_yaml(root / 'tools/asset_registry.yaml'))
@@ -283,12 +305,12 @@ def index_models(root, layout):
             result.append(fields)
         return result
 
-    scroll_source = (root/'src/race/ui/race_ui_effects.c').read_text()
+    scroll_source = (root/'src.us/race/ui/race_ui_effects.c').read_text()
     scroll_body = re.search(r'gRaceCourseScrollingTextureInit\[[^]]+\]\s*=\s*\{(.*?)\};',scroll_source,re.S)[1]
     scroll_rows = table_rows(scroll_body)
     scroll_courses = ['quicksand_valley','quicksand_valley','night_highway','animal_land',
                       'dizzy_land','dizzy_land','sunset_rock','sunset_rock']
-    effect_source = (root/'src/race/course/race_course_effects.c').read_text()
+    effect_source = (root/'src.us/race/course/race_course_effects.c').read_text()
     water_layer_body = re.search(r'gCourseWaterLayerEntries\[\]\s*=\s*\{(.*?)\};',effect_source,re.S)[1]
     water_layers = table_rows(water_layer_body)
     for bank in specs:

@@ -21,8 +21,8 @@ tools/ido-recomp
 .push_secrets
 
 # Permuter
-src/ctx.c
-src/temp.c
+src.*/ctx.c
+src.*/temp.c
 nonmatchings
 .decomp-workbench/
 

@@ -12,7 +12,6 @@ ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 
 CPP_FLAGS = [
     "-Iinclude",
-    "-Isrc",
     "-DLANGUAGE_C",
     "-D_LANGUAGE_C",
     "-D_MIPS_SZLONG=32",
@@ -23,8 +22,10 @@ CPP_FLAGS = [
 
 def import_c_file(in_file):
     rel_file = os.path.relpath(in_file, ROOT_DIR)
-    macro_cmd = ["gcc", "-E", "-P", "-dM", *CPP_FLAGS, rel_file]
-    preprocess_cmd = ["gcc", "-E", "-P", *CPP_FLAGS, rel_file]
+    source_root = rel_file.split(os.sep)[0]
+    source_include = "-I" + (source_root if source_root in ("src.us", "src.jp") else "src.us")
+    macro_cmd = ["gcc", "-E", "-P", "-dM", source_include, *CPP_FLAGS, rel_file]
+    preprocess_cmd = ["gcc", "-E", "-P", source_include, *CPP_FLAGS, rel_file]
 
     with tempfile.NamedTemporaryFile(suffix=".c") as tmp:
         stock_macros = subprocess.check_output(

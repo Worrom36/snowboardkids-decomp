@@ -477,8 +477,8 @@ def find_similar_functions(query: ParsedFunction, candidates: List[ParsedFunctio
 
 def get_c_source_for_function(func_name: str, project_root: str) -> Optional[str]:
     """Try to find the C source file containing a matched function."""
-    # Search for the function name in src/ directory
-    src_dir = os.path.join(project_root, 'src')
+    # Search for the function name in src.us/ directory
+    src_dir = os.path.join(project_root, 'src.us')
     if not os.path.isdir(src_dir):
         return None
 

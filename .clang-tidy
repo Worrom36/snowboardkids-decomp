@@ -5,7 +5,7 @@ Checks: >
   readability-redundant-parentheses,
   misc-include-cleaner,
 WarningsAsErrors: ""
-HeaderFilterRegex: '^(src|include)/.*\.h$'
+HeaderFilterRegex: '^(src\.(us|jp)|include)/.*\.h$'
 ExcludeHeaderFilterRegex: '^include/(hasm|include_asm)\.h$|^include/sys/'
 FormatStyle: "file"
 CheckOptions:

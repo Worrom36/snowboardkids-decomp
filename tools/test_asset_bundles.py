@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from tools.asset_bundles import (LAYOUT, commands, dependencies, dump, materialize,
-                                migrate, pack_segment, safe_path)
+                                migrate, migrate_source_paths, pack_segment, safe_path)
 from tools.model_preview import GLB, Interpreter, posed_parts, quaternion
 
 
@@ -20,6 +20,23 @@ def vertex(x, y, z, s=0, t=0):
 
 
 class BundleTests(unittest.TestCase):
+    def test_source_directory_migration_preserves_editable_manifests(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'src.us/menu').mkdir(parents=True)
+            (root / 'src.us/menu/text.c').write_text('/* source */')
+            manifest = root / 'assets/text/example/asset.yaml'
+            manifest.parent.mkdir(parents=True)
+            source = ("# Keep user formatting\nsources: ['../../../src/menu/text.c']\n"
+                      "shared_effects: [src/menu/text.c]\ncustom: edited\n"
+                      "missing: src/menu/missing.c\nupstream: ../library/src/menu/text.c\n")
+            manifest.write_text(source)
+            self.assertEqual(migrate_source_paths(root), 1)
+            expected = source.replace('../../../src/menu/text.c', '../../../src.us/menu/text.c')
+            expected = expected.replace('[src/menu/text.c]', '[src.us/menu/text.c]')
+            self.assertEqual(manifest.read_text(), expected)
+            self.assertEqual(migrate_source_paths(root), 0)
+
     def test_format_specific_segment_adapters(self):
         import importlib
         from tools.asset_bundles import ASSET_TYPES, source_segments

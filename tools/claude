@@ -235,13 +235,13 @@ elif [ "$BOOTSTRAP" = true ]; then
         echo "// file is blank because m2c is not installed" >> "$created_dir/base.c"
     else
         # Determine the C file path from the ASM path
-        # asm/nonmatchings/10AD0/func_8000FED0_10AD0.s -> src/10AD0.c
-        # asm/nonmatchings/levels/crazy_jungle_boss/func_800BB2B0_ABAE0.s -> src/levels/crazy_jungle_boss.c
+        # asm/nonmatchings/10AD0/func_8000FED0_10AD0.s -> src.us/10AD0.c
+        # asm/nonmatchings/levels/crazy_jungle_boss/func_800BB2B0_ABAE0.s -> src.us/levels/crazy_jungle_boss.c
         ASM_DIR=$(dirname "$ASM_PATH")
         # Remove the "asm/nonmatchings/" or "asm/matchings/" prefix
         RELATIVE_DIR=${ASM_DIR#asm/nonmatchings/}
         RELATIVE_DIR=${RELATIVE_DIR#asm/matchings/}
-        C_FILE="src/${RELATIVE_DIR}.c"
+        C_FILE="src.us/${RELATIVE_DIR}.c"
 
         # Generate context file if the C file exists
         CONTEXT_ARG=""
@@ -285,7 +285,7 @@ elif [ "$BOOTSTRAP" = true ]; then
     fi
 else
     # Use temp.c as before
-    cp src/temp.c "$created_dir/base.c"
+    cp src.us/temp.c "$created_dir/base.c"
 fi
 cat "${CLAUDE_DIR}/prelude.inc" "${CLAUDE_DIR}/../../include/macro.inc" "$ASM_PATH" > "$created_dir/target.s"
 CROSS="$(find_cross_prefix)"

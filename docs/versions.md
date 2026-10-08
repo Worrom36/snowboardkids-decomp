@@ -1,12 +1,11 @@
 # Multi-version development
 
-The version selector follows the conventions used by
-[SSSV](https://github.com/mkst/sssv/blob/master/Makefile) and
-[SM64](https://github.com/n64decomp/sm64/blob/master/Makefile): `VERSION=us|jp`,
-separate ROM metadata, and `VERSION_US`/`VERSION_JP` preprocessor definitions.
-US keeps its established paths because the readable asset and progress tools
-use them. JP uses isolated outputs, so switching versions does not require
-discarding the other build.
+Select the region with `VERSION=us|jp`. Each region has separate ROM metadata
+and a corresponding `VERSION_US` or `VERSION_JP` preprocessor definition.
+Source trees are `src.us` and `src.jp`, selected through
+`SRC_DIR = src.$(VERSION)`. Shared headers stay in `include`. ROM metadata,
+assembly, assets, and build outputs retain their established regional paths.
+Switching versions does not require discarding the other build.
 
 | Purpose | US | JP |
 | --- | --- | --- |
@@ -16,7 +15,7 @@ discarding the other build.
 | Relocations | `reloc_addrs.txt` | `reloc_addrs.jp.txt` |
 | Generated assembly | `asm/` | `asm.jp/` |
 | Extracted assets | `assets/` | `assets.jp/` |
-| Default C source directory | `src/` | `src/jp/` |
+| Default C source directory | `src.us/` | `src.jp/` |
 | Build directory | `build/` | `build/jp/` |
 | Generated linker script | `snowboardkids.ld` | `snowboardkids.jp.ld` |
 | Generated unresolved symbols | `undefined_*_auto.txt` | `undefined_*_auto.jp.txt` |
@@ -40,13 +39,44 @@ to the US `rspboot`, `aspMain`, and `f3dlx` blobs. Remaining loaded data begins
 at `0xB35E0`; ROM `0xE28E0..0x800000` is retained as one asset blob. These
 coarse splits provide a matching starting point, not a complete data map.
 
+## Function alignment and file splits
+
+Run both verified builds before refreshing the map:
+
+```bash
+./tools/build-and-verify.sh
+./tools/build-and-verify.sh --version jp
+.venv/bin/python tools/match_rom_functions.py
+```
+
+The matcher writes `reports/region-functions.json`, a readable Markdown summary,
+and a proposed `.splits.yaml` fragment. It reads complete function extents from
+MIPS ELF symbols and bytes from the original ROMs. Exact-byte matches are kept
+separate from instruction sequences that differ only in recognized RAM address
+operands. Ordinary constants, registers, and branch structure remain significant.
+Order, neighboring anchors, pointer identity, and mapped call targets constrain
+ambiguous matches. Small stubs need anchors on both sides. These are conservative
+correspondences, not a proof of semantic identity or original compilation units.
+
+Supported starts mirror US relative file names as JP `asm` subsegments. Where
+an adjacent file start cannot be identified, an `unresolved/<ROM offset>` range
+keeps the uncertain tail separate. Do not interpret an approximate interval as
+an exact split or copy US addresses into JP symbols. Main data and assets retain
+the coarse scaffold described above. JP assembly uses `-no-pad-sections` so a
+four-byte split does not introduce assembler padding.
+
+The JSON report records supporting anchors and unresolved functions; rerunning
+it after extraction must reproduce the same function map and split proposals.
+The tool never edits the configuration itself.
+
 ## Matching a Japanese function
 
-1. Inspect `asm.jp/main.s` and identify the function and surrounding boundaries.
+1. Find the corresponding JP subsegment in `reports/region-functions.md` or
+   `snowboardkids.jp.yaml`, then inspect its assembly under `asm.jp/`.
 2. Record verified Japanese addresses in `symbol_addrs.jp.txt`. Add relocation
    overrides only to `reloc_addrs.jp.txt`, using Japanese ROM offsets.
 3. Split the corresponding range in `snowboardkids.jp.yaml` into asm/C
-   subsegments. Its `src_path` is `src/jp`, so new C stubs land there; the existing
+   subsegments. Its `src_path` is `src.jp`, so new C stubs land there; the existing
    compilation rules also support these files. Keep generated ROM-derived
    assembly in the ignored `asm.jp` tree.
 4. Rebuild with `./tools/build-and-verify.sh --version jp`, then compare:
@@ -63,8 +93,8 @@ Japanese `rom:0x... size:0x...` metadata to `symbol_addrs.jp.txt`.
 Shared C can be introduced after verifying the layouts and compiler settings
 for both versions; use `VERSION_US`/`VERSION_JP` only for confirmed differences.
 Do not assume US function/data addresses, struct layouts, or text encoding
-apply to Japanese code. The existing text conversion table and specialized
-US compiler overrides have not been validated for JP C code.
+apply to Japanese code. The text conversion table and inherited compiler overrides still require
+per-function verification before introducing JP C code.
 
 Use `make VERSION=jp clean` to remove only the Japanese assembly/build outputs
 and generated linker metadata. Extracted binary assets remain available, as

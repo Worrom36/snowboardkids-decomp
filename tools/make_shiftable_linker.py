@@ -35,7 +35,7 @@ def runtime_index_inputs(source, build_dir, *, palettes=True, snowboards=False):
     if snowboards:
         inputs.append(('race/player', 'race_player_model_renderer'))
     for directory, name in inputs:
-        original = f'{build_dir}/src/{directory}/{name}.o'
+        original = f'{build_dir}/src.us/{directory}/{name}.o'
         if original not in source:
             raise ValueError(f'{name}: missing original renderer linker input')
         source = source.replace(original, f'{build_dir}/runtime-indices/{name}.o')

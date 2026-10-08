@@ -478,7 +478,7 @@ def source_files(paths: Sequence[Path]) -> Iterable[Path]:
 
 def expected_header_for_source(source: Path, repo_root: Path) -> Path | None:
     try:
-        relative = source.relative_to(repo_root / "src").with_suffix(".h")
+        relative = source.relative_to(repo_root / "src.us").with_suffix(".h")
     except ValueError:
         return None
     return Path("game") / relative
@@ -669,8 +669,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "paths",
         nargs="*",
         type=Path,
-        default=[Path("src")],
-        help="C files or directories to check (default: src)",
+        default=[Path("src.us")],
+        help="C files or directories to check (default: src.us)",
     )
     parser.add_argument(
         "--include-dir",

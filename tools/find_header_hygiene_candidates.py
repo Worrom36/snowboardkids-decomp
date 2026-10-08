@@ -9,8 +9,8 @@ from pathlib import Path
 
 
 HEADER_ROOT = Path("include/game")
-SOURCE_ROOT = Path("src")
-EXCLUDED_SOURCE_ROOTS = (Path("src/ultra"),)
+SOURCE_ROOT = Path("src.us")
+EXCLUDED_SOURCE_ROOTS = (Path("src.us/ultra"),)
 GENERATED_CONTEXT_NAME = "c" + "tx.c"
 
 FORWARD_TYPE_RE = re.compile(

@@ -56,7 +56,8 @@ endif
 BUILD_DIR = $(if $(filter shiftable,$(BUILD_MODE)),build/shiftable,$(MATCHING_BUILD_DIR))
 ASM_DIRS  = asm$(VERSION_SUFFIX) asm$(VERSION_SUFFIX)/data
 BIN_DIRS  = assets$(VERSION_SUFFIX)
-SRC_DIRS  = src
+SRC_DIR = src.$(VERSION)
+SRC_DIRS = $(SRC_DIR)
 TOOLS_DIR = tools
 
 # Tools
@@ -121,7 +122,7 @@ CC_CHECK_MIPS_DEFINES = -DMIPSEB -D_MIPS_FPSET=16 -D_MIPS_ISA_MIPS2=2 \
                         -D_MIPS_ISA=_MIPS_ISA_MIPS2 -D_ABIO32=1 \
                         -D_MIPS_SIM=_ABIO32 -D_MIPS_SZINT=32 \
                         -D_MIPS_SZPTR=32 -D__sgi=1
-CC_CHECK_INCLUDES = -I. -Iinclude -Iinclude/PR -Isrc/ultra/audio -Isrc/ultra/libc
+CC_CHECK_INCLUDES = -I. -Iinclude -Iinclude/PR -I$(SRC_DIR)/ultra/audio -I$(SRC_DIR)/ultra/libc
 CC_CHECK_FLAGS = -fsyntax-only -ffreestanding -fno-builtin -funsigned-char \
                  -fdiagnostics-color -std=gnu89 -m32 \
                  '-D__builtin_classof(type)=0' \
@@ -148,61 +149,61 @@ C_MIPS       = -mips1
 C_OPT        = -O2
 CFLAGS       = -c $(C_MIPS) -G 0 -non_shared -fullwarn -Xcpluscomm \
                -nostdinc -Wab,-r4300_mul -woff 649,838,712,516 \
-               -I. -Iinclude -Iinclude/PR -Isrc/ultra/audio -Isrc/ultra/libc \
+               -I. -Iinclude -Iinclude/PR -I$(SRC_DIR)/ultra/audio -I$(SRC_DIR)/ultra/libc \
                $(C_DEFINES)
 OBJCOPYFLAGS = -O binary
 RM_MDEBUG    = $(OBJCOPY) --remove-section .mdebug $@
 C_OBJ_POSTPROCESS = :
 
-$(BUILD_DIR)/src/ultra/io/%.o: C_OPT = -O1
-$(BUILD_DIR)/src/ultra/io/%.o: C_MIPS = -mips2
-$(BUILD_DIR)/src/ultra/audio/%.o: C_OPT = -O2
-$(BUILD_DIR)/src/ultra/audio/%.o: C_MIPS = -mips2
-$(BUILD_DIR)/src/ultra/audio/env.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/audio/env.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/audio/drvrnew.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/audio/drvrnew.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/audio/reverb.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/audio/reverb.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/audio/resample.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/audio/resample.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/audio/auxbus.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/audio/auxbus.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/audio/load.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/audio/load.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/audio/mainbus.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/audio/mainbus.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/audio/synallocfx.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/audio/synallocfx.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/audio/synallocvoice.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/audio/synallocvoice.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/audio/synthesizer.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/audio/synthesizer.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/os/%.o: C_OPT = -O1
-$(BUILD_DIR)/src/ultra/os/%.o: C_MIPS = -mips2
-$(BUILD_DIR)/src/ultra/os/timerintr.o: CFLAGS += -D_FINALROM
-$(BUILD_DIR)/src/ultra/gu/%.o: C_OPT = -O2
-$(BUILD_DIR)/src/ultra/gu/%.o: C_MIPS = -mips2
-$(BUILD_DIR)/src/ultra/gu/perspective.o: C_OPT = -O2
-$(BUILD_DIR)/src/ultra/io/sptask.o: C_OPT = -O2
-$(BUILD_DIR)/src/ultra/io/sptask.o: CFLAGS += -DF3DEX_GBI
-$(BUILD_DIR)/src/ultra/libc/%.o: C_MIPS = -mips2
-$(BUILD_DIR)/src/ultra/libc/%.o: ULTRA_AS_OPT = -O3
-$(BUILD_DIR)/src/ultra/libc/ll.o: C_OPT = -O1
-$(BUILD_DIR)/src/ultra/libc/ll.o: C_MIPS = -mips3 -32
-$(BUILD_DIR)/src/ultra/libc/xprintf.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/libc/xprintf.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/libc/xldtob.o: C_OPT = -O3
-$(BUILD_DIR)/src/ultra/libc/xldtob.o: IDO_CC = $(IDO_DIRECT)
-$(BUILD_DIR)/src/ultra/os/exceptasm.o: ULTRA_AS_ISA = mips3
-$(BUILD_DIR)/src/ultra/os/exceptasm.o: ULTRA_AS_POST = $(PYTHON) $(TOOLS_DIR)/set_o32abi_bit.py $@
+$(BUILD_DIR)/$(SRC_DIR)/ultra/io/%.o: C_OPT = -O1
+$(BUILD_DIR)/$(SRC_DIR)/ultra/io/%.o: C_MIPS = -mips2
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/%.o: C_OPT = -O2
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/%.o: C_MIPS = -mips2
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/env.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/env.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/drvrnew.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/drvrnew.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/reverb.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/reverb.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/resample.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/resample.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/auxbus.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/auxbus.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/load.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/load.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/mainbus.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/mainbus.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/synallocfx.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/synallocfx.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/synallocvoice.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/synallocvoice.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/synthesizer.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/synthesizer.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/os/%.o: C_OPT = -O1
+$(BUILD_DIR)/$(SRC_DIR)/ultra/os/%.o: C_MIPS = -mips2
+$(BUILD_DIR)/$(SRC_DIR)/ultra/os/timerintr.o: CFLAGS += -D_FINALROM
+$(BUILD_DIR)/$(SRC_DIR)/ultra/gu/%.o: C_OPT = -O2
+$(BUILD_DIR)/$(SRC_DIR)/ultra/gu/%.o: C_MIPS = -mips2
+$(BUILD_DIR)/$(SRC_DIR)/ultra/gu/perspective.o: C_OPT = -O2
+$(BUILD_DIR)/$(SRC_DIR)/ultra/io/sptask.o: C_OPT = -O2
+$(BUILD_DIR)/$(SRC_DIR)/ultra/io/sptask.o: CFLAGS += -DF3DEX_GBI
+$(BUILD_DIR)/$(SRC_DIR)/ultra/libc/%.o: C_MIPS = -mips2
+$(BUILD_DIR)/$(SRC_DIR)/ultra/libc/%.o: ULTRA_AS_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/libc/ll.o: C_OPT = -O1
+$(BUILD_DIR)/$(SRC_DIR)/ultra/libc/ll.o: C_MIPS = -mips3 -32
+$(BUILD_DIR)/$(SRC_DIR)/ultra/libc/xprintf.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/libc/xprintf.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/libc/xldtob.o: C_OPT = -O3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/libc/xldtob.o: IDO_CC = $(IDO_DIRECT)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/os/exceptasm.o: ULTRA_AS_ISA = mips3
+$(BUILD_DIR)/$(SRC_DIR)/ultra/os/exceptasm.o: ULTRA_AS_POST = $(PYTHON) $(TOOLS_DIR)/set_o32abi_bit.py $@
 # These course-select BSS objects end at intentional non-16-byte boundaries.
 # Preserve their logical section sizes instead of adding assembler tail padding.
 COURSE_SELECT_BSS_C_O_FILES := \
-	$(BUILD_DIR)/src/menu/course_select/course_select_selection_state.o \
-	$(BUILD_DIR)/src/menu/course_select/course_select_transition_state.o \
-	$(BUILD_DIR)/src/menu/course_select/course_select_course_tables.o \
-	$(BUILD_DIR)/src/menu/course_select/course_select_status.o
+	$(BUILD_DIR)/$(SRC_DIR)/menu/course_select/course_select_selection_state.o \
+	$(BUILD_DIR)/$(SRC_DIR)/menu/course_select/course_select_transition_state.o \
+	$(BUILD_DIR)/$(SRC_DIR)/menu/course_select/course_select_course_tables.o \
+	$(BUILD_DIR)/$(SRC_DIR)/menu/course_select/course_select_status.o
 COURSE_SELECT_UNPADDED_BSS_O_FILES := \
 	$(COURSE_SELECT_BSS_C_O_FILES) \
 	$(BUILD_DIR)/asm/data/bss_chunk_a_2_course_select_selection_tail.bss.o \
@@ -212,7 +213,7 @@ COURSE_SELECT_UNPADDED_BSS_O_FILES := \
 $(COURSE_SELECT_UNPADDED_BSS_O_FILES): ASFLAGS += -no-pad-sections
 # The weak, zero-initialized prompt state preserves IDO's original codegen;
 # raw BSS owns its storage. Remove only that verified trailing data block.
-$(BUILD_DIR)/src/menu/race_setup/race_setup_menu.o: C_OBJ_POSTPROCESS = \
+$(BUILD_DIR)/$(SRC_DIR)/menu/race_setup/race_setup_menu.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .data 16 \
 		--undefine-symbol gControllerPakRumbleCheckPromptState
 
@@ -244,15 +245,15 @@ C_O_FILES   := $(patsubst %.c,$(BUILD_DIR)/%.o,$(C_FILES))
 
 # Formatting and tidy cover all tracked C code, including libultra and libmus.
 # Local match-sensitive functions and textconv tables use clang-format guards.
-PROJECT_C_FILES := $(shell git ls-files 'src/**/*.c' 'src/*.c')
+PROJECT_C_FILES := $(shell git ls-files 'src.us/**/*.c' 'src.us/*.c' 'src.jp/**/*.c' 'src.jp/*.c')
 FORMAT_C_FILES := $(PROJECT_C_FILES)
-PROJECT_H_FILES := $(shell git ls-files 'include/**/*.h' 'include/*.h' 'src/**/*.h')
+PROJECT_H_FILES := $(shell git ls-files 'include/**/*.h' 'include/*.h' 'src.us/**/*.h' 'src.jp/**/*.h')
 FORMAT_H_FILES := $(filter-out include/hasm.h include/include_asm.h include/sys/%,$(PROJECT_H_FILES))
 FORMAT_FILES := $(FORMAT_C_FILES) $(FORMAT_H_FILES)
 TIDY_C_FRAGMENT_FILES := \
-	src/libmus/player_api.c \
-	src/libmus/player_commands.c \
-	src/libmus/player_commands_tail.c
+	$(SRC_DIR)/libmus/player_api.c \
+	$(SRC_DIR)/libmus/player_commands.c \
+	$(SRC_DIR)/libmus/player_commands_tail.c
 TIDY_C_FILES := $(filter-out %.inc.c $(TIDY_C_FRAGMENT_FILES),$(PROJECT_C_FILES))
 
 TEXTCONV = $(PYTHON) $(TOOLS_DIR)/textconv.py
@@ -263,22 +264,22 @@ BIN_FILES   := $(foreach dir,$(BIN_DIRS),$(wildcard $(dir)/*.bin))
 BIN_O_FILES := $(patsubst %.bin,$(BUILD_DIR)/%.o,$(BIN_FILES))
 
 ULTRA_IDO_AS_FILES := \
-	src/ultra/libc/bcopy.s \
-	src/ultra/libc/bzero.s \
-	src/ultra/os/exceptasm.s \
-	src/ultra/os/getcount.s \
-	src/ultra/os/getsr.s \
-	src/ultra/os/interrupt.s \
-	src/ultra/os/invaldcache.s \
-	src/ultra/os/invalicache.s \
-	src/ultra/os/maptlbrdb.s \
-	src/ultra/os/probetlb.s \
-	src/ultra/os/setcompare.s \
-	src/ultra/os/setfpccsr.s \
-	src/ultra/os/setintmask.s \
-	src/ultra/os/setsr.s \
-	src/ultra/os/writebackdcache.s \
-	src/ultra/os/writebackdcacheall.s
+	$(SRC_DIR)/ultra/libc/bcopy.s \
+	$(SRC_DIR)/ultra/libc/bzero.s \
+	$(SRC_DIR)/ultra/os/exceptasm.s \
+	$(SRC_DIR)/ultra/os/getcount.s \
+	$(SRC_DIR)/ultra/os/getsr.s \
+	$(SRC_DIR)/ultra/os/interrupt.s \
+	$(SRC_DIR)/ultra/os/invaldcache.s \
+	$(SRC_DIR)/ultra/os/invalicache.s \
+	$(SRC_DIR)/ultra/os/maptlbrdb.s \
+	$(SRC_DIR)/ultra/os/probetlb.s \
+	$(SRC_DIR)/ultra/os/setcompare.s \
+	$(SRC_DIR)/ultra/os/setfpccsr.s \
+	$(SRC_DIR)/ultra/os/setintmask.s \
+	$(SRC_DIR)/ultra/os/setsr.s \
+	$(SRC_DIR)/ultra/os/writebackdcache.s \
+	$(SRC_DIR)/ultra/os/writebackdcacheall.s
 ULTRA_IDO_AS_O_FILES := $(patsubst %.s,$(BUILD_DIR)/%.o,$(ULTRA_IDO_AS_FILES))
 
 O_FILES := $(patsubst $(MATCHING_BUILD_DIR)/%,$(BUILD_DIR)/%,$(shell grep -E '$(MATCHING_BUILD_DIR)/[^ ()]+\.o' $(BASE_LD_SCRIPT) -o 2>/dev/null | sort | uniq))
@@ -307,7 +308,7 @@ nonmatching: dirs $(TARGET).z64
 dirs:
 	@mkdir -p $(BUILD_DIR)/asm/data
 	@mkdir -p $(BUILD_DIR)/assets
-	@mkdir -p $(BUILD_DIR)/src
+	@mkdir -p $(BUILD_DIR)/$(SRC_DIR)
 
 extract: check
 	$(PRINTF) "[$(CYAN) splat  $(NO_COL)]  Extracting $(CONFIG)\n"
@@ -348,6 +349,12 @@ $(ULTRA_IDO_AS_O_FILES): $(BUILD_DIR)/%.o: %.s
 	$(V)$(RM_MDEBUG)
 
 # *.s -> *.o (through C preprocessor)
+# JP splits may end at four-byte boundaries. Keep assembler section padding
+# from shifting subsequent functions; extracted assembly owns its ROM padding.
+ifeq ($(VERSION),jp)
+ASFLAGS += -no-pad-sections
+endif
+
 $(BUILD_DIR)/%.o: %.s
 	@mkdir -p $(dir $@)
 	$(PRINTF) "[$(GREEN)   as   $(NO_COL)]  $<\n"
@@ -366,9 +373,9 @@ $(COURSE_SELECT_BSS_C_O_FILES): $(BUILD_DIR)/%.o: $(TEXTCONV_DIR)/%.c
 	$(V)$(CC_CHECK) $(CC_CHECK_FLAGS) $(CC_CHECK_WARNINGS) \
 		$(CC_CHECK_INCLUDES) $(C_DEFINES) $(CC_CHECK_MIPS_DEFINES) -iquote $(dir $*) $<
 	$(V)cd $(dir $@) && $(abspath $(CC)) \
-		$(filter-out -c -I. -Iinclude -Iinclude/PR -Isrc/ultra/audio -Isrc/ultra/libc,$(CFLAGS)) $(C_OPT) \
+		$(filter-out -c -I. -Iinclude -Iinclude/PR -I$(SRC_DIR)/ultra/audio -I$(SRC_DIR)/ultra/libc,$(CFLAGS)) $(C_OPT) \
 		-I$(abspath .) -I$(abspath include) -I$(abspath include/PR) \
-		-I$(abspath src/ultra/audio) -I$(abspath src/ultra/libc) -I$(abspath $(dir $*)) \
+		-I$(abspath $(SRC_DIR)/ultra/audio) -I$(abspath $(SRC_DIR)/ultra/libc) -I$(abspath $(dir $*)) \
 		-S $(abspath $<)
 	$(V)$(AS) $(ASFLAGS) -o $@ $(dir $@)$(notdir $*).s
 	$(V)$(RM) $(dir $@)$(notdir $*).s
@@ -384,22 +391,22 @@ $(BUILD_DIR)/%.o: $(TEXTCONV_DIR)/%.c
 
 # Compile optional renderer variants without changing the matching objects.
 # Flexible links select them only when an asset requires CPU index translation.
-$(BUILD_DIR)/runtime-indices/%.o: $(TEXTCONV_DIR)/src/menu/renderer/%.c include/game/menu/renderer/sprite_palette_relocation.h
+$(BUILD_DIR)/runtime-indices/%.o: $(TEXTCONV_DIR)/$(SRC_DIR)/menu/renderer/%.c include/game/menu/renderer/sprite_palette_relocation.h
 	@mkdir -p $(dir $@)
 	$(V)$(CC_CHECK) $(CC_CHECK_FLAGS) $(CC_CHECK_WARNINGS) $(CC_CHECK_INCLUDES) \
-		$(C_DEFINES) $(CC_CHECK_MIPS_DEFINES) -DSBK_SPRITE_PALETTE_REMAP -iquote src/menu/renderer $<
-	$(V)$(IDO_CC) $(CFLAGS) $(C_OPT) -DSBK_SPRITE_PALETTE_REMAP -Isrc/menu/renderer -o $@ $<
+		$(C_DEFINES) $(CC_CHECK_MIPS_DEFINES) -DSBK_SPRITE_PALETTE_REMAP -iquote $(SRC_DIR)/menu/renderer $<
+	$(V)$(IDO_CC) $(CFLAGS) $(C_OPT) -DSBK_SPRITE_PALETTE_REMAP -I$(SRC_DIR)/menu/renderer -o $@ $<
 	$(V)$(RM_MDEBUG)
 
-$(BUILD_DIR)/runtime-indices/race_player_model_renderer.o: $(TEXTCONV_DIR)/src/race/player/race_player_model_renderer.c
+$(BUILD_DIR)/runtime-indices/race_player_model_renderer.o: $(TEXTCONV_DIR)/$(SRC_DIR)/race/player/race_player_model_renderer.c
 	@mkdir -p $(dir $@)
 	$(V)$(CC_CHECK) $(CC_CHECK_FLAGS) $(CC_CHECK_WARNINGS) $(CC_CHECK_INCLUDES) \
-		$(C_DEFINES) $(CC_CHECK_MIPS_DEFINES) -DSBK_SNOWBOARD_TEXTURE_SIZE -iquote src/race/player $<
-	$(V)$(IDO_CC) $(CFLAGS) $(C_OPT) -DSBK_SNOWBOARD_TEXTURE_SIZE -Isrc/race/player -o $@ $<
+		$(C_DEFINES) $(CC_CHECK_MIPS_DEFINES) -DSBK_SNOWBOARD_TEXTURE_SIZE -iquote $(SRC_DIR)/race/player $<
+	$(V)$(IDO_CC) $(CFLAGS) $(C_OPT) -DSBK_SNOWBOARD_TEXTURE_SIZE -I$(SRC_DIR)/race/player -o $@ $<
 	$(V)$(RM_MDEBUG)
 
 # Patch ll.o for modern binutils, matching the upstream libultra build.
-$(BUILD_DIR)/src/ultra/libc/ll.o: src/ultra/libc/ll.c
+$(BUILD_DIR)/$(SRC_DIR)/ultra/libc/ll.o: $(SRC_DIR)/ultra/libc/ll.c
 	@mkdir -p $(dir $@)
 	$(PRINTF) "[$(GREEN)   c    $(NO_COL)]  $<\n"
 	$(V)$(CC_CHECK) $(CC_CHECK_FLAGS) $(CC_CHECK_WARNINGS) \

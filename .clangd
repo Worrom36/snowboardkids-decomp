@@ -8,10 +8,6 @@ CompileFlags:
     - -I.
     - -Iinclude
     - -Iinclude/PR
-    - -Isrc
-    - -Isrc/libmus
-    - -Isrc/ultra/audio
-    - -Isrc/ultra/libc
     - -DLANGUAGE_C
     - -D_LANGUAGE_C
     - -D_MIPS_SZLONG=32
@@ -34,3 +30,13 @@ CompileFlags:
     - -fno-builtin
     - '-D__builtin_classof(type)=0'
     - '-D__builtin_alignof(type)=__alignof__(type)'
+---
+If:
+  PathMatch: src\.us/.*
+CompileFlags:
+  Add: [-Isrc.us, -Isrc.us/libmus, -Isrc.us/ultra/audio, -Isrc.us/ultra/libc]
+---
+If:
+  PathMatch: src\.jp/.*
+CompileFlags:
+  Add: [-Isrc.jp, -Isrc.jp/libmus, -Isrc.jp/ultra/audio, -Isrc.jp/ultra/libc]

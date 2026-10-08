@@ -9,7 +9,7 @@ options:
   compiler: IDO
 
   asm_path: asm
-  src_path: src
+  src_path: src.us
   build_path: build
   hasm_in_src_path: True
   create_asm_dependencies: True
