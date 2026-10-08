@@ -27,6 +27,7 @@ nonmatchings
 .decomp-workbench/
 
 report.json
+/reports/region-functions.json
 .idea
 __pycache__
 .venv
