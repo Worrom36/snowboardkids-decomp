@@ -1,0 +1,104 @@
+#include "common.h"
+#include "game/save_data.h"
+#include "game/menu/renderer/menu_renderer.h"
+#include "game/menu/renderer/menu_render_utils.h"
+#include "game/engine/render_callback.h"
+#include "assets.h"
+#include "game/audio/sound_manager.h"
+#include "game/engine/callback_task_scheduler.h"
+#include "game/engine/relocatable_heap.h"
+#include "game/engine/asset_manager.h"
+#include "game/engine/system_runtime.h"
+#include "game/menu/character_select/character_select_course_menu.h"
+#include "game/menu/character_select/character_select_menu.h"
+#include "game/menu/course_select/multiplayer_course_select_menu.h"
+#include "game/menu/controller_pak/controller_pak_race_record_save_flow.h"
+#include "game/menu/controller_pak/controller_pak_replay_save_message_flow.h"
+#include "game/menu/controller_pak/controller_pak_file_delete_flow.h"
+#include "game/menu/course_select/course_select_menu.h"
+#include "game/menu/race_setup/race_setup_menu.h"
+#include "game/engine/game_task_scheduler.h"
+#include "game/menu/main_menu/controller_main_menu_flow.h"
+#include "game/menu/renderer/menu_screen_effects.h"
+#include "game/menu/main_menu/main_menu_panel_ui.h"
+#include "game/menu/race_type_select/race_type_select_menu.h"
+#include "game/menu/splitscreen_select/race_splitscreen_select_menu.h"
+#include "game/race/camera/race_camera.h"
+#include "game/race/course/race_course_effects.h"
+#include "game/race/flow/race_flow.h"
+#include "game/race/race_state.h"
+#include "game/race/race_replay.h"
+#include "game/race/player/race_player_update.h"
+#include "game/race/scene/race_scene_setup.h"
+#include "game/race/effects/race_start_transition.h"
+#include "game/race/ui/race_hud.h"
+#include "game/ending/ending_credits_flow.h"
+#include "game/race/ui/race_ui_effects.h"
+#include "game/menu/controller_pak/controller_pak_continue_prompt_flow.h"
+#include "game/menu/race_setup/race_setup_ui.h"
+#include "game/engine/viewport_manager.h"
+#include "game/race/player/race_player_input.h"
+
+void initNewGameSaveData(void) {
+    s32 course;
+    s32 one;
+    s32 player;
+
+    for (course = 0; course < 11; course++) {
+        one = 1;
+        for (player = 0; player < 5; player++) {
+            gGameSaveDataBuffer[0].timeTrialRecords[course][player].minutes = 3;
+            gGameSaveDataBuffer[0].timeTrialRecords[course][player].seconds = 0x3B;
+            gGameSaveDataBuffer[0].timeTrialRecords[course][player].fraction = 0;
+            gGameSaveDataBuffer[0].raceRecords[course][player].minutes = 3;
+            gGameSaveDataBuffer[0].raceRecords[course][player].seconds = 0;
+            gGameSaveDataBuffer[0].raceRecords[course][player].fraction = 0;
+            gGameSaveDataBuffer[0].timeTrialCharacterIds[course][player] = player;
+            gGameSaveDataBuffer[0].scoreAttackScores[course][player] = 0;
+            gGameSaveDataBuffer[0].scoreAttackCharacterIds[course][player] = player;
+            gGameSaveDataBuffer[0].raceRecordCharacterIds[course][player] = player;
+            gGameSaveDataBuffer[0].trickAttackScores[course][player] = 0;
+            gGameSaveDataBuffer[0].trickAttackCharacterIds[course][player] = player;
+        }
+        gGameSaveDataBuffer[0].bestLapRecords[course].minutes = one;
+        gGameSaveDataBuffer[0].bestLapRecords[course].seconds = 0x18;
+        gGameSaveDataBuffer[0].bestLapRecords[course].fraction = 0;
+        gGameSaveDataBuffer[0].highScores[course + 1] = 0;
+    }
+
+    gGameSaveDataBuffer[0].replaySlots[0].length = 0;
+    gGameSaveDataBuffer[0].replaySlots[1].length = 0;
+    gGameSaveDataBuffer[0].replaySlots[2].length = 0;
+    gGameSaveDataBuffer[0].replaySlots[3].length = 0;
+    gGameSaveDataBuffer[0].replaySlots[4].length = 0;
+    gGameSaveDataBuffer[0].replaySlots[5].length = (u8)0;
+    gGameSaveDataBuffer[0].replaySlots[6].length = 0;
+    gGameSaveDataBuffer[0].replaySlots[7].length = 0;
+    gGameSaveDataBuffer[0].replaySlots[8].length = 0;
+    gPlayerCount = 1;
+    gRaceTypeSelection = 0;
+    gRacePlayers[0].selectedCharacterId = 0;
+    gRacePlayers[1].selectedCharacterId = 0;
+    gRacePlayers[2].selectedCharacterId = 0;
+    gRacePlayers[3].selectedCharacterId = 0;
+    gRacePlayers[0].menuSelection = 0;
+    gRacePlayers[1].menuSelection = 0;
+    gRacePlayers[2].menuSelection = 0;
+    gRacePlayers[3].menuSelection = 0;
+    gRacePlayers[0].selectionUnlockState = 0;
+    gRacePlayers[1].selectionUnlockState = 0;
+    gRacePlayers[2].selectionUnlockState = 0;
+    gRacePlayers[3].selectionUnlockState = 0;
+    gRacePlayers[0].money = 0;
+    gRacePlayers[1].money = 0;
+    gRacePlayers[2].money = 0;
+    gRacePlayers[3].money = 0;
+    gRacePlayers[0].unk18 = 0;
+    gRacePlayers[1].unk18 = 0;
+    gRacePlayers[2].unk18 = 0;
+    gRacePlayers[3].unk18 = 0;
+    gRaceCourseIndex.signedValue = 0;
+    gRaceSplitscreenMode = 0;
+    gRaceCameraModeChangeDisabled = 0;
+    setCurrentGameTaskCallback(openRaceSetupMenuFlow, 0);
+}

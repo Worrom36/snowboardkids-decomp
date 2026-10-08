@@ -341,3 +341,12 @@ WENDY_MODEL_RESOURCES_ROM_END = 0x001E2100;
 WENDY_MODEL_RESOURCES_ROM_START = 0x001E16A0;
 WENDY_RACE_ANIMATIONS_ROM_END = 0x001FE5C0;
 WENDY_RACE_ANIMATIONS_ROM_START = 0x001F7A80;
+
+/* Typed views and segmented graphics references used by partial C files. */
+gControllerPakHandles = gControllerSubsystemBssPadding + 0x10;
+gRaceCamerasEnd = gRaceCameras + 0x2C0;
+drawMenuSpriteWithAlphaWideArgs = drawMenuSpriteWithAlpha;
+drawAssetTableSpriteWithExplicitPaletteWideIndex = drawAssetTableSpriteWithExplicitPalette;
+D_2000000 = 0x02000000;
+D_20058A8 = 0x020058A8;
+_ADDR_20019C0_VRAM = 0x020019C0;
