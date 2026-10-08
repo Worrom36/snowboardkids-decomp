@@ -1,5 +1,7 @@
 #include <PR/libaudio.h>
 
+ALGlobals *alGlobals = 0;
+
 void alUnlink(ALLink *ln) {
     if (ln->next) {
         ln->next->prev = ln->prev;
@@ -19,4 +21,18 @@ void alLink(ALLink *ln, ALLink *to) {
     }
 
     to->next = ln;
+}
+
+void alClose(ALGlobals *glob) {
+    if (alGlobals) {
+        alSynDelete(&glob->drvr);
+        alGlobals = 0;
+    }
+}
+
+void alInit(ALGlobals *g, ALSynConfig *c) {
+    if (!alGlobals) {
+        alGlobals = g;
+        alSynNew(&alGlobals->drvr, c);
+    }
 }
