@@ -1,0 +1,32 @@
+#include "common.h"
+#include <PR/os_libc.h>
+#include "game/engine/controller_input.h"
+#include "game/engine/render_callback.h"
+#include "game/menu/renderer/menu_render_utils.h"
+#include "game/race/camera/race_camera.h"
+#include "game/race/motion/race_motion_animation_debug_viewer.h"
+#include "game/race/motion/race_motion.h"
+#include "game/race/player/race_player_model_renderer.h"
+#include "game/race/player/race_player_input.h"
+#include "game/race/player/race_player_update.h"
+
+void initRaceMotionAnimationDebugViewer(void) {
+    RacePlayer *state;
+    s16 temp_v0;
+
+    setRaceCameraMode(0, 2);
+    state = &gRacePlayers[0];
+    state->leanAngle = 0;
+    temp_v0 = state->leanAngle;
+    state->pos.x = 0;
+    state->pos.y = 0;
+    state->pos.z = 0;
+    state->animationId = 0;
+    state->groundCorrectionY = 0xFFFA0000;
+    state->groundOffset = 0;
+    state->mode = 0;
+    state->playerIndex = 0;
+    state->facingAngle = temp_v0;
+    state->pitchAngle = temp_v0;
+    initRaceMotionModelParts(state);
+}
