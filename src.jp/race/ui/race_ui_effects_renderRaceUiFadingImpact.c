@@ -1,0 +1,62 @@
+#include "game/engine/model_asset_symbols.h"
+#include "game/race/course/race_course_effects.h"
+#include "game/engine/game_task_scheduler.h"
+#include "game/race/race_state.h"
+#include "common.h"
+#include <PR/os_libc.h>
+#include "game/save_data.h"
+#include "game/audio/sound_manager.h"
+#include "game/menu/renderer/menu_render_utils.h"
+#include "game/engine/render_callback.h"
+#include "game/engine/system_runtime.h"
+#include "game/engine/controller_input.h"
+#include "assets.h"
+#include "game/race/ui/race_ui_effects.h"
+#include "game/race/effects/snowboard_trail_effects.h"
+#include "game/engine/relocatable_heap.h"
+#include "game/engine/callback_task_scheduler.h"
+#include "game/engine/asset_manager.h"
+#include "game/race/items/race_item_hit_flags.h"
+#include "game/engine/viewport_manager.h"
+#include "game/math/spatial_math.h"
+#include "game/math/fixed_point_math.h"
+#include "game/race/motion/race_motion.h"
+#include "game/race/items/race_item_projectiles.h"
+#include "game/race/player/race_player_movement.h"
+#include "game/race/player/race_player_input.h"
+#include "game/race/camera/race_camera.h"
+#include "game/race/ui/race_hud.h"
+#include <PR/os_cache.h>
+
+#define RACE_UI_TRAIL_GFX_ALLOC_PTR (*(RaceUiDisplayCommand **)&gRegionAllocPtr)
+#define ASSET_HANDLE(index) (gAssetHandles[(index)])
+
+typedef struct {
+    struct {
+        u32 w0;
+        u32 w1;
+    } words;
+} RaceUiDisplayCommand;
+
+void renderRaceUiFadingImpact(RaceUiFadingTrailActor *arg0) {
+    volatile u8 pad[0x20];
+    RaceUiDisplayCommand *unused;
+
+    if (gRenderMatricesDirty != 0) {
+        arg0->matrixDirty = 1;
+    }
+
+    if (arg0->matrixDirty != 0) {
+        arg0->matrixDirty = 0;
+        arg0->matrix = allocFixedTransformMatrix(&arg0->copyBlock);
+    }
+
+    if (arg0->matrix != NULL) {
+        gDPPipeSync(RACE_UI_TRAIL_GFX_ALLOC_PTR++);
+        gSPSegment(RACE_UI_TRAIL_GFX_ALLOC_PTR++, 0x02, getRelocatableHeapBlockBase(ASSET_HANDLE(0xA)));
+        gSPSegment(RACE_UI_TRAIL_GFX_ALLOC_PTR++, 0x03, getRelocatableHeapBlockBase(ASSET_HANDLE(0xB)));
+        gSPMatrix(RACE_UI_TRAIL_GFX_ALLOC_PTR++, arg0->matrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+        gDPSetPrimColor(RACE_UI_TRAIL_GFX_ALLOC_PTR++, 0, 0, 0xFF, 0xFF, 0xFF, arg0->alpha);
+        gSPDisplayList(RACE_UI_TRAIL_GFX_ALLOC_PTR++, &_ADDR_20035F8_VRAM);
+    }
+}

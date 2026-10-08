@@ -1106,3 +1106,9 @@ above can possibly work, so read them before spending a variant.
   `databin` can be linked before the C constants despite appearing after them
   in the YAML, shifting both constants and subsequent data. Verify the section
   addresses and full ROM checksum after the split.
+
+- Address-normalized regional matches can contain a deliberate callback change.
+  Resolve each relocated function pointer against known target-region functions
+  before reusing its source name. If the target is a different known callback,
+  name that callback in the regional C instead of introducing an alias that
+  hides the control-flow difference.

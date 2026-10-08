@@ -350,3 +350,7 @@ drawAssetTableSpriteWithExplicitPaletteWideIndex = drawAssetTableSpriteWithExpli
 D_2000000 = 0x02000000;
 D_20058A8 = 0x020058A8;
 _ADDR_20019C0_VRAM = 0x020019C0;
+
+gModelRenderCallbackQueues = gModelRenderCallbackList;
+PAN_DISPLAY_LIST_VRAM = 0x02002660;
+_ADDR_2002490_VRAM = 0x02002490;

@@ -792,3 +792,43 @@ $(BUILD_DIR)/src.jp/race/player/race_player_update_updateRacePlayerPostUpdateMod
 $(BUILD_DIR)/src.jp/race/player/race_player_update_updateRacePlayerPostUpdateMode22.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 12
 endif
+
+ifeq ($(VERSION),jp)
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_renderRaceUiExpiredSpeedFanEffect.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 4
+$(BUILD_DIR)/src.jp/menu/controller_pak/controller_pak_race_record_save_ui_initControllerPakRaceRecordSaveStatusMessage.o \
+$(BUILD_DIR)/src.jp/menu/course_select/course_select_shop_ui_drawShopMenuSelectedModePanel.o \
+$(BUILD_DIR)/src.jp/menu/course_select/course_select_shop_ui_initCourseDetailsMenu.o \
+$(BUILD_DIR)/src.jp/ending/ending_credits_ui_initEndingObjectSpriteDebugViewerActor.o \
+$(BUILD_DIR)/src.jp/menu/main_menu/main_menu_panel_ui_drawMainMenuModeSelectIcons.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_drawRaceUiCourseStatsRows.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_renderGhostSlowdownActor.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_renderRaceUiHeavyKnockdownTrailEffect.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_renderRaceUiSingleTrailEffect.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_renderRaceUiSpinHitTransitionEffect.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_renderDizzyLandFerrisWheel.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_initTimeTrialRecordDeltaPopup.o \
+$(BUILD_DIR)/src.jp/audio/sound_manager_loadMusicSequenceBank.o \
+$(BUILD_DIR)/src.jp/audio/sound_manager_enqueueSoundEffect.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 8
+$(BUILD_DIR)/src.jp/menu/race_setup/race_setup_menu_initRaceSetupPlayerSaveData.o \
+$(BUILD_DIR)/src.jp/menu/renderer/menu_render_utils_allocFixedTransformMatrix.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_drawRaceUiCourseRecordRows.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_renderRaceUiItemStealTrailEffect.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_renderDizzyLandCarousel.o \
+$(BUILD_DIR)/src.jp/race/ui/race_ui_effects_renderDizzyLandTeacupBumper.o \
+$(BUILD_DIR)/src.jp/engine/system_runtime_resetRenderCallbackQueues.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 12
+endif
+
+ifeq ($(VERSION),jp)
+$(BUILD_DIR)/src.jp/ending/ending_credits_ui_drawEndingObjectSpriteDebugViewer.o \
+$(BUILD_DIR)/src.jp/race/player/race_player_update_updateRacePlayerMotionFeedback.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 4
+endif
+
+ifeq ($(VERSION),jp)
+$(BUILD_DIR)/src.jp/race/player/race_player_update_updateRacePlayerMotionFeedback.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 4 && \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .rodata 8
+endif
