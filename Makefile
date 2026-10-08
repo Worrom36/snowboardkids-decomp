@@ -429,8 +429,7 @@ $(BUILD_DIR)/src.jp/libmus/player_MusIntMemSet.o: C_OBJ_POSTPROCESS = \
 $(BUILD_DIR)/src.jp/menu/main_menu/main_menu_scene_model.o \
 $(BUILD_DIR)/src.jp/menu/main_menu/main_menu_scene_model_applyMainMenuSceneModelAnimationFrame.o \
 $(BUILD_DIR)/src.jp/libmus/player_Fendit.o \
-$(BUILD_DIR)/src.jp/libmus/player_Fgoto.o \
-$(BUILD_DIR)/src.jp/ultra/audio/env.o: C_OBJ_POSTPROCESS = \
+$(BUILD_DIR)/src.jp/libmus/player_Fgoto.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 12
 endif
 

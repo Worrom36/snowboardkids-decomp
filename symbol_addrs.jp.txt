@@ -360,3 +360,4 @@ makeFixedRotationZXY = 0x80097B08; // type:func rom:0x98708 size:0x21C
 makeFixedRotationZY = 0x80097AB4; // type:func rom:0x986B4 size:0x54
 makeFixedRotationZYX = 0x80097D98; // type:func rom:0x98998 size:0x74
 transformVec3iByFixedMatrix = 0x80097ED0; // type:func rom:0x98AD0 size:0x210
+__libm_qnan_f = 0x800E10C0;
