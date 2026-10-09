@@ -39,6 +39,13 @@
 #include "game/engine/viewport_manager.h"
 #include "game/race/player/race_player_input.h"
 
+typedef struct {
+    s32 unk0;
+    u8 pad4[4];
+    s8 unk8;
+} Unk80043040;
+
+extern s8 D_80120E81;
 extern u8 gPendingEndingCreditsFlow;
 extern s32 gMenuFlowState;
 extern u8 gRumblePakConnectedMask;
@@ -400,9 +407,35 @@ void updateRaceResultsMusicFlow(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/fadeOutRaceResultsFlow.s")
+void fadeOutRaceResultsFlow(void) {
+    gFramebufferRenderInterval.value = 0;
+    if (D_80120E80 != 0) {
+        createCallbackTaskWithUserId((CallbackTaskCallback)initFallingConfetti, 5, 0x64, D_80120E80 - 1);
+    }
+    updateRaceFlowFrame();
+    gRaceRumbleEnabled = 0;
+    gMenuFadeAlpha += 0x10;
+    if (gMenuFadeAlpha >= 0xFF) {
+        gMenuFadeAlpha = 0xFF;
+        gCurrentGameTask->callbackData0 -= 1;
+        if (gCurrentGameTask->callbackData0 == 0) {
+            stopSoundEffects();
+            if ((gRaceSplitscreenMode == 2) &&
+                (((Unk80043040 *)getRelocatableHeapBlockBase(gAssetHandles[0x2B]))->unk8 != 0) && (D_80120E81 != 0) &&
+                (saveRaceRecordReplayData() != 0)) {
+                D_80120E81 = -1;
+            }
+            if (gRaceSplitscreenMode == 2) {
+                setCurrentGameTaskCallback(&initRaceGhostReplayFlow, 0);
+            } else {
+                gFramebufferSwapHold = 1;
+                setCurrentGameTaskCallback(finalizeRaceExitFlow, 0);
+            }
+        }
+    }
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_8007704C.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/initRaceGhostReplayFlow.s")
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80077474.s")
 

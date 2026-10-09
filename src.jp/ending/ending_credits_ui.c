@@ -58,7 +58,21 @@ void drawEndingCreditsTheEndText(EndingCreditsPageTextActor *arg0) {
     );
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/ending/ending_credits_ui/updateEndingCreditsTheEndTextFadeIn.s")
+void updateEndingCreditsTheEndTextFadeIn(EndingCreditsPageTextActor *arg0) {
+    s32 v1 = ENDING_CREDITS_TEXT_FADE_MAX;
+    s32 v0;
+
+    if (gEndingCreditsSequencePhase == 0x43) {
+        v0 = arg0->alpha;
+        if (v1 != v0) {
+            arg0->alpha = v0 + 0x10;
+            if (arg0->alpha >= ENDING_CREDITS_TEXT_FADE_MAX) {
+                arg0->alpha = v1;
+            }
+        }
+        addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawEndingCreditsTheEndText, arg0);
+    }
+}
 
 void updateEndingCreditsPageText(EndingCreditsPageTextActor *arg0) {
     switch (arg0->state) {

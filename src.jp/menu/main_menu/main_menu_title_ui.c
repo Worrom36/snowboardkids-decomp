@@ -41,7 +41,15 @@ void drawMainMenuTitleCursor(MainMenuTitleCursorActor *arg0) {
     drawMenuSprite(arg0->common.x, arg0->common.y, temp, 3, 0x20, 0x20, 0, 0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_title_ui/updateMainMenuTitleCursor.s")
+void updateMainMenuTitleCursor(MainMenuTitleCursorActor *arg0) {
+    if (gCurrentGameTask->callbackData1 != 2) {
+        arg0->common.x = -0x34;
+    } else {
+        arg0->common.x = -0x3C;
+    }
+    arg0->common.y = (gCurrentGameTask->callbackData1 << 4) + 0x20;
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawMainMenuTitleCursor, arg0);
+}
 
 void initMainMenuTitleCursor(MainMenuTitleCursorActor *arg0) {
     arg0->common.y = 0x20;

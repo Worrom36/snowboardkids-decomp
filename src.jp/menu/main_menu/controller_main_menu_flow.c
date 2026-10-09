@@ -33,6 +33,7 @@
 #define CONTROLLER_PAK_U16_AT(cursor, field) (*(u16 *)((cursor) + CONTROLLER_PAK_SAVE_FIELD_OFFSET(field)))
 #define CONTROLLER_PAK_SAVE_FIELD_OFFSET(field) ((u32) & (((GameSaveData *)0)->field))
 
+extern u8 gRumblePakConnectedMask;
 extern u8 gControllerReadPending;
 extern OSMesgQueue gControllerSubsystemRequestQueue;
 extern u8 gConnectedControllerBitmask;
@@ -84,7 +85,13 @@ void requestRumbleMotorInit(u16 controllerIndex) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/func_80000A8C.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/requestRumbleMotorStart.s")
+void requestRumbleMotorStart(u16 controllerIndex) {
+    if (gRaceRumbleEnabled != 0) {
+        if (gRumblePakConnectedMask & (1 << controllerIndex)) {
+            gRumbleMotorRequestStates[controllerIndex] = 1;
+        }
+    }
+}
 
 void requestControllerPakProbe(u16 controllerIndex) {
     OSMesg msg;

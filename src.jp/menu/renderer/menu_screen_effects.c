@@ -29,6 +29,12 @@ typedef struct {
     s32 pad20;
 } TitleMenuRotatingBoardScratch;
 
+extern s16 gMenuFadeAlpha;
+extern s16 raceSetupCharacterFocusSoundIds[6];
+extern u8 raceSetupCharacterFocusAnimationIds[8];
+extern u8 passAwardOpponentAnimationIds[4];
+extern s32 passAwardOpponentXPositions[6];
+extern char D_800E0520[];
 extern u32 D_20006C8[];
 extern u32 D_2000000[];
 extern u32 D_2000D78[];
@@ -37,6 +43,9 @@ extern Vtx raceStartPlayerEffectVertices[4];
 extern s16 titleMenuSparklePositions[2];
 extern u32 D_2000E48[];
 extern u32 D_2000E70[];
+
+void drawPassAwardLabel(MenuScreenEffectActor *);
+void drawCourseRecordBanner(MenuScreenEffectActor *);
 
 extern void drawFallingConfetti(MenuScreenEffectActor *arg0);
 extern void updateFallingConfettiSway(MenuScreenEffectActor *arg0);
@@ -216,9 +225,29 @@ void stopPassAwardWinner(MenuScreenEffectActor *arg0) {
     addMainMenuSceneModelDrawCallbackForViewport0(0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_800539F8.s")
+void updatePassAwardWinner(MenuScreenEffectActor *arg0) {
+    if (gMenuFadeAlpha == 0) {
+        if (arg0->unk18.byte.b0 != 0) {
+            enqueueSoundEffect(raceSetupCharacterFocusSoundIds[arg0->index], 0x32);
+            arg0->unk18.byte.b0 = 0;
+        }
+        loopMainMenuSceneModelAnimation(0);
+        setCallbackTaskCallback(arg0, (CallbackTaskCallback)stopPassAwardWinner);
+        addMainMenuSceneModelDrawCallbackForViewport0(0);
+        return;
+    }
+    addMainMenuSceneModelDrawCallback(0);
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/initPassAwardWinner.s")
+void initPassAwardWinner(MenuScreenEffectActor *arg0) {
+    arg0->unk18.byte.b0 = 1;
+    initMainMenuSceneModel(0, arg0->index);
+    setMainMenuSceneModelAnimation(0, raceSetupCharacterFocusAnimationIds[arg0->index]);
+    loopMainMenuSceneModelAnimation(0);
+    setMainMenuSceneModelPosition(0, 0, 0, 0);
+    setMainMenuSceneModelRotation(0, 0, 0, 0);
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updatePassAwardWinner);
+}
 
 void updatePassAwardOpponent(MenuScreenEffectActor *arg0) {
     s16 temp = arg0->unk1C.half.hi;
@@ -231,7 +260,19 @@ void updatePassAwardOpponent(MenuScreenEffectActor *arg0) {
     addMainMenuSceneModelDrawCallbackForViewport(arg0->unk18.word, 1);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/initPassAwardOpponent.s")
+void initPassAwardOpponent(MenuScreenEffectActor *arg0) {
+    s32 a = arg0->unk18.word;
+    arg0->unk1C.half.hi = a * 0xF;
+    initMainMenuSceneModel(a, arg0->index);
+    setMainMenuSceneModelAnimation(arg0->unk18.word, passAwardOpponentAnimationIds[arg0->index]);
+    loopMainMenuSceneModelAnimation(arg0->unk18.word);
+    {
+        s32 b = arg0->unk18.word;
+        setMainMenuSceneModelPosition(b, passAwardOpponentXPositions[b], 0xFFB50000, 0xA00000);
+    }
+    setMainMenuSceneModelRotation(arg0->unk18.word, 0, 0x800, 0);
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updatePassAwardOpponent);
+}
 
 void createPassAwardOpponent(s32 arg0, s32 arg1) {
     MenuScreenEffectActor *p = createCallbackTaskWithUserId((CallbackTaskCallback)initPassAwardOpponent, 0, 0x64, arg1);
@@ -240,7 +281,9 @@ void createPassAwardOpponent(s32 arg0, s32 arg1) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/drawTitleScreenStartPrompt.s")
+void drawTitleScreenStartPrompt(MenuScreenEffectActor *arg0) {
+    drawMenuAsciiTextDefaultScale(-0x44, 0x38, D_800E0520, 0);
+}
 
 void updateTitleScreenStartPrompt(void *arg0) {
     if (gFrameCounter & 8) {
@@ -313,9 +356,21 @@ void initTitleMenuSparkle(MenuScreenEffectActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)renderTitleMenuSparkle);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_80054300.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/drawCourseRecordBanner.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/updateCourseRecordBannerFadeOut.s")
+void updateCourseRecordBannerFadeOut(MenuScreenEffectActor *arg0) {
+    s16 v = arg0->unk18.half.hi;
+    if (v != 0) {
+        arg0->unk18.half.hi = v - 1;
+    } else {
+        arg0->unk18.half.lo -= 0x20;
+        if (arg0->unk18.half.lo <= 0) {
+            removeCallbackTask(arg0);
+            return;
+        }
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseRecordBanner, arg0);
+}
 
 void initCourseRecordBannerFadeOut(MenuScreenEffectActor *arg0) {
     arg0->unk18.half.hi = 0x3E;
@@ -323,7 +378,19 @@ void initCourseRecordBannerFadeOut(MenuScreenEffectActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseRecordBannerFadeOut);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/drawRaceSetupNamePlate.s")
+void drawRaceSetupNamePlate(MenuScreenEffectActor *arg0) {
+    u8 *new_var;
+
+    new_var = &gCurrentViewportIndex;
+    if (arg0->index == *new_var) {
+        drawAssetTableSprite(
+            (s16)((arg0->unk18.word >> 1) - 0x38),
+            -8,
+            getRelocatableHeapBlockBase(gAssetHandles[31]),
+            0x76
+        );
+    }
+}
 
 void updateRaceSetupNamePlateSlideOut(MenuScreenEffectActor *arg0) {
     s32 temp_v0 = arg0->unk24.word;
@@ -389,9 +456,20 @@ void initCongratulationsBannerModel(MenuScreenEffectActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_80054C84.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_80054CEC.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/drawPassAwardLabel.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/updatePassAwardLabelFadeIn.s")
+void updatePassAwardLabelFadeIn(MenuScreenEffectActor *arg0) {
+    s16 v = arg0->unk18.half.hi;
+    if (v != 0) {
+        arg0->unk18.half.hi = v - 1;
+        return;
+    }
+    arg0->unk18.half.lo += 0x20;
+    if (arg0->unk18.half.lo >= 0x100) {
+        arg0->unk18.half.lo = 0xFF;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawPassAwardLabel, arg0);
+}
 
 void initPassAwardLabelFadeIn(MenuScreenEffectActor *arg0) {
     arg0->unk18.half.hi = 0x50;
