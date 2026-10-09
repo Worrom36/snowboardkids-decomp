@@ -30,6 +30,12 @@ enum {
     COURSE_DETAILS_ROW_SPACING = 0x13
 };
 
+extern const char gCourseUnlockPriceFormat4[];
+
+extern const char gCourseUnlockPriceFormat5[];
+
+extern const char gCourseUnlockPriceFormat6[];
+
 extern u8 gShopMenuShowNewCoursesMessage;
 
 extern u8 gShopMenuDescriptionSeen;
@@ -416,7 +422,21 @@ void initShopMenuCourseListPanel(ShopMenuWidgetActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateShopMenuCourseListPanel);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002E110.s")
+void drawShopMenuModeCursor(ShopMenuWidgetActor *arg0) {
+    if (arg0->transition.bytes.state != 5) {
+        drawMenuSpriteWithAlpha(
+            arg0->x,
+            (s16)(arg0->y + (gCourseSelectModeSelection * 0x1C)),
+            getRelocatableHeapBlockBase(gAssetHandles[0x25]),
+            7,
+            0x20,
+            0x20,
+            0,
+            arg0->sprite.index,
+            0
+        );
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuModeCursor.s")
 
@@ -558,7 +578,39 @@ void drawShopMenuMoneyPanel(ShopMenuWidgetActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002E8E4.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002E920.s")
+void updateShopMenuMoneyPanelForCourseSelectReturn(ShopMenuWidgetActor *arg0) {
+    u8 state = arg0->transition.bytes.state;
+
+    switch (state) {
+        case 0:
+            arg0->sprite.index += 0x26;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->transition.bytes.state = 1;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 3) {
+                state = arg0->transition.bytes.state = 2;
+            }
+            break;
+        case 2:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuMoneyPanel, arg0);
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002EA20.s")
 
@@ -634,7 +686,58 @@ void initShopMenuSparkles(ShopMenuWidgetActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateShopMenuSparkles);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002ECC8.s")
+void drawCourseUnlockPricePanel(ShopMenuWidgetActor *arg0) {
+    s16 new_var;
+    s32 temp;
+    char sp4C[4];
+    u16 sp4A;
+    u16 sp48;
+    s32 palette;
+
+    if (gGameSaveDataBuffer[0].courseUnlockStates[gRacePlayers[0].menuSelection] == -1) {
+        new_var = 0x3000;
+        temp = gCourseUnlockPrices[gRacePlayers[0].menuSelection];
+        if ((u32)temp >= 0x186A0U) {
+            sp4A = 0x4000;
+            sp48 = 0;
+            sprintf(sp4C, gCourseUnlockPriceFormat6, arg0->item.price);
+        } else if ((u32)temp >= 0x2710U) {
+            sp4A = 0x3800;
+            sp48 = 4;
+            sprintf(sp4C, gCourseUnlockPriceFormat5, arg0->item.price);
+        } else {
+            sp4A = new_var;
+            sp48 = 8;
+            sprintf(sp4C, gCourseUnlockPriceFormat4, arg0->item.price);
+        }
+
+        drawMenuPanelBackdrop((s16)(arg0->x + sp48), arg0->y, sp4A, 0x2000);
+
+        if ((u32)gRacePlayers[0].money < (u32)gCourseUnlockPrices[gRacePlayers[0].menuSelection]) {
+            palette = 1;
+        } else {
+            palette = 0;
+        }
+        if (arg0->slide.slideState == 2) {
+            palette = 0;
+        }
+
+        drawMenuAsciiText((s16)(arg0->x + sp48 + 4), (s16)(arg0->y + 4), sp4C, (u8)palette, arg0->sprite.index);
+        return;
+    }
+
+    drawMenuSpriteWithAlpha(
+        arg0->x,
+        arg0->y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x27]),
+        6,
+        0x20,
+        0x20,
+        0,
+        arg0->sprite.index,
+        0
+    );
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateCourseUnlockPricePanel.s")
 

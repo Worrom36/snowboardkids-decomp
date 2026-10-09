@@ -19,6 +19,8 @@
 #define CHARACTER_SELECT_FRAME_TEXTURE_HANDLE (gAssetHandles[0x21])
 #define ASSET_HANDLE(index) (gAssetHandles[index])
 
+typedef MenuGlyphScript CharacterSelectCourseText[0x4A];
+
 typedef struct {
     u8 pad0[8];
     u8 next;
@@ -37,6 +39,10 @@ typedef struct {
     s16 y2;
     s16 y3;
 } CharacterSelectCourseListInitLoop;
+
+extern CharacterSelectCourseText gCharacterSelectCourseNameText[10];
+
+extern u8 gCourseSelectFromRaceTypeMenu;
 
 extern u8 gHighestUnlockedCourse;
 extern MenuGlyphScript gCharacterSelectCourseStartGameText[44];
@@ -368,11 +374,108 @@ void initCharacterSelectCourseExitPreviewPanel(CharacterSelectCourseWidgetActor 
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCourseExitPreviewPanel);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_80020A78.s")
+void drawCharacterSelectCourseListCursor(CharacterSelectCourseWidgetActor *arg0) {
+    if (arg0->transition.bytes.state < 3) {
+        drawMenuSpriteWithAlpha(
+            arg0->x,
+            (s16)(arg0->y + gRaceCourseIndex.signedValue * arg0->selection.bytes.rowSpacing),
+            getRelocatableHeapBlockBase(ASSET_HANDLE(0x21)),
+            0x12,
+            0x20,
+            0x20,
+            0,
+            arg0->sprite.index,
+            0
+        );
+    }
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_80020B08.s")
+// clang-format off
+void updateCharacterSelectCourseListCursor(CharacterSelectCourseWidgetActor *arg0) {
+    u8 state;
+    s32 primaryPlayerIndex;
+    u8 globalState;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_80020C84.s")
+    state = arg0->transition.bytes.state;
+    if (state != (globalState = gCharacterSelectCourseCursorState.listCursorState)) {
+        arg0->transition.bytes.state = globalState;
+        state = globalState;
+        arg0->sprite.index = gCharacterSelectCourseCursorState.listCursorSpriteIndex;
+        arg0->transition.bytes.timer = gCharacterSelectCourseCursorState.listCursorTimer;
+    }
+
+    /* Preserve IDO's state selector register allocation. */
+    primaryPlayerIndex = 0;
+    switch (state ^ primaryPlayerIndex) {
+        case 0:
+            arg0->sprite.index += 0x26;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->transition.bytes.state = 1;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            if ((s32)arg0->transition.bytes.timer < 0x10) {
+                arg0->sprite.index -= 9;
+            } else {
+                arg0->sprite.index += 9;
+            }
+            state = arg0->transition.bytes.state;
+            arg0->transition.bytes.timer = (arg0->transition.bytes.timer + 1) & 0x1F;
+            break;
+        case 2:
+            if (gRacePlayers[primaryPlayerIndex].menuState == 1) {
+                state = arg0->transition.bytes.state = 3;
+            }
+            break;
+        case 3:
+            break;
+    }
+
+    (&gCharacterSelectCourseCursorState.listCursorState)[primaryPlayerIndex] = state;
+    if (gRacePlayers[primaryPlayerIndex].menuState == 7) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseListCursor, arg0);
+}
+// clang-format on
+
+void initCharacterSelectCourseListCursor(CharacterSelectCourseWidgetActor *arg0) {
+    u8 rowSpacing;
+    s16 y;
+    int mode;
+
+    mode = gHighestUnlockedCourse;
+    if (mode == 0) {
+        if (1) {}
+        rowSpacing = 0x18;
+        y = -0x50;
+    } else if (mode == 1) {
+        y = -0x54;
+        rowSpacing = 0x16;
+    } else if (mode == 2) {
+        rowSpacing = 0x16;
+        y = -0x60;
+    } else {
+        y = -0x60;
+        rowSpacing = 0x13;
+    }
+
+    if (gCourseSelectFromRaceTypeMenu != 0) {
+        y = -0x58;
+        rowSpacing = 0x18;
+    }
+
+    arg0->x = -0x7C;
+    arg0->y = y;
+    arg0->selection.bytes.rowSpacing = rowSpacing;
+    arg0->sprite.index = 0;
+    arg0->transition.bytes.state = 0;
+    arg0->transition.bytes.timer = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCourseListCursor);
+}
 
 void drawCharacterSelectCourseTitleCursor(CharacterSelectCourseWidgetActor *arg0) {
     drawMenuSpriteWithAlpha(
@@ -683,7 +786,26 @@ void initCharacterSelectCourseRecordsFrame(CharacterSelectCourseWidgetActor *arg
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCourseRecordsFrame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_80021E40.s")
+void drawCharacterSelectCourseNamePopup(CharacterSelectCourseWidgetActor *arg0) {
+    CharacterSelectCourseText *texts;
+    MenuGlyphScript *text;
+
+    texts = gCharacterSelectCourseNameText;
+    text = texts[gRaceCourseIndex.signedValue];
+    drawMenuGlyphScript(arg0->x, arg0->y, text, 1, arg0->sprite.index, 0);
+    if (arg0->transition.bytes.state == 2) {
+        drawMenuSprite(
+            (s16)(arg0->x + 0x60),
+            (s16)(arg0->y + 0x40),
+            getRelocatableHeapBlockBase(ASSET_HANDLE(0x24)),
+            ((s32)arg0->transition.bytes.timer >= 8) + 5,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+    }
+}
 
 // clang-format off
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseNamePopup.s")

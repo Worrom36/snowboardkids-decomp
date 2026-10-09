@@ -10,6 +10,12 @@
 #include "game/menu/renderer/menu_render_utils.h"
 #include "game/menu/renderer/sprite_palette_relocation.h"
 
+#define FONT_GFX_CMD(pkt, cmd0, cmd1) \
+    {                                 \
+        Gfx *_g = (Gfx *)(pkt);       \
+        _g->words.w0 = (cmd0);        \
+        _g->words.w1 = (cmd1);        \
+    }
 #define MENU_PALETTE_SIZE_BYTES 0x20
 #define MENU_RGBA5551_ALPHA_BIT 1
 #define MENU_RGBA5551_CHANNEL_MASK 0x1F
@@ -467,7 +473,81 @@ void drawMenuSpriteTile(s16 arg0, s16 arg1, AssetTable *arg2, u16 arg3, u16 arg4
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_renderer/func_8001130C.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_renderer/func_80011314.s")
+void drawMenuTextureByAssetId(s16 x, s16 y, AssetTable *unusedTable, u16 assetId, u16 width, u16 height) {
+    s32 x0;
+    s32 y0;
+    s32 x1;
+    s32 y1;
+    volatile u8 pad[0x10];
+    s16 clipX0;
+    s16 clipY0;
+    s16 clipX1;
+    s16 clipY1;
+    void *image;
+    void *palette;
+
+    if (width >= 0x201) {
+        return;
+    }
+    if (width <= 0) {
+        return;
+    }
+    if (height >= 0x201) {
+        return;
+    }
+    if (height <= 0) {
+        return;
+    }
+
+    x0 = (x + gMenuViewportCenterX) << 2;
+    y0 = (y + gMenuViewportCenterY) << 2;
+    x1 = x0 + (((width * 64) << 2) >> 5);
+    y1 = y0 + (((height * 64) << 2) >> 5);
+
+    clipY0 = (gMenuViewportCenterY - (gMenuViewportHeight / 2)) << 2;
+    clipY1 = (gMenuViewportCenterY + (gMenuViewportHeight / 2)) << 2;
+    clipX0 = (gMenuViewportCenterX - (gMenuViewportWidth / 2)) << 2;
+    clipX1 = (gMenuViewportCenterX + (gMenuViewportWidth / 2)) << 2;
+
+    if ((x0 >= clipX1) || (y0 >= clipY1) || (x1 < clipX0) || (y1 < clipY0)) {
+        return;
+    }
+    if (x0 < clipX0) {
+        x0 = clipX0;
+    }
+    if (y0 < clipY0) {
+        y0 = clipY0;
+    }
+    if (x1 >= clipX1) {
+        x1 = clipX1 - 4;
+    }
+    if (y1 >= clipY1) {
+        y1 = clipY1 - 4;
+    }
+
+    getAssetTableImageAndPalette(getRelocatableHeapBlockBase(gAssetHandles[13]), assetId, &image, &palette);
+
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xFD500000, (u32)&image);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xF5500000, 0x07080200);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xE6000000, 0);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xF3000000, 0x073FF200);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xE7000000, 0);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xF5400800, 0x00080200);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xF2000000, 0x000FC0FC);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xFD100000, (u32)palette);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xE8000000, 0);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xF5000100, 0x07000000);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xE6000000, 0);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xF0000000, 0x0703C000);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xE7000000, 0);
+    FONT_GFX_CMD(
+        gRegionAllocPtr++,
+        0xE4000000 | ((x1 & 0xFFF) << 12) | (y1 & 0xFFF),
+        ((x0 & 0xFFF) << 12) | (y0 & 0xFFF)
+    );
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xB4000000, 0);
+    FONT_GFX_CMD(gRegionAllocPtr++, 0xB3000000, 0x04000400);
+}
 
 void initMenuSpriteActorDebugControls(MenuRenderSpriteActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateMenuSpriteActorDebugControls);

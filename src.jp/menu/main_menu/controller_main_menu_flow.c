@@ -83,7 +83,51 @@ void requestRumbleMotorInit(u16 controllerIndex) {
     osRecvMesg(&gControllerSubsystemReplyQueue, &msg, OS_MESG_BLOCK);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/func_80000A8C.s")
+void serviceRumbleMotorRequest(u16 controllerIndex) {
+    if (gRumbleMotorStatuses[controllerIndex] == RUMBLE_MOTOR_NO_PAK) {
+        gRumbleMotorRequestStates[controllerIndex] = 0;
+        if (gRumblePakConnectedMask & (1 << controllerIndex)) {
+            osSendMesg(
+                &gControllerSubsystemRequestQueue,
+                (OSMesg)(controllerIndex + CONTROLLER_REQUEST_RETRY_RUMBLE_INIT),
+                OS_MESG_BLOCK
+            );
+        }
+    } else if (gRumbleMotorStatuses[controllerIndex] == RUMBLE_MOTOR_WRONG_DEVICE) {
+        gRumbleMotorRequestStates[controllerIndex] = 0;
+        if (gRumblePakConnectedMask & (1 << controllerIndex)) {
+            osSendMesg(
+                &gControllerSubsystemRequestQueue,
+                (OSMesg)(controllerIndex + CONTROLLER_REQUEST_RETRY_RUMBLE_INIT),
+                OS_MESG_BLOCK
+            );
+        }
+    } else if (gRumbleMotorStatuses[controllerIndex] == RUMBLE_MOTOR_CONTROLLER_FAILURE) {
+        gRumbleMotorRequestStates[controllerIndex] = 0;
+        if (gRumblePakConnectedMask & (1 << controllerIndex)) {
+            osSendMesg(
+                &gControllerSubsystemRequestQueue,
+                (OSMesg)(controllerIndex + CONTROLLER_REQUEST_RETRY_RUMBLE_INIT),
+                OS_MESG_BLOCK
+            );
+        }
+    } else {
+        if (gRumbleMotorRequestStates[controllerIndex] == 0) {
+            osSendMesg(
+                &gControllerSubsystemRequestQueue,
+                (OSMesg)(controllerIndex + CONTROLLER_REQUEST_STOP_RUMBLE),
+                OS_MESG_BLOCK
+            );
+        } else {
+            osSendMesg(
+                &gControllerSubsystemRequestQueue,
+                (OSMesg)(controllerIndex + CONTROLLER_REQUEST_START_RUMBLE),
+                OS_MESG_BLOCK
+            );
+        }
+        gRumbleMotorRequestStates[controllerIndex] = 0;
+    }
+}
 
 void requestRumbleMotorStart(u16 controllerIndex) {
     if (gRaceRumbleEnabled != 0) {
@@ -490,13 +534,168 @@ void enterMainMenuFromRace(void) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/initMainMenu.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/func_80001FF8.s")
+void updateMainMenu(void) {
+    s32 unused[2];
+    s32 flag;
+    s32 temp_v1;
+    s32 temp_a0;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/func_8000228C.s")
+    flag = 0;
+    temp_v1 = gCurrentGameTask->callbackData0;
+    if (temp_v1 != 0) {
+        gCurrentGameTask->callbackData0 = stepMenuFadeAlpha((s16)temp_v1, 0x10, 0);
+        if (gCurrentGameTask->callbackData0 == 0) {
+            gMenuFadeOverlayActive = 0;
+        }
+    } else {
+        if (gCurrentGameTask->callbackData2 != 0) {
+            gCurrentGameTask->callbackData2 -= 1;
+            if (gCurrentGameTask->callbackData2 == 0) {
+                requestMusicSequenceBank(0);
+            }
+        }
+        temp_a0 = gPlayerInputPressed[0];
+        if (temp_a0 & (STICK_UP | U_JPAD)) {
+            if (gCurrentGameTask->callbackData1 != 0) {
+                gCurrentGameTask->callbackData1 -= 1;
+                enqueueSoundEffect(0x19, 0x32);
+                temp_a0 = gPlayerInputPressed[0];
+            }
+        }
+        if (temp_a0 & (STICK_DOWN | D_JPAD)) {
+            if (gCurrentGameTask->callbackData1 != 2) {
+                gCurrentGameTask->callbackData1 += 1;
+                enqueueSoundEffect(0x19, 0x32);
+                temp_a0 = gPlayerInputPressed[0];
+            }
+        }
+        if ((temp_a0 & START_BUTTON) || (temp_a0 & A_BUTTON)) {
+            flag = 1;
+            enqueueSoundEffect(1, 0x32);
+        }
+        if (flag == 0) {
+            gCurrentGameTask->callbackData3 -= 1;
+            if (gCurrentGameTask->callbackData3 == 0) {
+                flag = 1;
+            }
+        }
+        if (flag != 0) {
+            setCurrentGameTaskCallback(fadeOutMainMenu, 0);
+            requestMusicSequenceStop(0xC);
+        }
+    }
+    updateRaceCamera(0);
+    if (checkMainMenuSecretCode() != 0) {
+        gMainMenuSecretCodeUnlocked = 1;
+        enqueueSoundEffect(0x26, 0x32);
+    }
+    loopMainMenuSceneModelAnimation(0);
+    loopMainMenuSceneModelAnimation(1);
+    loopMainMenuSceneModelAnimation(2);
+    loopMainMenuSceneModelAnimation(3);
+    loopMainMenuSceneModelAnimation(4);
+    if (gCurrentGameTask->callbackData0 == 0xEF) {
+        addMainMenuSceneModelDrawCallback(0);
+        addMainMenuSceneModelDrawCallback(1);
+        addMainMenuSceneModelDrawCallback(2);
+        addMainMenuSceneModelDrawCallback(3);
+        addMainMenuSceneModelDrawCallback(4);
+    } else {
+        addMainMenuSceneModelDrawCallbackForViewport0(0);
+        addMainMenuSceneModelDrawCallback(1);
+        addMainMenuSceneModelDrawCallback(2);
+        addMainMenuSceneModelDrawCallbackForViewport0(3);
+        addMainMenuSceneModelDrawCallback(4);
+    }
+    updateCallbackTasks();
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/func_8000247C.s")
+void fadeOutMainMenu(void) {
+    s32 temp_v0;
+    s32 temp_v1;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/func_80002600.s")
+    temp_v0 = gCurrentGameTask->callbackData0;
+    if (temp_v0 != 0xFF) {
+        gCurrentGameTask->callbackData0 = stepMenuFadeAlpha((s16)temp_v0, 0x28, 1);
+        if (gCurrentGameTask->callbackData0 == 0xFF) {
+            gFramebufferSwapHold = 1;
+        } else {
+            updateRaceCamera(0);
+            loopMainMenuSceneModelAnimation(0);
+            loopMainMenuSceneModelAnimation(1);
+            loopMainMenuSceneModelAnimation(2);
+            loopMainMenuSceneModelAnimation(3);
+            loopMainMenuSceneModelAnimation(4);
+            addMainMenuSceneModelDrawCallback(0);
+            addMainMenuSceneModelDrawCallback(1);
+            addMainMenuSceneModelDrawCallback(2);
+            addMainMenuSceneModelDrawCallback(3);
+            addMainMenuSceneModelDrawCallback(4);
+            updateCallbackTasks();
+        }
+    } else if (gPendingFramebufferSwapCount == 2) {
+        releaseMenuAssetHandles();
+        gFramebufferSwapHold = 0;
+        gFramebufferRenderInterval.value = 0;
+        if (gCurrentGameTask->callbackData3 != 0) {
+            temp_v1 = gCurrentGameTask->callbackData1;
+            if (temp_v1 == 0) {
+                createGameTask(2, initNewGameSaveData, 0x64);
+                removeGameTask(3);
+            } else if (temp_v1 == 1) {
+                setCurrentGameTaskCallback(initMainMenuModeSelect, 0);
+            } else {
+                setCurrentGameTaskCallback(initMainMenuSettings, 0);
+            }
+        } else if (gMainMenuReturnFromRace == 0) {
+            setCurrentGameTaskCallback(enterMainMenuFromRace, 0);
+        } else {
+            gMainMenuReturnFromRace = 0;
+            setCurrentGameTaskCallback(initMainMenu, 0);
+            createGameTask(4, initMainMenuDemoRaceIntro, 0x64);
+            suspendGameTask(3);
+        }
+    }
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/initMainMenuModeSelect.s")
+
+void updateMainMenuModeSelect(void) {
+    s32 temp_v0;
+
+    gMenuFadeAlpha -= 0x10;
+    if (gMenuFadeAlpha < 0) {
+        gMenuFadeAlpha = 0;
+        temp_v0 = gPlayerInputPressed[0];
+        if (temp_v0 & (STICK_UP | U_JPAD)) {
+            if (gMenuFlowState != 0) {
+                enqueueSoundEffect(0x19, 0x32);
+                gMenuFlowState -= 1;
+                temp_v0 = gPlayerInputPressed[0];
+            }
+        }
+        if ((temp_v0 & (STICK_DOWN | D_JPAD)) && (gMenuFlowState != 2)) {
+            enqueueSoundEffect(0x19, 0x32);
+            gMenuFlowState += 1;
+            temp_v0 = gPlayerInputPressed[0];
+        }
+        if (temp_v0 & (A_BUTTON | B_BUTTON | START_BUTTON)) {
+            enqueueSoundEffect(0x18, 0x32);
+            if (gPlayerInputPressed[0] & B_BUTTON) {
+                gMenuFlowState = 2;
+            }
+            gMainMenuSelectionResult = 1;
+            if (gMenuFlowState == 2) {
+                requestMusicSequenceStop(0x3C);
+            }
+            setCurrentGameTaskCallback(fadeOutMainMenuModeSelect, 0);
+        }
+    }
+    updateRaceCamera(0);
+    loopMainMenuSceneModelAnimation(4);
+    addMainMenuSceneModelDrawCallback(4);
+    updateCallbackTasks();
+}
 
 void fadeOutMainMenuModeSelect(void) {
     gMenuFadeAlpha += 0x10;
@@ -529,9 +728,87 @@ void exitMainMenuModeSelect(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/func_80002888.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/initMainMenuSettings.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/func_800029F0.s")
+void updateMainMenuSettings(void) {
+    s32 temp_v1;
+
+    gMenuFadeAlpha -= 0x10;
+    if (gMenuFadeAlpha < 0) {
+        gMenuFadeAlpha = 0;
+        temp_v1 = gPlayerInputPressed[0];
+        if ((temp_v1 & (STICK_UP | U_JPAD)) && (gMenuFlowState != 0)) {
+            gMenuFlowState -= 1;
+            enqueueSoundEffect(0x19, 0x32);
+            temp_v1 = gPlayerInputPressed[0];
+        }
+        if ((temp_v1 & (STICK_DOWN | D_JPAD)) && (gMenuFlowState != 3)) {
+            gMenuFlowState += 1;
+            enqueueSoundEffect(0x19, 0x32);
+            temp_v1 = gPlayerInputPressed[0];
+        }
+        if (temp_v1 & B_BUTTON) {
+            gMenuFlowState = 3;
+        }
+        if (temp_v1 & (STICK_RIGHT | R_JPAD)) {
+            switch (gMenuFlowState) {
+                case 0:
+                    if (gRaceRecordSettingsEnabled != 0) {
+                        gRaceRecordSettingsEnabled -= 1;
+                        enqueueSoundEffect(0x19, 0x32);
+                        temp_v1 = gPlayerInputPressed[0];
+                    }
+                    break;
+                case 1:
+                    if (gRaceCourseModelEffectsDisabled != 1) {
+                        gRaceCourseModelEffectsDisabled += 1;
+                        enqueueSoundEffect(0x19, 0x32);
+                        temp_v1 = gPlayerInputPressed[0];
+                    }
+                    break;
+                case 2:
+                    if (gRaceCourseOverlayEffectsDisabled != 1) {
+                        gRaceCourseOverlayEffectsDisabled += 1;
+                        enqueueSoundEffect(0x19, 0x32);
+                        temp_v1 = gPlayerInputPressed[0];
+                    }
+                    break;
+            }
+        }
+        if (temp_v1 & (STICK_LEFT | L_JPAD)) {
+            switch (gMenuFlowState) {
+                case 0:
+                    if (gRaceRecordSettingsEnabled != 1) {
+                        gRaceRecordSettingsEnabled += 1;
+                        enqueueSoundEffect(0x19, 0x32);
+                        temp_v1 = gPlayerInputPressed[0];
+                    }
+                    break;
+                case 1:
+                    if (gRaceCourseModelEffectsDisabled != 0) {
+                        gRaceCourseModelEffectsDisabled -= 1;
+                        enqueueSoundEffect(0x19, 0x32);
+                        temp_v1 = gPlayerInputPressed[0];
+                    }
+                    break;
+                case 2:
+                    if (gRaceCourseOverlayEffectsDisabled != 0) {
+                        gRaceCourseOverlayEffectsDisabled -= 1;
+                        enqueueSoundEffect(0x19, 0x32);
+                        temp_v1 = gPlayerInputPressed[0];
+                    }
+                    break;
+            }
+        }
+        if ((temp_v1 & (A_BUTTON | B_BUTTON | START_BUTTON)) && (gMenuFlowState == 3)) {
+            requestMusicSequenceStop(0x3C);
+            enqueueSoundEffect(0x18, 0x32);
+            setCurrentGameTaskCallback(fadeOutMainMenuSettings, 0);
+        }
+    }
+    updateRaceCamera(0);
+    updateCallbackTasks();
+}
 
 void fadeOutMainMenuSettings(void) {
     gMenuFadeAlpha += 0x10;
@@ -553,4 +830,4 @@ void exitMainMenuSettings(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/func_80002D74.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/checkMainMenuSecretCode.s")

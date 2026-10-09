@@ -14,6 +14,14 @@
 #include "game/menu/race_setup/race_setup_ui.h"
 #include "game/race/player/race_player_input.h"
 
+extern MenuGlyphScript gControllerPakRumblePakText[20];
+
+extern MenuGlyphScript gControllerPakRumbleCheckNoEntryText[12];
+
+extern MenuGlyphScript gControllerPakRumbleCheckPromptText[4][0x34];
+
+extern MenuGlyphScript gControllerPakRumbleCheckNotUsedText[12];
+
 extern u8 gControllerPakMenuConfirmChoice;
 
 extern u8 gControllerPakDeletePromptState;
@@ -69,7 +77,233 @@ void initControllerPakContinuePrompt(ControllerPakOptionsActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateControllerPakContinuePrompt);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/func_80030A78.s")
+void drawControllerPakRumbleCheckPrompt(ControllerPakRumbleCheckPromptActor *actor) {
+    s32 i;
+    s32 j;
+    s32 playerIndex;
+    s32 yAdjust;
+    MenuGlyphScript *message;
+    u16 alpha;
+    MenuGlyphScript playerNumberText[5];
+
+    if (actor->state == CONTROLLER_PAK_RUMBLE_DEVICE_SUMMARY) {
+        yAdjust = 8;
+    } else {
+        yAdjust = 0;
+    }
+
+    drawMenuSpriteWithAlpha(
+        (s16)(actor->common.x - 4),
+        (s16)(actor->common.y - yAdjust - 4),
+        getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+        2,
+        0x20,
+        0x20,
+        0,
+        actor->scale,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(actor->common.x + 0xD4),
+        (s16)(actor->common.y - yAdjust - 4),
+        getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+        4,
+        0x20,
+        0x20,
+        0,
+        actor->scale,
+        0
+    );
+
+    for (i = 0; i < 0xE0; i += 0x10) {
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->common.x + i),
+            (s16)(actor->common.y - yAdjust - 4),
+            getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+            3,
+            0x20,
+            0x20,
+            0,
+            actor->scale,
+            0
+        );
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->common.x + i),
+            (s16)(actor->common.y + yAdjust + 0x24),
+            getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+            8,
+            0x20,
+            0x20,
+            0,
+            actor->scale,
+            0
+        );
+    }
+
+    drawMenuSpriteWithAlpha(
+        (s16)(actor->common.x - 4),
+        (s16)(actor->common.y + yAdjust + 0x24),
+        getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+        7,
+        0x20,
+        0x20,
+        0,
+        actor->scale,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(actor->common.x + 0xD4),
+        (s16)(actor->common.y + yAdjust + 0x24),
+        getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+        9,
+        0x20,
+        0x20,
+        0,
+        actor->scale,
+        0
+    );
+
+    for (i = 0; i < 0x30; i += 0x10) {
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->common.x - 4),
+            (s16)(actor->common.y + i),
+            getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+            5,
+            0x20,
+            0x20,
+            0,
+            actor->scale,
+            0
+        );
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->common.x + 0xD4),
+            (s16)(actor->common.y + i),
+            getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+            6,
+            0x20,
+            0x20,
+            0,
+            actor->scale,
+            0
+        );
+        for (j = 0; j < 0xE0; j += 0x10) {
+            drawMenuSpriteWithAlpha(
+                (s16)(actor->common.x + j),
+                (s16)(actor->common.y + i),
+                getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+                0xB,
+                0x20,
+                0x20,
+                0,
+                actor->scale,
+                0
+            );
+            if (((!actor) && (!actor)) && (!actor)) {}
+        }
+    }
+
+    if (actor->state == CONTROLLER_PAK_RUMBLE_DEVICE_SUMMARY) {
+        for (playerIndex = 0; playerIndex < 4; playerIndex++) {
+            playerNumberText[0] = -4;
+            playerNumberText[1] = 7;
+            playerNumberText[2] = playerIndex + 1;
+            playerNumberText[3] = 0x19;
+            playerNumberText[4] = 0xFFFF;
+            if (playerIndex < gPlayerCount) {
+                if (gRumblePakConnectedByController[playerIndex] == 1) {
+                    message = gControllerPakRumblePakText;
+                } else {
+                    message = gControllerPakRumbleCheckNotUsedText;
+                }
+                alpha = (u16)actor->scale;
+            } else {
+                message = gControllerPakRumbleCheckNoEntryText;
+                alpha = 0x60;
+            }
+            drawMenuGlyphScript(
+                (s16)(actor->common.x + 0x10),
+                (s16)(actor->common.y - yAdjust + playerIndex * 0x10),
+                playerNumberText,
+                0,
+                alpha,
+                0
+            );
+            drawMenuGlyphScript(
+                (s16)(actor->common.x + 0x40),
+                (s16)(actor->common.y - yAdjust + playerIndex * 0x10),
+                message,
+                0,
+                alpha,
+                0
+            );
+        }
+    } else {
+        drawMenuGlyphScript(
+            actor->common.x,
+            actor->common.y,
+            gControllerPakRumbleCheckPromptText[actor->messageIndex],
+            0,
+            actor->scale,
+            0
+        );
+    }
+
+    if (actor->state == CONTROLLER_PAK_RUMBLE_CONFIRM_DEVICES) {
+        alpha = (gControllerPakRumbleCheckPromptTransition.confirmSelection == 0) ? 0x100 : 0x60;
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->common.x + 0x4C),
+            (s16)(actor->common.y + 0x10),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            0x17,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            0
+        );
+        if (alpha == 0x100) {
+            alpha = 0x60;
+        } else {
+            alpha = 0x100;
+        }
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->common.x + 0x4C),
+            (s16)(actor->common.y + 0x20),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            0x18,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            0
+        );
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->common.x + 0x4C),
+            (s16)(actor->common.y + (gControllerPakRumbleCheckPromptTransition.confirmSelection * 0x10) + 0x10),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            0x12,
+            0x20,
+            0x20,
+            0,
+            actor->optionScale,
+            0
+        );
+    }
+
+    if ((actor->state == CONTROLLER_PAK_RUMBLE_INSERT_ACK) || (actor->state == CONTROLLER_PAK_RUMBLE_WARNING_ACK) ||
+        (actor->state == CONTROLLER_PAK_RUMBLE_DEVICE_SUMMARY)) {
+        drawMenuSprite(
+            (s16)(actor->common.x + 0xD0),
+            (s16)(actor->common.y + yAdjust + 0x20),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            (actor->timer >= 8) + 5,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/updateControllerPakRumbleCheckPrompt.s")
 

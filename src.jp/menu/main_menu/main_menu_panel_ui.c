@@ -13,6 +13,9 @@
 #include "game/menu/renderer/menu_renderer.h"
 #include "game/menu/renderer/menu_render_utils.h"
 
+#define MENU_PANEL_INPUT_REPEAT_FRAMES 4
+#define MENU_PANEL_ACCEPT_SOUND 0x18
+#define MENU_PANEL_SOUND_VOLUME 0x32
 #define MENU_PANEL_TEXTURE_HANDLE (gAssetHandles[0x2A])
 #define mainMenuModeSelectTopRowIconTiles gMainMenuModeSelectByteData.topRowIconTiles
 #define mainMenuModeSelectBottomRowIconTiles gMainMenuModeSelectByteData.bottomRowIconTiles
@@ -160,7 +163,42 @@ void scrollMainMenuModeDescriptionPanelOut(MenuPanelActor *arg0) {
     addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawMainMenuModeDescriptionPanel, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_panel_ui/updateMainMenuModeDescriptionPanel.s")
+void updateMainMenuModeDescriptionPanel(MenuPanelActor *arg0) {
+    s16 timer;
+    u8 state;
+
+    timer = arg0->inputRepeatTimer;
+    if (timer == 0) {
+        if (arg0->selectionState == 0) {
+            arg0->selectedTile++;
+        }
+        arg0->inputRepeatTimer = MENU_PANEL_INPUT_REPEAT_FRAMES;
+    } else {
+        arg0->inputRepeatTimer = timer - 1;
+    }
+
+    if (gPlayerInputPressed[0] & (A_BUTTON | START_BUTTON)) {
+        state = arg0->selectionState;
+        switch (state) {
+            case 0:
+                arg0->selectedTile = 0xE7;
+                break;
+            case 1:
+                gMainMenuSelectionResult = 1;
+                setCallbackTaskCallback(arg0, (CallbackTaskCallback)scrollMainMenuModeDescriptionPanelOut);
+                break;
+            case 2:
+                arg0->selectedTile = 0;
+                arg0->selectionState = 0;
+                arg0->inputRepeatTimer = 0;
+                arg0->tileList = arg0->tileListStart;
+                break;
+        }
+        enqueueSoundEffect(MENU_PANEL_ACCEPT_SOUND, MENU_PANEL_SOUND_VOLUME);
+    }
+
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawMainMenuModeDescriptionPanel, arg0);
+}
 
 void initMainMenuModeDescriptionPanel(MenuPanelActor *arg0) {
     arg0->x = -0x80;

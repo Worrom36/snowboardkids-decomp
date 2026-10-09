@@ -14,6 +14,7 @@
 #include "game/menu/renderer/menu_renderer.h"
 #include "game/race/player/race_player_input.h"
 
+#define gControllerPakRaceRecordSaveStatusMessages (gControllerPakRaceRecordSaveUiData.content.typed.statusMessages)
 #define CONTROLLER_PAK_RACE_RECORD_SAVE_SCORE_TEXTURE_HANDLE (gAssetHandles[0x21])
 #define gControllerPakRaceRecordSaveExitMessage (gControllerPakRaceRecordSaveUiData.exitMessage)
 
@@ -263,7 +264,31 @@ void initControllerPakRaceRecordSavePromptFrame(ControllerPakRaceRecordSavePromp
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateControllerPakRaceRecordSavePromptFrame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_race_record_save_ui/func_8002BFBC.s")
+void drawControllerPakRaceRecordSaveStatusMessage(ControllerPakRaceRecordSaveStatusMessageActor *arg0) {
+    MenuGlyphScript *text;
+    void *texture;
+
+    if (gControllerPakStatusCodes[0] != 8) {
+        text = gControllerPakRaceRecordSaveStatusMessages[gControllerPakStatusCodes[0]];
+        drawMenuGlyphScript(arg0->common.x, arg0->common.y, text, 1, arg0->alpha, 0);
+        if (((gControllerPakStatusCodes[0] == 4) || (gControllerPakStatusCodes[0] >= 7)) &&
+            (gMenuChoicePromptState[0] == 0)) {
+            if (arg0->alpha == 0x100) {
+                texture = getRelocatableHeapBlockBase(gAssetHandles[0x21]);
+                drawMenuSprite(
+                    (s16)(arg0->common.x + 0x70),
+                    (s16)(arg0->common.y + 0x10),
+                    texture,
+                    ((s32)arg0->arrowFrame >= 8) + 5,
+                    0x20,
+                    0x20,
+                    0,
+                    0
+                );
+            }
+        }
+    }
+}
 
 // clang-format off
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_race_record_save_ui/updateControllerPakRaceRecordSaveStatusMessage.s")

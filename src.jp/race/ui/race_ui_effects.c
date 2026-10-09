@@ -28,6 +28,9 @@
 #include "game/race/ui/race_hud.h"
 #include <PR/os_cache.h>
 
+#define RACE_UI_HIT_PRIZE_SCORE_RATE 0x12C
+#define RACE_UI_HIT_PRIZE_QUICKSAND_VALLEY_SCORE_RATE 0x64
+#define RACE_UI_HIT_PRIZE_PERFECT_HIT_BONUS 0x3E8
 #define RACE_UI_GSP_VERTEX_F3DEX(pkt, v, n, v0) \
     gDma1p((pkt), G_VTX, (v), ((n) << 10) | (sizeof(Vtx) * (n) - 1), (v0) * 2)
 #define RACE_UI_GSP1QUADRANGLE_F3DEX(pkt, v0, v1, v2, v3, flag)                                  \
@@ -90,6 +93,26 @@
 #define RACE_UI_TIME_TRIAL_SAVE_DATA ((RaceUiTimeTrialSaveData *)&gGameSaveDataBuffer[0])
 
 typedef struct {
+    u8 pad30[4];
+    Vec3i vec;
+    Mat3x3 matrix;
+    u8 pad52[4];
+} RaceUiSparkleRetargetScratch;
+
+typedef struct {
+    u8 pad30[4];
+    Vec3i vec;
+    Mat3x3 matrix;
+    u8 pad52[0xC];
+} RaceUiSparkleTransformScratch;
+
+typedef struct {
+    s16 active;
+    s16 sentinel;
+    Vec3i position;
+} RaceUiGfxCommandScriptEntry;
+
+typedef struct {
     s32 displayListAddress;
     u16 textureAssetId;
     u8 useOverlayQueue;
@@ -127,6 +150,18 @@ typedef struct {
     u8 pad0[0x12A];
     RaceTimer timeTrialRecordSplitTimes[11];
 } RaceUiTimeTrialSaveData;
+
+extern Vtx D_800D53D0[];
+
+extern Vec3i D_800D5440;
+
+extern RaceUiGfxCommandScriptEntry *D_800D5C6C[];
+
+extern const char gRaceUiBoardReversePromptLabelBlinkOn[0x10];
+
+extern const char gRaceUiBoardReversePromptLabelBlinkOff[0x10];
+
+extern s16 gRacePrizeAmountsByCourseAndRank[][4];
 
 extern const char D_800E05B8[4];
 
@@ -316,11 +351,43 @@ void initRaceCourseScrollingTexture(RaceCourseScrollingTextureActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceCourseScrollingTexture);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_80057234.s")
+void drawRaceUiBoardReversePrompt(RaceUiPromptActor *arg0) {
+    if (gCurrentViewportIndex == arg0->task.userId) {
+        if (gUiBlinkTimer & 1) {
+            drawMenuAsciiTextDefaultScale(-0x34, arg0->y, gRaceUiBoardReversePromptLabelBlinkOn, 0);
+            return;
+        }
+        drawMenuAsciiTextDefaultScale(-0x34, arg0->y, gRaceUiBoardReversePromptLabelBlinkOff, 1);
+    }
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_800572B0.s")
+void updateRaceUiBoardReversePrompt(RaceUiPromptActor *arg0) {
+    if (gRacePlayers[arg0->task.userId].stateFlags & 0x400) {
+        if (arg0->timer < 0x1E) {
+            arg0->timer++;
+        }
+    } else {
+        arg0->timer = 0;
+    }
+    if (gRacePlayers[arg0->task.userId].stateFlags & 0x1040) {
+        arg0->timer = 0;
+    }
+    if (arg0->timer >= 0x1E) {
+        addRenderCallback(
+            &gRaceForegroundRenderCallbackList,
+            (RenderCallback)drawRaceUiBoardReversePrompt,
+            (void *)arg0
+        );
+    }
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_800573B0.s")
+void initRaceUiBoardReversePrompt(RaceUiPromptActor *arg0) {
+    arg0->y = -0x10;
+    if (gPlayerCount != 1) {
+        arg0->y = -8;
+    }
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiBoardReversePrompt);
+}
 
 void drawRaceUiTrickScorePopup(RaceUiPopupActor *arg0) {
     volatile u8 padding[0x20];
@@ -747,7 +814,12 @@ void updateRaceUiPrizePayoutFadeIn(RaceUiPrizePayoutActor *arg0) {
     addRenderCallback(&gMenuForegroundRenderCallbackList, (RenderCallback)drawRaceUiPrizePayoutLabels, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005874C.s")
+void initRaceUiPrizePayout(RaceUiPrizePayoutActor *arg0) {
+    arg0->alpha = 0;
+    arg0->prizeAmount =
+        gRacePrizeAmountsByCourseAndRank[0][gRacePlayers[0].rankIndex + gRaceCourseIndex.signedValue * 4];
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiPrizePayoutFadeIn);
+}
 
 void drawRaceUiResultsBannerPlacements(RaceUiResultsBannerActor *arg0) {
     u16 characterSpriteIndex;
@@ -1582,7 +1654,25 @@ void updateRaceUiHitPrizeFadeIn(RaceUiCounterActor *arg0) {
     addRenderCallback(&gMenuForegroundRenderCallbackList, (RenderCallback)drawRaceUiHitPrizePayoutLabels, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005B3D4.s")
+void initRaceUiHitPrizePayout(RaceUiCounterActor *arg0) {
+    arg0->alpha = 0;
+    arg0->hasPerfectHitBonus = FALSE;
+    arg0->pendingPerfectHitBonus = 0;
+    arg0->pendingCompleteBonus = RACE_UI_HIT_PRIZE_SCORE_RATE;
+    if (gRaceCourseIndex.signedValue == 9) {
+        arg0->pendingCompleteBonus = RACE_UI_HIT_PRIZE_QUICKSAND_VALLEY_SCORE_RATE;
+    }
+    if (gRaceChallengeFailed != 0) {
+        arg0->pendingHitPrize = gRacePlayers[0].scoreAttackPointTotal;
+    } else {
+        arg0->pendingHitPrize = gRacePlayers[0].scoreAttackPointTotal * 0x32;
+        if (gRacePlayers[0].scoreAttackPointTotal == gRacePlayers[0].scoreAttackPointTarget) {
+            arg0->hasPerfectHitBonus = TRUE;
+            arg0->pendingPerfectHitBonus = RACE_UI_HIT_PRIZE_PERFECT_HIT_BONUS;
+        }
+    }
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiHitPrizeFadeIn);
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiCourseRecordElapsedTime.s")
 
@@ -2074,7 +2164,37 @@ void updateRaceUiCourseRecordFadeIn(RaceUiDualCounterActor *arg0) {
     addRenderCallback(&gMenuForegroundRenderCallbackList, (RenderCallback)drawRaceUiCourseRecordPayoutLabels, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005C9EC.s")
+void initRaceUiCourseRecordPayout(RaceUiDualCounterActor *arg0) {
+    u32 temp_v0;
+    s16 *new_var;
+
+    arg0->alpha = 0;
+    arg0->flag = 0;
+    arg0->bonus = 0;
+    arg0->leftTarget = 0x12C;
+    if (gRaceCourseIndex.signedValue == 9) {
+        arg0->leftTarget = 0x64;
+    }
+    calculateRaceTimerDelta(
+        &gRaceCourseTargetTimes[gRaceCourseIndex.signedValue],
+        &gRaceElapsedTimer,
+        (RaceTimer *)&arg0->row
+    );
+    new_var = &gRacePlayers[0].collectedCourseCoinMarkerCount;
+    if (gRaceChallengeFailed != 0) {
+        arg0->leftValue = 0;
+        temp_v0 = *new_var;
+    } else {
+        arg0->leftValue = ((arg0->row * 0x3C) + arg0->column) * 0x14;
+        if (gRacePlayers[0].totalCourseCoinMarkerCount == (temp_v0 = gRacePlayers[0].collectedCourseCoinMarkerCount)) {
+            arg0->flag = 1;
+            arg0->bonus = 0x12C;
+            temp_v0 = *new_var;
+        }
+    }
+    arg0->rightValue = temp_v0 * 0xA;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiCourseRecordFadeIn);
+}
 
 void drawRaceUiTrickAttackTotals(RaceUiDualCounterActor *arg0) {
     s32 i;
@@ -2453,7 +2573,19 @@ void updateRaceUiTrickPrizePayoutFadeIn(RaceUiCourseStatsActor *arg0) {
     addRenderCallback(&gMenuForegroundRenderCallbackList, (RenderCallback)drawRaceUiTrickPrizePayoutLabels, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005E0D4.s")
+void initRaceUiTrickPrizePayout(RaceUiCourseStatsActor *arg0) {
+    arg0->titleAlpha = 0;
+    arg0->pendingMakeBonus = 0;
+    arg0->pendingCompleteBonus = 0x12C;
+    if (gRaceChallengeFailed != 0) {
+        arg0->pendingTrickPrize = 0;
+        *(volatile s16 *)&arg0->pendingMakeBonus = 0;
+    } else {
+        arg0->pendingTrickPrize = gRacePlayers[0].trickAttackPointTotal * 3;
+        arg0->pendingMakeBonus = gRacePlayers[0].trickAttackMakeCount * 10;
+    }
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiTrickPrizePayoutFadeIn);
+}
 
 void drawRaceUiResultAwardBadge(CallbackTask *task) {
     drawAssetTableSprite(-0x68, -0x2C, getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)), 0x4D);
@@ -2462,13 +2594,191 @@ void drawRaceUiResultAwardBadge(CallbackTask *task) {
     drawAssetTableSprite(-0x68, 6, getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)), gRacePlayers[0].characterId + 0x91);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005E22C.s")
+void updateRaceUiResultAwardBadgeDelay(CallbackTask *task) {
+    if ((u16)task->header.userId != 0) {
+        task->header.userId = (u16)task->header.userId - 1;
+    } else {
+        addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceUiResultAwardBadge, task);
+    }
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/renderRacePlayerSparkleEffect.s")
+void renderRacePlayerSparkleEffect(RaceUiSparkleActor *arg0) {
+    RaceUiSparkleActor *arg1;
+    s32 i;
+    s32 j;
+    Transform3D sp6C;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005E5EC.s")
+    arg1 = arg0;
+    if (gRenderMatricesDirty != 0) {
+        arg0->matrixDirty = 1;
+    }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRacePlayerSparkleRetarget.s")
+    if (arg1->matrixDirty != 0) {
+        arg1->matrixDirty = 0;
+        sp6C = gIdentityFixedTransform;
+        for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++) {
+                sp6C.rotation[(i * 3) + j] = (sp6C.rotation[(i * 3) + j] * arg1->scale) / 0x1000;
+            }
+        }
+        sp6C.translation.x = arg1->pos.x;
+        sp6C.translation.y = arg1->pos.y;
+        sp6C.translation.z = arg1->pos.z;
+        arg1->matrix = allocFixedTransformMatrix(&sp6C);
+    }
+
+    if (arg1->matrix != NULL) {
+        gSPDisplayList(gRegionAllocPtr++, gTranslucentSpriteRenderModeDl);
+        gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 0xFF, 0xFF, 0xFF, arg1->alpha);
+        gDPLoadTextureBlock_4b(
+            gRegionAllocPtr++,
+            arg1->images[arg1->frame],
+            G_IM_FMT_CI,
+            0x20,
+            0x20,
+            0,
+            G_TX_CLAMP,
+            G_TX_CLAMP,
+            0,
+            0,
+            G_TX_NOLOD,
+            G_TX_NOLOD
+        );
+        gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, arg1->palettes[arg1->frame]);
+        gSPMatrix(gRegionAllocPtr++, arg1->matrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+        gSPMatrix(gRegionAllocPtr++, gViewportMatrix, G_MTX_NOPUSH | G_MTX_MUL | G_MTX_MODELVIEW);
+        RACE_UI_GSP_VERTEX_F3DEX(gRegionAllocPtr++, D_800D53D0, 4, 0);
+        RACE_UI_GSP1QUADRANGLE_F3DEX(gRegionAllocPtr++, 2, 1, 0, 3, 3);
+    }
+}
+
+void updateRacePlayerSparkleOrbit(RaceUiSparkleActor *arg0) {
+    RaceUiSparkleTransformScratch stack;
+    RacePlayer *player;
+    s16 timer;
+    s32 angle;
+
+    if (gRaceUpdatePaused == 0) {
+        arg0->scale += 0x100;
+        if (arg0->scale >= 0x1001) {
+            arg0->scale = 0x1000;
+        }
+        if (gFrameCounter & 1) {
+            arg0->frame = (arg0->frame + 1) & 3;
+        }
+
+        timer = arg0->timer;
+        if (timer != 0) {
+            arg0->timer = timer - 1;
+            arg0->alpha += arg0->alphaStep;
+            if (arg0->alpha >= 0xE0) {
+                arg0->alphaStep = -0x10;
+            }
+            if (arg0->alpha < 0x41) {
+                arg0->alphaStep = 0x10;
+            }
+        } else {
+            arg0->alpha -= 0x10;
+            if (arg0->alpha <= 0) {
+                player = &gRacePlayers[arg0->playerIndex];
+                player->activeSparkleEffectCount--;
+                removeCallbackTask((CallbackTask *)arg0);
+                return;
+            }
+        }
+
+        arg0->unk28 += 0x60;
+        angle = arg0->unk28 - gRacePlayers[arg0->playerIndex].facingAngle;
+        makeFixedRotationY(stack.matrix, angle);
+        transformVec3iByFixedMatrix(stack.matrix, &D_800D5440, &stack.vec);
+
+        player = &gRacePlayers[arg0->playerIndex];
+        makeFixedRotationXY(stack.matrix, player->pitchAngle, player->facingAngle);
+        transformVec3iByFixedMatrix(stack.matrix, &stack.vec, &arg0->pos);
+
+        player = &gRacePlayers[arg0->playerIndex];
+        arg0->pos.x += player->unk28.x;
+        arg0->pos.y += player->unk28.y;
+        arg0->pos.z += player->unk28.z;
+    }
+
+    addRenderCallback(&D_801248EC, (RenderCallback)renderRacePlayerSparkleEffect, (void *)arg0);
+}
+
+void updateRacePlayerSparkleRetarget(RaceUiSparkleActor *arg0) {
+    RacePlayer *player;
+    s16 timer;
+    s32 selectedPlayerIndex;
+    s32 activeCount;
+    RaceUiSparkleRetargetScratch scratch;
+
+    if (gRaceUpdatePaused == 0) {
+        if (gFrameCounter & 1) {
+            arg0->frame = (arg0->frame + 1) & 3;
+        }
+
+        scratch.vec.x = 0;
+        scratch.vec.y = arg0->zOffset;
+        scratch.vec.z = 0;
+
+        player = &gRacePlayers[arg0->playerIndex];
+        if (arg0) {}
+        makeFixedRotationXY(scratch.matrix, player->pitchAngle, player->facingAngle);
+        transformVec3iByFixedMatrix(scratch.matrix, &scratch.vec, &arg0->pos);
+
+        player = &gRacePlayers[arg0->playerIndex];
+        arg0->pos.x += player->unk28.x;
+        arg0->pos.y += player->unk28.y;
+        arg0->pos.z += player->unk28.z;
+        selectedPlayerIndex = gRaceOrderPlayerIds[1];
+
+        timer = arg0->timer;
+        if (timer == 0) {
+            arg0->alpha += arg0->alphaStep;
+            arg0->scale -= 0x200;
+            if (arg0->scale < 0) {
+                arg0->scale = 0;
+            }
+            if (arg0->alpha < 0) {
+                arg0->alpha = 0;
+                arg0->alphaStep = 0x10;
+                activeCount = randomNextMain() ^ 0;
+                if (activeCount > 0) {
+                    selectedPlayerIndex = 0;
+                    if ((gRacePlayerCount >= 4) && (arg0->playerIndex != gRaceOrderPlayerIds[3]) && (activeCount > 0)) {
+                        selectedPlayerIndex = gRaceOrderPlayerIds[3];
+                    }
+                    if ((gRacePlayerCount >= 3) && (arg0->playerIndex != gRaceOrderPlayerIds[2]) &&
+                        (activeCount >= 2) && !(gRacePlayers[gRaceOrderPlayerIds[2]].stateFlags & 0x40)) {
+                        selectedPlayerIndex = gRaceOrderPlayerIds[2];
+                    }
+                    if ((gRacePlayerCount >= 2) && (arg0->playerIndex != gRaceOrderPlayerIds[1]) &&
+                        (activeCount >= 3) && !(gRacePlayers[gRaceOrderPlayerIds[1]].stateFlags & 0x40)) {
+                        selectedPlayerIndex = gRaceOrderPlayerIds[1];
+                    }
+                    if ((gRacePlayerCount > 0) && (arg0->playerIndex != gRaceOrderPlayerIds[0]) && (activeCount >= 4) &&
+                        !(gRacePlayers[gRaceOrderPlayerIds[0]].stateFlags & 0x40)) {
+                        selectedPlayerIndex = gRaceOrderPlayerIds[0];
+                    }
+                    arg0->playerIndex = selectedPlayerIndex & 3;
+                }
+
+                player = &gRacePlayers[arg0->playerIndex];
+                player->activeSparkleEffectCount++;
+                if (gRacePlayerHudStatuses[arg0->playerIndex].active != 0) {
+                    enqueueSoundEffect(0x53, 0x5A);
+                }
+                enqueuePositionalSoundEffect(0x10, &gRacePlayers[arg0->playerIndex].pos, 0x7F, 0x32);
+                arg0->timer = 0x12C;
+                setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRacePlayerSparkleOrbit);
+            }
+        } else {
+            arg0->timer = timer - 1;
+        }
+    }
+
+    addRenderCallback(&D_801248EC, (RenderCallback)renderRacePlayerSparkleEffect, (void *)arg0);
+}
 
 void updateRacePlayerSparkleRise(RaceUiSparkleActor *arg0) {
     s16 sp38[0x10];
@@ -2934,7 +3244,38 @@ void updateGhostSlowdownDriftAway(RaceUiPodiumTrailActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateGhostSlowdownImpact.s")
+void updateGhostSlowdownImpact(RaceUiPodiumTrailActor *arg0) {
+    RacePlayer *player;
+    s32 height;
+
+    if (gRaceUpdatePaused == 0) {
+        arg0->velocity += -0x10000;
+        height = arg0->height + arg0->velocity;
+        arg0->height = height;
+        if ((height < 0x200000) && ((arg0->playImpactSound & 0xFF) != 0)) {
+            enqueuePositionalSoundEffect(0xC, &gRacePlayers[arg0->targetPlayerIndex].pos, 0x7F, 0x32);
+            gRacePlayers[arg0->targetPlayerIndex].pendingItemHitFlags |= PLAYER_HITFLAG_GHOST_SLOWDOWN;
+            gRacePlayers[arg0->targetPlayerIndex].hitSourcePlayerIndex = arg0->playerIndex;
+            height = arg0->height;
+            arg0->playImpactSound = 0;
+        }
+
+        if (height < 0x100000) {
+            arg0->timer = 0x14;
+            arg0->velocity = 0x80000;
+            setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateGhostSlowdownDriftAway);
+            height = arg0->height;
+        }
+
+        player = &gRacePlayers[arg0->targetPlayerIndex];
+        arg0->pos.x = player->unk28.x;
+        arg0->pos.y = player->unk28.y + height;
+        arg0->pos.z = player->unk28.z;
+    }
+
+    gRacePlayers[arg0->targetPlayerIndex].itemTargetFlag = 1;
+    addRenderCallback(&gRaceModelEffectRenderCallbackList, (RenderCallback)renderGhostSlowdownActor, arg0);
+}
 
 void updateGhostSlowdownRise(RaceUiPodiumTrailActor *arg0) {
     RacePlayer *player;
@@ -4446,9 +4787,59 @@ void initTimeTrialRecordDeltaPopup(RaceUiTimeTrialRecordDeltaPopupActor *popup) 
     setCallbackTaskCallback(popup, (CallbackTaskCallback)updateTimeTrialRecordDeltaPopupSlideIn);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_80064D94.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/renderRaceCourseCoinMarkers.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_800650E0.s")
+void updateRaceCourseCoinMarkers(RaceUiGfxCommandActor *arg0) {
+    RaceUiGfxCommandScriptEntry *entry;
+    Vec3i *pos;
+    RaceUiGfxCommandActor *actor;
+    register s32 xzSize;
+    register s32 ySize;
+    register s32 sentinel;
+
+    entry = D_800D5C6C[gRaceCourseIndex.signedValue];
+    actor = arg0;
+    if (gFrameCounter & 1) {
+        actor->textureOffset++;
+    }
+    if (actor->textureOffset >= 6) {
+        actor->textureOffset = 0;
+    }
+
+    sentinel = -1;
+    ySize = 0xC0000;
+    if (entry->sentinel == sentinel) {
+        goto done;
+    }
+    xzSize = 0x70000;
+    pos = &entry->position;
+
+loop:
+    if (entry->active != 0) {
+        if (isPositionNearAnyRaceViewportFocus(pos) != 0) {
+            if (isRacePlayerInsideCylinder(pos, xzSize, ySize, 0) != 0) {
+                entry->active = 0;
+                enqueuePositionalSoundEffect(0x18, pos, 0x7F, 0x32);
+                gRacePlayers[0].collectedCourseCoinMarkerCount++;
+                if (gRacePlayers[0].trailEffectTimer != 0) {
+                    gRacePlayers[0].trailEffectTimer = 0xF0;
+                } else {
+                    startSpeedFanEffect(gRacePlayers);
+                }
+                if (gRacePlayers[0].trailEffectTimer) {}
+            }
+        }
+    }
+
+    entry++;
+    pos = &entry->position;
+    if (entry->sentinel != sentinel) {
+        goto loop;
+    }
+
+done:
+    addRenderCallback(&gEffectRenderCallbackList, (RenderCallback)renderRaceCourseCoinMarkers, actor);
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_80065234.s")
 

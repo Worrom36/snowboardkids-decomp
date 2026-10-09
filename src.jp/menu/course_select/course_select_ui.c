@@ -20,6 +20,8 @@
 #include "game/race/player/race_player_model_renderer.h"
 #include "game/race/player/race_player_input.h"
 
+extern u8 gCurrentViewportIndex;
+
 extern u8 D_800EC9C0;
 
 extern s16 gCourseSelectIconListXLayout[][4];
@@ -27,7 +29,57 @@ extern s16 gCourseSelectIconListYLayout[][6];
 extern s16 gCourseSelectStatsPanelLayout[][4];
 extern const char D_800E0DB8[];
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80023810.s")
+void drawCourseSelectSnowboardPreviewIn(CourseSelectCoursePreviewActor *arg0) {
+    u8 sp2F;
+    unsigned char sp2E;
+    u8 var_t0;
+    s8 temp_v0_2;
+    RacePlayer *temp_v0_3;
+    Transform3D sp30;
+    u8 var_a3;
+    u8 var_v1;
+    int temp_v0;
+
+    if ((gCourseSelectViewportSyncState != 0) && (gCurrentViewportIndex == 1)) {
+        var_t0 = 0;
+    } else {
+        var_t0 = gCurrentViewportIndex;
+    }
+    if ((gCourseSelectSlideStates[var_t0] == 0) || (gCourseSelectSlideStates[var_t0] & 1)) {
+        temp_v0 = arg0->playerFlags[var_t0];
+        if ((temp_v0 == 0) || (temp_v0 & 1)) {
+            if (gCourseSelectSlideStates[var_t0] == 1) {
+                var_a3 = arg0->playerSlots[var_t0].courseIndex;
+            } else {
+                var_a3 = gRacePlayers[var_t0].menuSelection;
+            }
+            temp_v0_2 = gGameSaveDataBuffer[var_t0].courseUnlockStates[var_a3];
+            if (temp_v0_2 == -1) {
+                var_v1 = 9;
+            } else {
+                var_v1 = temp_v0_2;
+            }
+            if ((gCourseSelectViewportSyncState != 0) && (gCurrentViewportIndex == 1)) {
+                var_v1 = (u8)(gCourseSelectViewportSyncState - 1);
+            }
+            temp_v0_3 = &gRacePlayers[gCurrentViewportIndex];
+            if (temp_v0_3->selectedCharacterId == 5) {
+                var_v1 = 0;
+                var_a3 = (var_a3 % 3) + 0xC;
+            }
+            if (temp_v0_3->menuSelection >= 9) {
+                var_v1 = 0;
+            }
+            sp2E = var_v1;
+            sp2F = var_a3;
+            composeFixedTransforms(&arg0->viewTransform, &arg0->modelTransforms[var_t0], &sp30);
+            arg0->renderMatrix = allocFixedTransformMatrix(&sp30);
+            if (arg0->renderMatrix != 0) {
+                drawSnowboardModel(arg0->renderMatrix, (s16)sp2F, (s16)sp2E);
+            }
+        }
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectPreviewModelIn.s")
 
@@ -59,7 +111,57 @@ void initCourseSelectPreviewModelIn(void *arg0) {
     setCallbackTaskCallback(actor, (CallbackTaskCallback)updateCourseSelectPreviewModelIn);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_800240F8.s")
+void drawCourseSelectSnowboardPreviewOut(CourseSelectCoursePreviewActor *arg0) {
+    u8 sp2F;
+    unsigned char sp2E;
+    u8 var_t0;
+    s8 temp_v0_2;
+    RacePlayer *temp_v0_3;
+    Transform3D sp30;
+    u8 var_a3;
+    u8 var_v1;
+    int temp_v0;
+
+    if ((gCourseSelectViewportSyncState != 0) && (gCurrentViewportIndex == 1)) {
+        var_t0 = 0;
+    } else {
+        var_t0 = gCurrentViewportIndex;
+    }
+    if ((gCourseSelectSlideStates[var_t0] == 2) || (gCourseSelectSlideStates[var_t0] & 1)) {
+        temp_v0 = arg0->playerFlags[var_t0];
+        if ((temp_v0 == 0) || (temp_v0 & 1)) {
+            if (gCourseSelectSlideStates[var_t0] == 3) {
+                var_a3 = arg0->playerSlots[var_t0].courseIndex;
+            } else {
+                var_a3 = gRacePlayers[var_t0].menuSelection;
+            }
+            temp_v0_2 = gGameSaveDataBuffer[var_t0].courseUnlockStates[var_a3];
+            if (temp_v0_2 == -1) {
+                var_v1 = 9;
+            } else {
+                var_v1 = temp_v0_2;
+            }
+            if ((gCourseSelectViewportSyncState != 0) && (gCurrentViewportIndex == 1)) {
+                var_v1 = (u8)(gCourseSelectViewportSyncState - 1);
+            }
+            temp_v0_3 = &gRacePlayers[gCurrentViewportIndex];
+            if (temp_v0_3->selectedCharacterId == 5) {
+                var_v1 = 0;
+                var_a3 = (var_a3 % 3) + 0xC;
+            }
+            if (temp_v0_3->menuSelection >= 9) {
+                var_v1 = 0;
+            }
+            sp2E = var_v1;
+            sp2F = var_a3;
+            composeFixedTransforms(&arg0->viewTransform, &arg0->modelTransforms[var_t0], &sp30);
+            arg0->renderMatrix = allocFixedTransformMatrix(&sp30);
+            if (arg0->renderMatrix != 0) {
+                drawSnowboardModel(arg0->renderMatrix, (s16)sp2F, (s16)sp2E);
+            }
+        }
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectPreviewModelOut.s")
 
@@ -425,7 +527,7 @@ void drawCourseSelectExtraCourseIconList(CourseSelectExtraCourseIconListActor *a
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80027868.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80027930.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectExtraCourseIconListOut.s")
 
 void updateCourseSelectExtraCourseIconListClose(CourseSelectExtraCourseIconListActor *arg0) {
     s32 i;
@@ -461,7 +563,152 @@ void updateCourseSelectExtraCourseIconListClose(CourseSelectExtraCourseIconListA
     addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseSelectExtraCourseIconList, temp_a2);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80027B14.s")
+void updateCourseSelectExtraCourseIconList(CourseSelectExtraCourseIconListActor *arg0) {
+    CourseSelectExtraCourseIconListActor *actor;
+    s16 *promptState;
+    s32 playerIndex;
+    s32 iconIndex;
+    s32 layoutIndex;
+    s32 iconMask;
+    s32 newCount;
+    s16 direction;
+    s16 state;
+    u8 splitscreenMode;
+    u8 count;
+
+    actor = (CourseSelectExtraCourseIconListActor *)arg0;
+    if (gRacePlayers[0].menuState == 3) {
+        setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectExtraCourseIconListClose);
+        for (playerIndex = 0; playerIndex < gPlayerCount; playerIndex++) {
+            actor->alpha[playerIndex] = 0x100;
+        }
+    } else if (gCurrentGameTask->callbackData2 == 1) {
+        setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectExtraCourseIconListOut);
+        actor->alpha[0] = 0x100;
+        actor->pulseTimer[0] = 0;
+    } else {
+        for (playerIndex = 0; playerIndex < gPlayerCount; playerIndex++) {
+            if (gRacePlayers[playerIndex].menuState != 2) {
+                promptState = &gMenuChoicePromptState[playerIndex];
+                if ((*promptState == 1) || ((*promptState >= 5) && (*promptState < 9))) {
+                    if ((*promptState == 1) && (actor->itemCounts[playerIndex] == 0)) {
+                        iconMask = 1;
+                        if (gRacePlayers[playerIndex].selectedCharacterId == 5) {
+                            actor->itemCounts[playerIndex] = 1;
+                            if (gPlayerCount == 1) {
+                                actor->tileIndices[playerIndex][0] = 9;
+                            } else {
+                                actor->tileIndices[playerIndex][0] = 0x1C;
+                            }
+                        } else {
+                            for (iconIndex = 0; iconIndex < 3; iconIndex++) {
+                                if (gRacePlayers[playerIndex].menuSelection >= 9) {
+                                    if (gRaceSplitscreenMode == 3) {
+                                        if (gGameSaveDataBuffer[playerIndex].extraCourseUnlockFlags & iconMask) {
+                                            actor->itemCounts[playerIndex]++;
+                                            if (gPlayerCount == 1) {
+                                                actor->tileIndices[playerIndex][actor->itemCounts[playerIndex] - 1] =
+                                                    iconIndex + 0xC;
+                                            } else {
+                                                actor->tileIndices[playerIndex][actor->itemCounts[playerIndex] - 1] =
+                                                    iconIndex + 0x1F;
+                                            }
+                                        }
+                                        iconMask *= 2;
+                                    } else if (gGameSaveDataBuffer[playerIndex].courseUnlockStates[iconIndex + 9] !=
+                                               -1) {
+                                        actor->itemCounts[playerIndex]++;
+                                        if (gPlayerCount == 1) {
+                                            actor->tileIndices[playerIndex][actor->itemCounts[playerIndex] - 1] =
+                                                iconIndex + 0xC;
+                                        } else {
+                                            actor->tileIndices[playerIndex][actor->itemCounts[playerIndex] - 1] =
+                                                iconIndex + 0x1F;
+                                        }
+                                    }
+                                } else if (gGameSaveDataBuffer[playerIndex].courseUnlockStates
+                                               [(gRacePlayers[playerIndex].menuSelection % 3) + (iconIndex * 3)] !=
+                                           -1) {
+                                    actor->itemCounts[playerIndex]++;
+                                    if (gPlayerCount == 1) {
+                                        actor->tileIndices[playerIndex][iconIndex] = iconIndex + 9;
+                                    } else {
+                                        actor->tileIndices[playerIndex][iconIndex] = iconIndex + 0x1C;
+                                    }
+                                }
+                            }
+
+                            splitscreenMode = gRaceSplitscreenMode;
+                            if ((gRaceSplitscreenMode == 3) && (gCourseSelectModeSelection == 0)) {
+                                if (gRacePlayers[playerIndex].menuSelection < 9) {
+                                    actor->itemCounts[playerIndex]++;
+                                }
+                                if (actor->itemCounts[playerIndex] >= 4) {
+                                    actor->itemCounts[playerIndex] = 3;
+                                }
+                                if (gRacePlayers[playerIndex].menuSelection < 9) {
+                                    actor->tileIndices[playerIndex][actor->itemCounts[playerIndex] - 1] =
+                                        actor->itemCounts[playerIndex] + 8;
+                                }
+                            }
+                        }
+                    }
+
+                    if (*promptState == 1) {
+                        direction = 1;
+                    } else {
+                        direction = -1;
+                    }
+                    for (iconIndex = 0; iconIndex < (s32)actor->itemCounts[playerIndex]; iconIndex++) {
+                        if (direction == 1) {
+                            if ((s32)actor->revealTimer[playerIndex] < (iconIndex * 3) + 3) {
+                                actor->iconY[playerIndex][iconIndex] += (s32)actor->rowSpacing[playerIndex] / 3;
+                            }
+                        } else if ((iconIndex * 2) + 2 >= (s32)actor->revealTimer[playerIndex]) {
+                            actor->iconY[playerIndex][iconIndex] -= (s32)actor->rowSpacing[playerIndex] / 2;
+                        }
+                    }
+
+                    if (direction == 1) {
+                        actor->revealTimer[playerIndex]++;
+                    } else {
+                        actor->revealTimer[playerIndex]--;
+                    }
+                    if (direction == 1) {
+                        if (actor->revealTimer[playerIndex] == (actor->itemCounts[playerIndex] * 3)) {
+                            *promptState = gCourseSelectSelectedRows[playerIndex] + 2;
+                        }
+                    } else if (actor->revealTimer[playerIndex] == 0) {
+                        *promptState = 0;
+                        actor->itemCounts[playerIndex] = 0;
+                        if ((s32)gPlayerCount < 3) {
+                            layoutIndex = gPlayerCount - 1;
+                        } else {
+                            layoutIndex = 2;
+                        }
+                        for (iconIndex = 0; iconIndex < 3; iconIndex++) {
+                            actor->iconY[playerIndex][iconIndex] =
+                                gCourseSelectIconListYLayout[layoutIndex][((playerIndex & 1) * 2) + 2];
+                        }
+                    }
+                }
+
+                state = *promptState;
+                if ((state >= 2) && (state < 5)) {
+                    if ((s32)actor->pulseTimer[playerIndex] < 0x10) {
+                        actor->alpha[playerIndex] -= 9;
+                    } else {
+                        actor->alpha[playerIndex] += 9;
+                    }
+                    actor->pulseTimer[playerIndex] = (actor->pulseTimer[playerIndex] + 1) & 0x1F;
+                }
+            }
+
+            gCourseSelectStatus.extraCourseCounts[playerIndex] = actor->itemCounts[playerIndex];
+        }
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseSelectExtraCourseIconList, arg0);
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/initCourseSelectExtraCourseIconList.s")
 

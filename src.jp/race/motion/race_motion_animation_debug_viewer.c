@@ -40,4 +40,38 @@ void drawRaceMotionAnimationDebugViewerMotionNumber(void *unused) {
     drawMenuAsciiTextDefaultScale(0x28, 0x28, buf, 1);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/motion/race_motion_animation_debug_viewer/func_80077DFC.s")
+void updateRaceMotionAnimationDebugViewer(void) {
+    s32 buttons;
+
+    if (gRacePlayers[0].mode == 0) {
+        gRacePlayers[0].mode = 1;
+        setRaceMotionAnimation((RaceMotionState *)&gRacePlayers[0], gRacePlayers[0].animationId);
+        stepRaceMotionLoopingAnimation((RaceMotionState *)&gRacePlayers[0]);
+    } else {
+        buttons = gPlayerInputPressed[0];
+        if (buttons & Z_TRIG) {
+            if (gRacePlayers[0].stateFlags != 0) {
+                gRacePlayers[0].stateFlags = 0;
+            } else {
+                gRacePlayers[0].stateFlags = 0x400;
+            }
+        }
+        if ((buttons & U_CBUTTONS) && (gRacePlayers[0].animationId != 0)) {
+            gRacePlayers[0].animationId--;
+            gRacePlayers[0].mode = 0;
+        }
+        if (buttons & D_CBUTTONS) {
+            gRacePlayers[0].mode = 0;
+            gRacePlayers[0].animationId++;
+        }
+        if (gPlayerInputHeld[0] & L_CBUTTONS) {
+            stepRaceMotionLoopingAnimation((RaceMotionState *)&gRacePlayers[0]);
+            buttons = gPlayerInputPressed[0];
+        }
+        if (buttons & R_CBUTTONS) {
+            stepRaceMotionLoopingAnimation((RaceMotionState *)&gRacePlayers[0]);
+        }
+    }
+    addRenderCallback(&gModelRenderCallbackList, (RenderCallback)drawRacePlayerModel, &gRacePlayers[0]);
+    addRenderCallback(&gMenuForegroundRenderCallbackList, drawRaceMotionAnimationDebugViewerMotionNumber, NULL);
+}

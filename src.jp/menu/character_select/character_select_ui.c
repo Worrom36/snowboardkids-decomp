@@ -425,7 +425,36 @@ void drawCharacterSelectRosterIcons(CharacterSelectUiRosterIconActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/func_80017404.s")
+void updateCharacterSelectRosterIcons(CharacterSelectUiRosterIconActor *arg0) {
+    s16 temp_v0;
+    int new_var;
+    u8 var_v1;
+
+    var_v1 = arg0->state;
+    new_var = 1;
+    switch (var_v1) {
+        case 0:
+        case 3:
+            break;
+        case 1:
+            temp_v0 = arg0->targetX;
+            arg0->x = arg0->x - 0x10;
+            if (temp_v0 >= arg0->x) {
+                arg0->state = 2;
+                arg0->x = temp_v0;
+            }
+            var_v1 = arg0->state;
+            break;
+        case 2:
+            gCharacterSelectHudState.rosterReady = new_var;
+            var_v1 = arg0->state;
+            break;
+    }
+    if (var_v1) {
+        arg0->timer = (arg0->timer + new_var) % 20;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectRosterIcons, arg0);
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/func_800174D0.s")
 

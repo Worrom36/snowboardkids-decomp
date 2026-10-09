@@ -16,6 +16,7 @@
 #include "game/menu/race_setup/race_setup_ui.h"
 #include "game/race/player/race_player_input.h"
 
+#define TITLE_MENU_SECONDARY_TEXTURE_HANDLE (gAssetHandles[31])
 #define gRaceSetupSaveChoicePromptBottomSprites (gRaceSetupSavePromptData.saveChoicePromptBottomSprites)
 #define gRaceSetupSaveChoicePromptTopSprites (gRaceSetupSavePromptData.saveChoicePromptTopSprites)
 #define TITLE_MENU_FRAME_TEXTURE_HANDLE (gAssetHandles[33])
@@ -31,6 +32,10 @@ typedef struct {
     u8 saveChoicePromptBottomSprites[1];
     u8 saveChoicePromptTopSprites[0x41];
 } RaceSetupSavePromptData;
+
+extern const char D_800DFDB4[];
+
+extern const char D_800DFDB0[];
 
 extern RaceSetupSavePromptData gRaceSetupSavePromptData;
 
@@ -442,7 +447,79 @@ void initRaceSetupPlayerCountCursor(FadeItemActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupPlayerCountCursor);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/func_8001516C.s")
+void drawRaceSetupSavePlayerPanels(TitleMenuWidgetItemView *actor) {
+    s32 i;
+    u16 alpha;
+    register TitleMenuWidgetItemView *panel;
+    s32 playerNumber;
+    volatile s32 unusedStackPadding;
+    char text[8];
+
+    for (i = 0; i < 4; i++) {
+        if ((gPlayerCount - 1) < i) {
+            alpha = 0x50;
+        } else {
+            alpha = 0x100;
+        }
+
+        panel = actor;
+        playerNumber = i + 1;
+        drawMenuSpriteWithAlpha(
+            actor->x[i],
+            actor->y[i],
+            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+            0xA,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            playerNumber
+        );
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->x[i] + 0x40),
+            actor->y[i],
+            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+            0xB,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            playerNumber
+        );
+        drawMenuSpriteWithAlpha(
+            (s16)(panel->x[i] + 0x80),
+            panel->y[i],
+            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+            0xC,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            playerNumber
+        );
+
+        sprintf(text, D_800DFDB0, playerNumber);
+        drawMenuAsciiText((s16)(actor->x[i] + 0x32), (s16)(panel->y[i] + 2), text, 0, alpha);
+
+        if (alpha == 0x100) {
+            sprintf(text, D_800DFDB4, gRacePlayers[i].money);
+            drawMenuAsciiText((s16)(actor->x[i] + 0x44), (s16)(panel->y[i] + 0x1B), text, 0, alpha);
+        } else {
+            if ((!panel) && (!panel)) {}
+            drawMenuSpriteWithAlpha(
+                (s16)(actor->x[i] + 2),
+                (s16)(panel->y[i] + 0x14),
+                getRelocatableHeapBlockBase(TITLE_MENU_SECONDARY_TEXTURE_HANDLE),
+                0x90,
+                0x20,
+                0x20,
+                0,
+                0xF0,
+                0
+            );
+        }
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupSavePanelFrame.s")
 

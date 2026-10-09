@@ -39,11 +39,36 @@
 #include "game/engine/viewport_manager.h"
 #include "game/race/player/race_player_input.h"
 
+#define RACE_PLAYER_READY_FLAG 0x40
+#define COURSE_GRID_ENTRY_FREE -1
+#define COURSE_GRID_ENTRY_END -2
+typedef struct {
+    s16 status;
+    s16 courseId;
+    s32 unk4;
+    s32 unk8;
+    s32 unkC;
+} CourseGridEntry;
+
 typedef struct {
     s32 unk0;
     u8 pad4[4];
     s8 unk8;
 } Unk80043040;
+
+extern u16 D_800DB8F0[16];
+
+extern u8 gRaceUpdatePaused;
+
+extern s32 gRaceCameraReplayStartY;
+
+extern s32 gRaceCameraReplayStartZ;
+
+extern s32 gRaceCameraReplayStartX;
+
+extern s16 gRaceLapCount;
+
+extern CourseGridEntry *D_800DB7C0[12];
 
 extern s8 D_80120E81;
 extern u8 gPendingEndingCreditsFlow;
@@ -53,7 +78,12 @@ extern s16 gMenuFadeAlpha;
 extern u8 D_80120E80;
 extern u8 D_80120E77;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80072780.s")
+void initStartupControllerPakFlow(void) {
+    LOAD_ASSET(_2427D0, 6);
+    initCallbackTaskScheduler(0);
+    gCurrentGameTask->callbackData0 = 0xA;
+    setCurrentGameTaskCallback(&waitStartupRumbleInit, 0);
+}
 
 void waitStartupRumbleInit(void) {
     gCurrentGameTask->callbackData0 -= 1;
@@ -91,13 +121,78 @@ void enterMainMenuAfterStartupControllerPakFlow(void) {
     removeGameTask(0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80072960.s")
+void clearRaceReplayCourseGrid(void) {
+    CourseGridEntry *entry = D_800DB7C0[gRaceCourseIndex.signedValue];
+    s32 count = 0;
+loop:
+    if (entry->status != COURSE_GRID_ENTRY_END) {
+        entry->status = COURSE_GRID_ENTRY_FREE;
+        entry++;
+        count += 1;
+        goto loop;
+    }
+    if (count != 0) {
+        gAssetHandles[0x2C] = allocRelocatableHeapBlock(count * sizeof(RacePlayer));
+    }
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_800729E8.s")
+void saveRaceReplayCourseGridEntry(void) {
+    CourseGridEntry *entry = D_800DB7C0[gRaceCourseIndex.signedValue];
+    s32 i = 0;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80072B14.s")
+loop:
+    if (entry->status != COURSE_GRID_ENTRY_END) {
+        if ((entry->status == COURSE_GRID_ENTRY_FREE) && (entry->courseId == gRacePlayers[0].coursePathIndex)) {
+            s32 *status = (s32 *)getRelocatableHeapBlockBase(gAssetHandles[0x2B]);
+            if (*status < 0x1194) {
+                entry->status = *status;
+                ((RacePlayer *)getRelocatableHeapBlockBase(gAssetHandles[0x2C]))[i] = gRacePlayers[0];
+            }
+        }
+        entry++;
+        i++;
+        goto loop;
+    }
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80072C3C.s")
+s32 loadNextRaceReplayCourseGridEntry(void) {
+    s32 count;
+    CourseGridEntry *entry;
+
+    entry = D_800DB7C0[gRaceCourseIndex.signedValue];
+    count = 0;
+loop:
+    if (entry->status != COURSE_GRID_ENTRY_END) {
+        if (entry->status != COURSE_GRID_ENTRY_FREE) {
+            gRacePlayers[0] = ((RacePlayer *)getRelocatableHeapBlockBase(gAssetHandles[0x2C]))[count];
+            *(s32 *)getRelocatableHeapBlockBase(gAssetHandles[0x2B]) = entry->status;
+            entry->status = COURSE_GRID_ENTRY_FREE;
+            gRaceCameraReplayStartX = entry->unk4;
+            gRaceCameraReplayStartY = entry->unk8;
+            gRaceCameraReplayStartZ = entry->unkC;
+            setRaceCameraModeForced(0, 7);
+            return 1;
+        }
+        entry++;
+        count += 1;
+        goto loop;
+    }
+    return 0;
+}
+
+s32 hasPendingRaceReplayCourseGridEntry(void) {
+    CourseGridEntry *entry = D_800DB7C0[gRaceCourseIndex.signedValue];
+
+loop:
+    if (entry->status != COURSE_GRID_ENTRY_END) {
+        if (entry->status != COURSE_GRID_ENTRY_FREE) {
+            return 1;
+        }
+        entry++;
+        goto loop;
+    }
+    return 0;
+}
 
 void initNewGameSaveData(void) {
     s32 course;
@@ -336,11 +431,79 @@ void startRaceGameplayFlow(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_8007435C.s")
+void drawRacePauseMenu(void *arg0) {
+    s32 color;
+
+    drawAssetTableSprite(-0x14, -0x10, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x57);
+    color = 0x1A;
+    if (D_80120E77 == 0) {
+        color = 0x1B;
+    }
+    drawAssetTableSpriteWithExplicitPalette(-0x1C, 0, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x58, color);
+    color = 0x1A;
+    if (D_80120E77 == 1) {
+        color = 0x1B;
+    }
+    drawAssetTableSpriteWithExplicitPalette(-0x1C, 0xA, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x59, color);
+    color = 0x1A;
+    if (D_80120E77 == 2) {
+        color = 0x1B;
+    }
+    drawAssetTableSpriteWithExplicitPalette(-0x1C, 0x14, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x5A, color);
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/updateRaceGameplayFlow.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80074754.s")
+void waitRaceFinishResultsFlow(void) {
+    D_80120E77 = 0;
+    updateRaceFlowFrameWithCourseEffects();
+    gCurrentGameTask->callbackData0--;
+    if (gCurrentGameTask->callbackData0 == 0) {
+        gMenuFlowState |= 8;
+        switch (gPlayerCount) {
+            case 3:
+                gCurrentGameTask->callbackData1 = 0;
+                if (gRacePlayers[1].rankIndex < gRacePlayers[gCurrentGameTask->callbackData1].rankIndex) {
+                    gCurrentGameTask->callbackData1 = 1;
+                }
+                if (gRacePlayers[2].rankIndex < gRacePlayers[gCurrentGameTask->callbackData1].rankIndex) {
+                    gCurrentGameTask->callbackData1 = 2;
+                }
+                gCurrentGameTask->callbackData1 += 2;
+                setCurrentGameTaskCallback(zoomRaceWinnerViewport, 0);
+                break;
+            case 4:
+                gCurrentGameTask->callbackData1 = 0;
+                if (gRacePlayers[1].rankIndex < gRacePlayers[gCurrentGameTask->callbackData1].rankIndex) {
+                    gCurrentGameTask->callbackData1 = 1;
+                }
+                if (gRacePlayers[2].rankIndex < gRacePlayers[gCurrentGameTask->callbackData1].rankIndex) {
+                    gCurrentGameTask->callbackData1 = 2;
+                }
+                if (gRacePlayers[3].rankIndex < gRacePlayers[gCurrentGameTask->callbackData1].rankIndex) {
+                    gCurrentGameTask->callbackData1 = 3;
+                }
+                gCurrentGameTask->callbackData1 += 5;
+                setCurrentGameTaskCallback(zoomRaceWinnerViewport, 0);
+                break;
+            case 2:
+                if (gRacePlayers[0].rankIndex < gRacePlayers[1].rankIndex) {
+                    gCurrentGameTask->callbackData1 = 0;
+                    gRacePlayerHudStatuses[1].active = 0;
+                } else {
+                    gCurrentGameTask->callbackData1 = 1;
+                    gRacePlayerHudStatuses[0].active = 0;
+                }
+                gCurrentGameTask->callbackData0 = 0;
+                setCurrentGameTaskCallback(zoomRaceWinnerViewport, 0);
+                break;
+            case 1:
+                gCurrentGameTask->callbackData0 = 0;
+                setCurrentGameTaskCallback(prepareRaceResultsFlow, 0);
+                break;
+        }
+    }
+}
 
 void interpolateRaceViewport(
     s32 arg0,
@@ -381,9 +544,9 @@ void interpolateRaceViewport(
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80074CBC.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/zoomRaceWinnerViewport.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80075B4C.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/prepareRaceResultsFlow.s")
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80075F88.s")
 
@@ -437,7 +600,38 @@ void fadeOutRaceResultsFlow(void) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/initRaceGhostReplayFlow.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80077474.s")
+void updateRaceGhostReplayFlow(void) {
+    void *sp18;
+
+    if (gCurrentGameTask->callbackData0 == D_800DB8F0[gCurrentGameTask->callbackData1]) {
+        if (loadNextRaceReplayCourseGridEntry() != 0) {
+            if (gCurrentGameTask->callbackData1 != 0xB) {
+                gCurrentGameTask->callbackData1++;
+                gRacePlayers[0].replayInputSource = RACE_PLAYER_INPUT_HISTORY_2B;
+                gRacePlayers[0].unk15 = 0;
+                gViewportStates[0].overlayAlpha = 0;
+            } else {
+                requestMusicSequenceStop(0x48);
+                setCurrentGameTaskCallback(fadeOutRaceGhostReplayFlow, 0);
+            }
+        } else {
+            requestMusicSequenceStop(0x48);
+            setCurrentGameTaskCallback(fadeOutRaceGhostReplayFlow, 0);
+        }
+    }
+    if (gCurrentGameTask->callbackData0 == 1) {
+        gMenuFadeAlpha = 0;
+    }
+    if (gRaceUpdatePaused == 0) {
+        gCurrentGameTask->callbackData0++;
+    }
+    updateRaceReplayFrame();
+    if (gPlayerInputPressed[0] & START_BUTTON) {
+        sp18 = fadeOutRaceGhostReplayFlow;
+        requestMusicSequenceStop(0x48);
+        setCurrentGameTaskCallback(sp18, 0);
+    }
+}
 
 void fadeOutRaceGhostReplayFlow(void) {
     updateRaceReplayFrame();
@@ -504,11 +698,61 @@ void updateRaceReplayFrame(void) {
     updateRaceCameras();
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_8007780C.s")
+s32 areRacePlayersFinished(void) {
+    s32 var_v0;
+    RacePlayer *player;
+
+    if (gRaceSplitscreenMode == 1) {
+        if (!(gRacePlayers[0].stateFlags & 0x40)) {
+            return 0;
+        }
+    } else {
+        var_v0 = 0;
+        if ((s32)gPlayerCount > 0) {
+            player = gRacePlayers;
+        loop:
+            if (!(player->stateFlags & RACE_PLAYER_READY_FLAG)) {
+                return 0;
+            }
+            var_v0++;
+            player++;
+            if (var_v0 < (s32)gPlayerCount) {
+                goto loop;
+            }
+        }
+    }
+    gMenuFlowState |= 2;
+    return 1;
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/initRaceRecordSettingsFlow.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80077B70.s")
+void updateRaceRecordSettingsFlow(void) {
+    s32 temp_v0;
+
+    gMenuFadeAlpha -= 0x10;
+    if (gMenuFadeAlpha < 0) {
+        gMenuFadeAlpha = 0;
+        temp_v0 = gPlayerInputPressed[0];
+        if ((temp_v0 & (STICK_DOWN | D_JPAD)) && (gRaceLapCount != 9)) {
+            enqueueSoundEffect(0x19, 0x32);
+            gRaceLapCount += 1;
+            temp_v0 = gPlayerInputPressed[0];
+        }
+        if ((temp_v0 & (STICK_UP | U_JPAD)) && (gRaceLapCount != 1)) {
+            enqueueSoundEffect(0x19, 0x32);
+            gRaceLapCount -= 1;
+            temp_v0 = gPlayerInputPressed[0];
+        }
+        if (temp_v0 & (A_BUTTON | START_BUTTON)) {
+            gMenuFlowState = 1;
+            enqueueSoundEffect(0x18, 0x32);
+            requestMusicSequenceStop(0x3C);
+            setCurrentGameTaskCallback(fadeOutRaceRecordSettingsFlow, 0);
+        }
+    }
+    updateCallbackTasks();
+}
 
 void fadeOutRaceRecordSettingsFlow(void) {
     gMenuFadeAlpha += 0x10;

@@ -15,8 +15,11 @@
 #include "game/race/player/race_player_input.h"
 #include "game/engine/callback_task_scheduler.h"
 
+#define RACE_HUD_MAIN_FONT_HANDLE (gAssetHandles[0x1C])
 #define RACE_HUD_POPUP_FONT_HANDLE (gAssetHandles[0x1F])
 #define ASSET_HANDLE(index) (gAssetHandles[index])
+
+extern s16 gRaceLapCount;
 
 extern u8 gTrainingCourseLesson;
 
@@ -197,19 +200,253 @@ void drawTimeTrialLabels(void *unused) {
     drawMenuAsciiTextDefaultScale(0x48, -0x58, bestLapText, 7);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_80078F38.s")
+void drawSinglePlayerRaceHud(void *arg0) {
+    s32 palette;
+    s32 i;
+    s32 var_s1;
+    char buffer[0x20];
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_80079250.s")
+    sprintf(buffer, gRaceHudSinglePlayerScoreFormat, gRacePlayers[0].score);
+    if (gRacePlayers[0].score < 100) {
+        palette = 0x10;
+    } else {
+        palette = 0xE;
+    }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_80079258.s")
+    for (i = 0, var_s1 = 0x50; i < 5; i++, var_s1 += 8) {
+        if (buffer[i] != ' ') {
+            drawAssetTableSpriteWithExplicitPalette(
+                var_s1,
+                0x50,
+                getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+                (u8)buffer[i] - 5,
+                palette
+            );
+        }
+    }
+
+    drawAssetTableSprite(
+        0x78,
+        0x50,
+        getRelocatableHeapBlockBase(RACE_HUD_MAIN_FONT_HANDLE),
+        (gRaceHudCoinSpinnerFrame >> 1) + 4
+    );
+
+    if (gRacePlayers[0].itemEffectPalette != 0) {
+        drawScaledAssetTableSprite(
+            -0x20,
+            -0x60,
+            getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+            gRaceHudItemEffectTileOffsets[gRacePlayers[0].itemEffectType] + gRacePlayers[0].itemEffectCount - 1,
+            gRacePlayers[0].itemEffectPalette
+        );
+    } else {
+        drawAssetTableSprite(
+            -0x20,
+            -0x60,
+            getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+            gRaceHudItemEffectTileOffsets[gRacePlayers[0].itemEffectType] + gRacePlayers[0].itemEffectCount - 1
+        );
+    }
+
+    if (gRacePlayers[0].actionEffectPalette != 0) {
+        drawScaledAssetTableSprite(
+            0,
+            -0x60,
+            getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+            gRaceHudActionEffectTileIds[gRacePlayers[0].actionEffectType],
+            gRacePlayers[0].actionEffectPalette
+        );
+    } else {
+        drawAssetTableSprite(
+            0,
+            -0x60,
+            getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+            gRaceHudActionEffectTileIds[gRacePlayers[0].actionEffectType]
+        );
+    }
+
+    drawAssetTableSprite(
+        -0x88,
+        0x40,
+        getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+        gRacePlayers[0].rankIndex
+    );
+    drawAssetTableSprite(-0x88, -0x60, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x39);
+    drawAssetTableSpriteWithExplicitPalette(
+        -0x68,
+        -0x60,
+        getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+        gRacePlayers[0].lapDigit + 0x2C,
+        0xE
+    );
+    drawAssetTableSprite(-0x5C, -0x60, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x38);
+    drawAssetTableSpriteWithExplicitPalette(
+        -0x50,
+        -0x60,
+        getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+        gRaceLapCount + 0x2B,
+        0xE
+    );
+}
+
+void noopRaceHudCallback(void *arg0) {
+}
+
+void drawTrainingRaceHud(void *arg0) {
+    s32 palette;
+    s32 i;
+    s32 x;
+    char buffer[0x20];
+
+    sprintf(buffer, gRaceHudTrainingScoreFormat, gRacePlayers[0].score);
+    if (gRacePlayers[0].score < 100) {
+        palette = 0x10;
+    } else {
+        palette = 0xE;
+    }
+
+    for (i = 0, x = 0x50; i < 5; i++, x += 8) {
+        if (buffer[i] != ' ') {
+            drawAssetTableSpriteWithExplicitPalette(
+                x,
+                0x50,
+                getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+                (u8)buffer[i] - 5,
+                palette
+            );
+        }
+    }
+
+    drawAssetTableSprite(
+        0x78,
+        0x50,
+        getRelocatableHeapBlockBase(RACE_HUD_MAIN_FONT_HANDLE),
+        (gRaceHudCoinSpinnerFrame >> 1) + 4
+    );
+
+    if (gRacePlayers[0].itemEffectPalette != 0) {
+        drawScaledAssetTableSprite(
+            -0x20,
+            -0x60,
+            getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+            gRaceHudItemEffectTileOffsets[gRacePlayers[0].itemEffectType] + gRacePlayers[0].itemEffectCount - 1,
+            gRacePlayers[0].itemEffectPalette
+        );
+    } else {
+        drawAssetTableSprite(
+            -0x20,
+            -0x60,
+            getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+            gRaceHudItemEffectTileOffsets[gRacePlayers[0].itemEffectType] + gRacePlayers[0].itemEffectCount - 1
+        );
+    }
+
+    if (gRacePlayers[0].actionEffectPalette != 0) {
+        drawScaledAssetTableSprite(
+            0,
+            -0x60,
+            getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+            gRaceHudActionEffectTileIds[gRacePlayers[0].actionEffectType],
+            gRacePlayers[0].actionEffectPalette
+        );
+    } else {
+        drawAssetTableSprite(
+            0,
+            -0x60,
+            getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+            gRaceHudActionEffectTileIds[gRacePlayers[0].actionEffectType]
+        );
+    }
+
+    drawAssetTableSprite(-0x88, 0x40, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x24);
+    drawAssetTableSprite(-0x88, 0x40, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x29);
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_800794DC.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_80079948.s")
+void drawTwoPlayerLapCounter(void *arg0) {
+    s32 y;
+    s32 viewportIndex;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_80079A04.s")
+    viewportIndex = gCurrentViewportIndex;
+    if (viewportIndex == 0) {
+        y = -0x30;
+    } else {
+        y = 0x2A;
+    }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_80079C08.s")
+    drawMenuAsciiChar(0x70, (s16)y, gRacePlayers[viewportIndex].lapDigit + '1', 2);
+    drawMenuAsciiChar(0x78, (s16)y, '/', 2);
+    drawMenuAsciiChar(0x80, (s16)y, gRaceLapCount + '0', 2);
+}
+
+void drawMultiplayerRaceHud(void *arg0) {
+    RacePlayer *player;
+    AssetTable *texture;
+
+    drawScaledAssetTableSprite(
+        0x38,
+        0x24,
+        getRelocatableHeapBlockBase(RACE_HUD_MAIN_FONT_HANDLE),
+        (gRaceHudCoinSpinnerFrame >> 1) + 4,
+        1
+    );
+
+    texture = getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE);
+    player = &gRacePlayers[gCurrentViewportIndex];
+    drawScaledAssetTableSprite(
+        -0x18,
+        -0x38,
+        texture,
+        gRaceHudItemEffectTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
+            gRacePlayers[gCurrentViewportIndex].itemEffectCount - 1,
+        player->itemEffectPalette + 1
+    );
+
+    texture = getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE);
+    player = &gRacePlayers[gCurrentViewportIndex];
+    drawScaledAssetTableSprite(
+        -8,
+        -0x38,
+        texture,
+        gRaceHudActionEffectTileIds[player->actionEffectType],
+        player->actionEffectPalette + 1
+    );
+
+    texture = getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE);
+    drawScaledAssetTableSprite(-0x4C, 0x18, texture, gRacePlayers[gCurrentViewportIndex].rankIndex, 1);
+
+    if (gCurrentViewportIndex < 2) {
+        drawAssetTableSprite(-0x44, -0x30, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x1A);
+        return;
+    }
+    drawAssetTableSprite(0x14, -0x30, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x1A);
+}
+
+void drawMultiplayerScoreAndLapCounter(void *arg0) {
+    s32 x;
+    s32 palette;
+    char buffer[0x20];
+
+    sprintf(buffer, gRaceHudMultiplayerScoreFormat, gRacePlayers[gCurrentViewportIndex].score);
+    if (gRacePlayers[gCurrentViewportIndex].score < 0x64) {
+        palette = 1;
+    } else {
+        palette = 2;
+    }
+    drawMenuAsciiTextDefaultScale(0x14, 0x28, buffer, palette);
+
+    if (gCurrentViewportIndex < 2) {
+        x = -0x2C;
+    } else {
+        x = 0x2C;
+    }
+
+    drawMenuAsciiChar((s16)x, -0x30, gRacePlayers[gCurrentViewportIndex].lapDigit + '1', 2);
+    drawMenuAsciiChar((s16)(x + 8), -0x30, 0x2F, 2);
+    drawMenuAsciiChar((s16)(x + 0x10), -0x30, gRaceLapCount + 0x30, 2);
+}
 
 void drawThreePlayerNoEntryPanel(void *arg0) {
     drawAssetTableSprite(0xC, 0x2C, getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)), 0x90);

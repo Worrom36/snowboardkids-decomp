@@ -35,6 +35,8 @@ typedef struct {
     s32 pad20;
 } TitleMenuRotatingBoardScratch;
 
+extern s16 congratulationsBannerSpriteTileOffsets[10];
+
 extern Vtx congratulationsBannerModelVertices[4];
 
 extern s16 passAwardLabelFlashTileOffsets[538];
@@ -44,6 +46,7 @@ extern u8 titleMenuSparkleTileFrames[16];
 extern s16 gMenuFadeAlpha;
 
 extern s16 raceSetupCharacterFocusSoundIds[6];
+
 extern u8 raceSetupCharacterFocusAnimationIds[8];
 extern u8 passAwardOpponentAnimationIds[4];
 extern s32 passAwardOpponentXPositions[6];
@@ -56,10 +59,13 @@ extern Vtx raceStartPlayerEffectVertices[4];
 extern s16 titleMenuSparklePositions[2];
 extern u32 D_2000E48[];
 extern u32 D_2000E70[];
+extern void updateRaceStartPlayerEffectActive(MenuScreenEffectActor *);
 extern void updateCongratulationsBannerSprite(MenuScreenEffectActor *);
 
 void drawPassAwardLabel(MenuScreenEffectActor *);
 void drawCourseRecordBanner(MenuScreenEffectActor *);
+
+void drawRaceStartPlayerEffectSprite(MenuScreenEffectActor *);
 
 extern void drawFallingConfetti(MenuScreenEffectActor *arg0);
 extern void updateFallingConfettiSway(MenuScreenEffectActor *arg0);
@@ -368,9 +374,54 @@ void drawRaceStartPlayerEffectSprite(MenuScreenEffectActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_80054004.s")
+void updateRaceStartPlayerEffectActive(MenuScreenEffectActor *arg0) {
+    s16 sp38[0x10];
+    Vec3i sp2C;
+    RacePlayer *player;
+    u8 temp;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_80054174.s")
+    player = &gRacePlayers[arg0->index];
+    if (player->stateFlags & 0x2000) {
+        setCallbackTaskCallback(arg0, (CallbackTaskCallback)waitForRaceStartPlayerEffect);
+        return;
+    }
+
+    temp = arg0->unk2E;
+    if (temp != 5) {
+        arg0->unk2E = temp + 1;
+    } else if (player->itemTargetFlag == 0) {
+        setCallbackTaskCallback(arg0, (CallbackTaskCallback)waitForRaceStartPlayerEffect);
+    }
+
+    sp2C.x = 0x40000;
+    sp2C.y = 0x180000;
+    sp2C.z = 0;
+
+    player = &gRacePlayers[arg0->index];
+    makeFixedRotationXY(sp38, player->pitchAngle, player->facingAngle);
+    transformVec3iByFixedMatrix(sp38, &sp2C, (Vec3i *)&arg0->unk18);
+
+    player = &gRacePlayers[arg0->index];
+    arg0->unk18.word += player->unk28.x;
+    arg0->unk1C.word += player->unk28.y;
+    arg0->unk20.word += player->unk28.z;
+
+    addRenderCallback(
+        &gRaceModelEffectRenderCallbackList,
+        (RenderCallback)drawRaceStartPlayerEffectSprite,
+        (void *)arg0
+    );
+}
+
+void waitForRaceStartPlayerEffect(MenuScreenEffectActor *arg0) {
+    RacePlayer *player = &gRacePlayers[arg0->index];
+    if (!(player->stateFlags & 0x2000)) {
+        if (player->itemTargetFlag != 0) {
+            arg0->unk2E = 0xFF;
+            setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceStartPlayerEffectActive);
+        }
+    }
+}
 
 void drawTitleMenuSparkle(MenuScreenEffectActor *arg0) {
     if ((gFrameCounter & 0x3E) >= 0x1F) {
@@ -473,7 +524,15 @@ void updateRaceSetupNamePlateSlideIn(MenuScreenEffectActor *arg0) {
     addRenderCallback(&gRaceOverlayRenderCallbackList, (RenderCallback)drawRaceSetupNamePlate, (void *)arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_800546D0.s")
+void waitForRaceSetupNamePlate(MenuScreenEffectActor *arg0) {
+    if (gViewportStates[arg0->index].active != 0) {
+        arg0->unk24.word = 0x38;
+        arg0->unk18.word = -0x1A4;
+        setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupNamePlateSlideIn);
+        return;
+    }
+    removeCallbackTask(arg0);
+}
 
 void drawCongratulationsBannerModel(MenuScreenEffectActor *arg0) {
     void *image;
@@ -551,7 +610,17 @@ void initCongratulationsBannerModel(MenuScreenEffectActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCongratulationsBannerModel);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_80054C18.s")
+void drawCongratulationsBannerSprite(MenuScreenEffectActor *arg0) {
+    if (gCurrentViewportIndex == 2) {
+        drawAssetTableSpriteWithExplicitPalette(
+            -0x6C,
+            -0x48,
+            getRelocatableHeapBlockBase(gAssetHandles[34]),
+            0,
+            congratulationsBannerSpriteTileOffsets[arg0->unk18.half.lo]
+        );
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/updateCongratulationsBannerSprite.s")
 

@@ -26,6 +26,7 @@
 #include "game/race/effects/snowboard_trail_effects.h"
 #include "game/engine/viewport_manager.h"
 
+#define stepRaceMotionJointAnimationUntilEnd(player) stepRaceMotionJointAnimationUntilEnd(RACE_MOTION_STATE(player))
 #define setRaceMotionAnimation(player, animIndex) setRaceMotionAnimation(RACE_MOTION_STATE(player), (animIndex))
 #define stepRaceMotionAnimationUntilEnd(player) stepRaceMotionAnimationUntilEnd(RACE_MOTION_STATE(player))
 #define RACE_MOTION_STATE(player) ((RaceMotionState *)(player))
@@ -35,6 +36,26 @@
 #define stepRaceMotionLoopingJointAnimation(player) stepRaceMotionLoopingJointAnimation(RACE_MOTION_STATE(player))
 #define interpolateRaceMotionJointAnimationFrame(player, animIndex, frameTimer, frameTimerReset) \
     interpolateRaceMotionJointAnimationFrame(RACE_MOTION_STATE(player), (animIndex), (frameTimer), (frameTimerReset))
+
+typedef struct {
+    u8 matrix[0x20];
+    s32 transformedX;
+    s32 transformedY;
+    s32 transformedZ;
+    s32 sourceX;
+    s32 sourceY;
+    s32 sourceZ;
+} PlayerTransformScratch80095A88;
+
+extern s16 gRaceLapCount;
+
+extern u8 gMainMenuModeSelection;
+
+extern s32 gMenuFlowState;
+
+extern void (*gRacePlayerModePostUpdateHandlers[])(RacePlayer *);
+
+extern void (*gRacePlayerMode30StateHandlers[])(RacePlayer *);
 
 extern u16 gRacePlayerVoiceBaseSoundIds[];
 
@@ -67,7 +88,34 @@ void initRacePlayers(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8008B8BC.s")
+void applyRacePlayerTuning(RacePlayer *arg0) {
+    RacePlayer *player;
+    RacePlayerTuning *var_v0;
+    RacePlayerTuning *var_v1;
+    RacePlayerTuning *temp_a1;
+    RacePlayerTuning *temp_a2;
+
+    player = arg0;
+    var_v0 = gRacePlayerCharacterTuning;
+    if ((gRaceDemoPlaybackEnabled != 0) || (var_v1 = var_v0, gMainMenuModeSelection != 0)) {
+        var_v0 = gRacePlayerDemoBoardTuning;
+        var_v1 = gRacePlayerDemoCharacterTuning;
+    } else {
+        var_v0 = gRacePlayerBoardTuning;
+    }
+    temp_a1 = (RacePlayerTuning *)((u8 *)var_v1 + (player->characterId * sizeof(RacePlayerTuning)));
+    temp_a2 = (RacePlayerTuning *)((u8 *)var_v0 + (player->characterVariant * sizeof(RacePlayerTuning)));
+    player->unk25C = (temp_a1->maxSpeed + temp_a2->maxSpeed) << 8;
+    player->speedLimit = player->unk25C;
+    player->gravity = (temp_a1->gravity + temp_a2->gravity) << 4;
+    player->unk264 = (temp_a1->aerialGravity + temp_a2->aerialGravity) << 4;
+    player->unk268 = temp_a1->turnStrength + temp_a2->turnStrength;
+    player->unk274 = (temp_a1->lateralDeceleration + temp_a2->lateralDeceleration) << 4;
+    player->unk26C = (temp_a1->turnRadiusAtFullLean + temp_a2->turnRadiusAtFullLean) << 4;
+    player->unk270 = (temp_a1->turnRadiusAtHalfLean + temp_a2->turnRadiusAtHalfLean) << 4;
+    player->unk278 = (temp_a1->forwardDeceleration + temp_a2->forwardDeceleration) << 4;
+    player->unk27C = (temp_a1->reverseDeceleration + temp_a2->reverseDeceleration) << 4;
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/initRacePlayer.s")
 
@@ -145,7 +193,318 @@ void updateRacePlayerMotionFeedback(RacePlayer *player) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8008C9E8.s")
+void updateRacePlayerMode00Grounded(RacePlayer *player) {
+    volatile s32 pad[26];
+    s64 temp;
+    s32 turnTarget;
+    s32 targetX;
+    s32 surfaceCue;
+    s32 targetZ;
+    s32 bankRate;
+    RaceCourseStartEntry *spawn;
+    s32 lean;
+    s32 speed;
+    s16 steerAngle;
+    s16 turn;
+    s16 quickTurn;
+    s32 rotation;
+    s16 unused;
+    s32 interpolated;
+
+    if (player->updateState == 0) {
+        player->updateState++;
+        player->stateFlags &= ~0x200;
+        player->unk92 = 0;
+        player->unk93 = 0;
+        player->subState = 0;
+        player->subStateTimer = 0;
+        player->unk2FA = 0;
+        player->unk528 = 0;
+        player->localVelocityX = 0;
+        if (player->unk57B != 0) {
+            enqueueRacePlayerVoiceSound(player, 7);
+            setRaceMotionAnimation(player, 0x22);
+        }
+    }
+
+    if (player->unk57A != 0) {
+        player->unk92 = 6;
+    }
+    if (player->targetGroundOffset == 0) {
+        player->targetGroundOffset = 0x40000;
+    }
+
+    player->velocity.y -= player->gravity;
+    speed = player->localVelocityZ;
+    if (speed > 0) {
+        if (speed < 0x4000) {
+            speed = 0x4000;
+        }
+    } else if (speed >= -0x3FFF) {
+        speed = -0x4000;
+    }
+
+    if (player->isCpu != 0) {
+        getRaceCourseTargetPositionAhead(
+            player->coursePathIndex,
+            player->pos.x,
+            player->pos.z,
+            &targetX,
+            &targetZ,
+            (s8)player->unk17,
+            (u16)player->playerIndex
+        );
+        turn =
+            (calculateFixedAngleBetweenXZPoints(player->pos.x, player->pos.z, targetX, targetZ) - player->facingAngle) &
+            0xFFF;
+        if (turn >= 0x801) {
+            turn -= 0x1000;
+        }
+        if (turn >= 0x101) {
+            turn = 0x100;
+        }
+        if (turn < -0x100) {
+            turn = -0x100;
+        }
+
+        quickTurn = turn >> 2;
+        turn = (turn + 1) >> 1;
+        if (turn >= 0x20) {
+            turn = 0x1F;
+        }
+        if (turn < -0x1F) {
+            turn = -0x1F;
+        }
+
+        turn = (turn - player->unk528) & 0xFFF;
+        if (turn >= 0x801) {
+            turn -= 0x1000;
+        }
+        if (turn >= 3) {
+            turn = 2;
+        }
+        if (turn < -2) {
+            turn = -2;
+        }
+        player->unk528 += turn;
+        turn = player->unk528;
+        if (turn == 1) {
+            turn = 0;
+        }
+        if (turn == -1) {
+            turn = 0;
+        }
+        player->leanScale = 0x3F;
+    } else {
+        turn = -player->stickX;
+        player->leanScale = 0x20 - player->stickY;
+        if (player->leanScale < 0x1F) {
+            player->leanScale = 0x1F;
+        }
+    }
+
+    lean = speed;
+    if (player->localVelocityZ > 0) {
+        lean = -speed;
+        turn = -turn;
+    }
+
+    if (player->isCpu == 0) {
+        spawn = &gRaceCourseStartEntries[gRaceCourseIndex.signedValue];
+        if ((spawn->pathIndex == player->coursePathIndex) && !(player->stateFlags & 0x40)) {
+            surfaceCue = (s16)(((calculateFixedAngleBetweenXZPoints(
+                                     player->pos.x,
+                                     player->pos.z,
+                                     spawn->startSurfaceTargetX,
+                                     spawn->startSurfaceTargetZ
+                                 ) -
+                                 player->facingAngle) +
+                                0x400) &
+                               0xFFF);
+            if (surfaceCue < 0x800) {
+                if (player->stateFlags & 0x400) {
+                    player->unk92 = 0;
+                    player->stateFlags &= ~0x400;
+                    player->unk93 = 6 - player->unk93;
+                }
+            } else if (!(player->stateFlags & 0x400)) {
+                player->unk92 = 0;
+                player->stateFlags |= 0x400;
+                player->unk93 = 6 - player->unk93;
+            }
+        } else {
+            if (player->localVelocityZ < -0x8000) {
+                if (player->stateFlags & 0x400) {
+                    if (player->unk92 >= 6) {
+                        player->unk92 = 0;
+                        player->stateFlags &= ~0x400;
+                        player->unk93 = 6 - player->unk93;
+                    } else {
+                        player->unk92++;
+                    }
+                }
+            }
+            if (player->localVelocityZ >= 0x8001) {
+                if (!(player->stateFlags & 0x400)) {
+                    if (player->unk92 >= 6) {
+                        player->unk92 = 0;
+                        player->stateFlags |= 0x400;
+                        player->unk93 = 6 - player->unk93;
+                    } else {
+                        player->unk92++;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!(gMenuFlowState & 1)) {
+        turnTarget = updateRacePlayerLeanAngle(player, lean, turn);
+        if (player->unk93 == 0) {
+            steerAngle = player->unk2FA;
+            steerAngle = turnTarget - steerAngle;
+            if (steerAngle >= 0x31) {
+                steerAngle = 0x30;
+            }
+            if (steerAngle < -0x30) {
+                steerAngle = -0x30;
+            }
+            player->unk2FA += steerAngle;
+            if (player->unk2FA == 0) {
+                if (player->animationId == 0x22) {
+                    if (stepRaceMotionJointAnimationUntilEnd(player) != 0) {
+                        setRaceMotionAnimation(player, 1);
+                    }
+                } else {
+                    if (player->animationId != 1) {
+                        setRaceMotionAnimation(player, 1);
+                    }
+                    stepRaceMotionLoopingJointAnimation(player);
+                }
+            } else if (player->unk2FA >= 0) {
+                setRaceMotionAnimation(player, 3);
+                blendRaceMotionJointAnimation(player, 3, player->unk2FA, 0x118);
+            } else {
+                setRaceMotionAnimation(player, 2);
+                blendRaceMotionJointAnimation(player, 2, -player->unk2FA, 0x118);
+            }
+        } else {
+            player->unk93--;
+            steerAngle = -player->unk2FA;
+            if (steerAngle >= 0x31) {
+                steerAngle = 0x30;
+            }
+            if (steerAngle < -0x30) {
+                steerAngle = -0x30;
+            }
+            player->unk2FA += steerAngle;
+            setRaceMotionAnimation(player, player->unk93 + 8);
+            stepRaceMotionJointAnimationUntilEnd(player);
+        }
+
+        if (player->isCpu == 0) {
+            steerAngle = 0;
+            bankRate = (-turn * 0x10 * player->unk268) / 0x100;
+            interpolated = (((player->unk270 - player->unk26C) * (0x3F - player->leanScale)) / 0x20) + player->unk26C;
+            if (bankRate != 0) {
+                lean = (lean - 0xFF) / 0x100;
+                temp = ((s64)interpolated * lean * lean) / bankRate;
+                if (temp != 0) {
+                    if (temp > 0) {
+                        temp += 0xC0000;
+                    }
+                    if (temp < 0) {
+                        temp += 0xFFFFFFFFFFF40000LL;
+                    }
+                    if (temp > 0x10000000LL) {
+                        temp = 0x10000000LL;
+                    }
+                    if (temp < -0x10000000LL) {
+                        temp = -0x10000000LL;
+                    }
+                    steerAngle = calculateFixedAngleBetweenXZPoints((s32)temp, 0, 0, speed);
+                    if (temp > 0) {
+                        steerAngle -= 0x400;
+                    }
+                    if (temp < 0) {
+                        steerAngle -= 0xC00;
+                    }
+                }
+                steerAngle &= 0xFFF;
+            }
+
+            if (steerAngle < 0x801) {
+                if (steerAngle >= 0x81) {
+                    steerAngle = 0x80;
+                }
+            }
+            if ((steerAngle >= 0x801) && (steerAngle < 0xF80)) {
+                steerAngle = 0xF80;
+            }
+            player->facingAngle += steerAngle;
+        } else {
+            player->facingAngle += quickTurn;
+        }
+
+        rotation = 0;
+        if (player->trailEffectTimer != 0) {
+            rotation = -0x8000;
+            if (player->snowboardTrailSide != 0) {
+                rotation = 0x8000;
+            }
+        }
+        if ((gMainMenuModeSelection != 0) && ((u8)player->unk519 == 6)) {
+            rotation = -0x60000;
+        }
+        updateRacePlayerLocalVelocity(player, 0, rotation, player->unk274, player->unk278, player->unk27C);
+
+        if (player->unk57A == 0) {
+            if (player->isCpu == 0) {
+                if (player->inputFlags & 0x8000) {
+                    player->mode = 2;
+                    player->updateState = 0;
+                    player->updateTimer = 0;
+                }
+            } else if (player->checkpointHit != 0) {
+                player->mode = 2;
+                player->updateState = 0;
+                player->updateTimer = 0;
+                player->unk525 = 1;
+            } else if ((player->movementSpeed < 0x30000) || (player->localVelocityZ >= (s32)0xFFFD0001)) {
+                player->mode = 2;
+                player->updateState = 0;
+                player->updateTimer = 0;
+                player->unk525 = 0;
+            }
+            updateRacePlayerItemEffectUse(player);
+            updateRacePlayerActionEffectUse(player);
+        } else {
+            player->unk57A--;
+            player->unk92 = 6;
+        }
+
+        if (player->stateFlags & 0x2000000) {
+            player->mode = 0x1D;
+            player->updateState = 0;
+            player->updateTimer = 0;
+        }
+        if (player->stateFlags & 0x40) {
+            player->mode = 0x1E;
+            player->updateState = 0;
+            player->updateTimer = 0;
+        }
+    } else {
+        stepRaceMotionLoopingJointAnimation(player);
+    }
+
+    player->pos.x += player->velocity.x;
+    player->pos.y += player->velocity.y;
+    player->pos.z += player->velocity.z;
+    updateRacePlayerMotionFeedback(player);
+    if (player->unk517 != 0) {
+        enqueueRacePlayerVoiceSound(player, 5);
+    }
+}
 
 void updateRacePlayerMode29Crash(RacePlayer *player) {
     s16 updateState;
@@ -323,7 +682,110 @@ void updateRacePlayerMode22Airborne(RacePlayer *player) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8008D91C.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8008D954.s")
+void updateRacePlayerAirborneLaunch(RacePlayer *player) {
+    RaceCourseStartEntry *spawn;
+    s16 updateTimer;
+    s32 velocityY;
+    s32 rotation;
+    s8 turnTimer;
+
+    updateTimer = player->updateTimer;
+    if (updateTimer == 0) {
+        player->updateTimer = updateTimer + 1;
+        player->stateTimer = 0x40000;
+        player->stateFlags |= 0x10;
+        setRaceMotionAnimation(player, 5);
+        resetRacePlayerSurfaceCueState(player);
+        player->targetGroundOffset = 0x40000;
+        player->unk2A6 = 0;
+        player->unk93 = 0;
+        player->unk336 = 0;
+    }
+
+    if (player->isCpu == 0) {
+        spawn = &gRaceCourseStartEntries[gRaceCourseIndex.signedValue];
+        if ((spawn->pathIndex == player->coursePathIndex) && !(player->stateFlags & 0x40)) {
+            velocityY = (s16)(((calculateFixedAngleBetweenXZPoints(
+                                    player->pos.x,
+                                    player->pos.z,
+                                    spawn->startSurfaceTargetX,
+                                    spawn->startSurfaceTargetZ
+                                ) -
+                                player->facingAngle) +
+                               0x400) &
+                              0xFFF);
+            if (velocityY < 0x800) {
+                if (player->stateFlags & 0x400) {
+                    player->stateFlags &= ~0x400;
+                    player->unk93 = 6 - player->unk93;
+                }
+            } else if (!(player->stateFlags & 0x400)) {
+                player->stateFlags |= 0x400;
+                player->unk93 = 6 - player->unk93;
+            }
+        } else {
+            if (player->localVelocityZ < -0x8000) {
+                if (player->stateFlags & 0x400) {
+                    player->stateFlags &= ~0x400;
+                    player->unk93 = 6 - player->unk93;
+                }
+            }
+            if (player->localVelocityZ >= 0x8001) {
+                if (!(player->stateFlags & 0x400)) {
+                    player->stateFlags |= 0x400;
+                    player->unk93 = 6 - player->unk93;
+                }
+            }
+        }
+    }
+
+    turnTimer = player->unk93;
+    if (turnTimer != 0) {
+        player->unk93 = turnTimer - 1;
+        setRaceMotionAnimation(player, player->unk93 + 8);
+    } else if (player->animationId != 5) {
+        setRaceMotionAnimation(player, 5);
+    }
+
+    updateRacePlayerItemEffectUse(player);
+    stepRaceMotionJointAnimationUntilEnd(player);
+
+    velocityY = player->targetGroundOffset;
+    if (velocityY != 0) {
+        if (velocityY < 0x20000) {
+            player->targetGroundOffset = 0;
+        } else {
+            player->targetGroundOffset = velocityY - 0x20000;
+        }
+    } else {
+        player->updateState++;
+    }
+
+    if ((player->isCpu == 0) && !(player->inputFlags & 0x8000)) {
+        player->stateFlags &= ~0x10;
+    }
+
+    updateRacePlayerLeanAngle(player, player->localVelocityZ, 0);
+    player->velocity.y -= player->gravity;
+
+    rotation = 0;
+    if (player->trailEffectTimer != 0) {
+        rotation = -0x8000;
+        if (player->snowboardTrailSide != 0) {
+            rotation = 0x8000;
+        }
+    }
+
+    updateRacePlayerLocalVelocity(player, 0, rotation, player->unk274, player->unk278, player->unk27C);
+    player->pos.x += player->velocity.x;
+    player->pos.y += player->velocity.y;
+    player->pos.z += player->velocity.z;
+    updateRacePlayerSurfaceCue(player);
+    updateRacePlayerMotionFeedback(player);
+    if (player->unk517 != 0) {
+        enqueueRacePlayerVoiceSound(player, 5);
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8008DC9C.s")
 
@@ -2420,7 +2882,69 @@ void updateRacePlayerMode05SpinoutStun(RacePlayer *player) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80092E38.s")
+void updateRacePlayerMode08SpinoutRecover(RacePlayer *player) {
+    RaceCourseStartEntry *spawn;
+    s16 updateState;
+    s16 targetAngle;
+    s16 facingAngle;
+
+    updateState = player->updateState;
+    if (updateState == 0) {
+        player->updateState = updateState + 1;
+        if (player->stateFlags & 0x10000) {
+            setRaceMotionAnimation(player, 0x11);
+        } else {
+            setRaceMotionAnimation(player, 0x10);
+        }
+        player->stateFlags = player->stateFlags & 0xFE0C1FFB;
+        player->stateFlags = player->stateFlags & ~0x200;
+        player->stateFlags = player->stateFlags | 0xA000;
+        player->targetGroundOffset = 0x40000;
+    }
+
+    if (player->stateFlags & 1) {
+        player->stateFlags |= 0x200;
+    } else {
+        player->stateFlags &= ~0x200;
+    }
+
+    spawn = &gRaceCourseStartEntries[gRaceCourseIndex.signedValue];
+    if ((spawn->pathIndex == player->coursePathIndex) && !(player->stateFlags & 0x40)) {
+        targetAngle = calculateFixedAngleBetweenXZPoints(
+            player->pos.x,
+            player->pos.z,
+            spawn->startSurfaceTargetX,
+            spawn->startSurfaceTargetZ
+        );
+        if (player->stateFlags & 0x400) {
+            targetAngle += 0x800;
+        }
+
+        facingAngle = player->facingAngle;
+        targetAngle = (targetAngle - facingAngle) & 0xFFF;
+        if (targetAngle >= 0x801) {
+            targetAngle -= 0x1000;
+        }
+        if (targetAngle >= 0x67) {
+            targetAngle = 0x66;
+        }
+        if (targetAngle < -0x66) {
+            targetAngle = -0x66;
+        }
+        player->facingAngle = facingAngle + targetAngle;
+    }
+
+    updateRacePlayerLeanAngle(player, 0, 0);
+    player->velocity.y -= 0xA000;
+    player->pos.y += player->velocity.y;
+
+    if (stepRaceMotionAnimationUntilEnd(player) != 0) {
+        player->stateFlags &= 0xFE0C1FFB;
+        player->mode = 0;
+        player->updateState = 0;
+        player->updateTimer = 0;
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80093020.s")
 
@@ -2903,7 +3427,60 @@ void updateRacePlayerMode25SpinHit(RacePlayer *player) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80094940.s")
+void updateRacePlayerMode27Slide(RacePlayer *player) {
+    s16 updateState;
+    s16 updateTimer;
+    u32 stateFlags;
+
+    updateState = player->updateState;
+    if (updateState == 0) {
+        player->updateState = updateState + 1;
+        setRaceMotionAnimation(player, 0x13);
+        player->stateFlags &= 0xFE0C1FFB;
+        player->stateFlags |= 0x822204;
+        player->pitchAngle = 0;
+        player->targetGroundOffset = 0;
+        player->velocity.y = 0x80000;
+        player->updateTimer = 0;
+        player->rumbleTimer = 4;
+        player->rumblePatternId = 0;
+    }
+
+    updateRacePlayerLeanAngle(player, 0, 0);
+    if (player->velocity.y > 0) {
+        player->velocity.y -= 0x7000;
+    } else {
+        updateTimer = player->updateTimer;
+        if (updateTimer == 0) {
+            player->updateTimer = updateTimer + 1;
+            createCallbackTaskWithUserIdPreservingArgs(
+                initRaceUiSpinHitTransitionEffect,
+                0,
+                3,
+                (u16)player->playerIndex
+            );
+        }
+        player->facingAngle += 0x40;
+        player->velocity.y -= 0x800;
+    }
+
+    player->velocity.x -= player->velocity.x >> 6;
+    player->velocity.z -= player->velocity.z >> 6;
+    player->pos.x += player->velocity.x;
+    player->pos.y += player->velocity.y;
+    player->pos.z += player->velocity.z;
+
+    stepRaceMotionAnimationUntilEnd(player);
+    if (player->velocity.y < 0) {
+        stateFlags = player->stateFlags;
+        if (!(stateFlags & 1)) {
+            player->mode = 8;
+            player->updateState = 0;
+            player->updateTimer = 0;
+            player->stateFlags = stateFlags & ~0x200;
+        }
+    }
+}
 
 void updateRacePlayerMode40Stun(RacePlayer *player) {
     s16 updateState;
@@ -2958,9 +3535,73 @@ void updateRacePlayerMode40Stun(RacePlayer *player) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80094C4C.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80094C84.s")
+void updateRacePlayerMode07AlignToLaunchRamp(RacePlayer *player) {
+    s16 angleDelta;
+    s16 updateTimer;
+    s32 temp_a1;
+    s32 tempX;
+    s32 tempZ;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80094F0C.s")
+    updateTimer = player->updateTimer;
+    if (updateTimer == 0) {
+        player->updateTimer = updateTimer + 1;
+        player->stateTimer = 0x14;
+        player->unk80 = 0xA;
+        player->unk2FA = gRaceCourseStartEntries[gRaceCourseIndex.signedValue].launchRampCourseObjectAngle;
+        if (player->stateFlags & 0x400) {
+            player->unk2FA += 0x800;
+        }
+        gMenuFlowState |= 4;
+        setRaceMotionAnimation(player, 1);
+    }
+
+    stepRaceMotionLoopingAnimation(player);
+    angleDelta = (player->unk2FA - player->facingAngle) & 0xFFF;
+    if (angleDelta >= 0x801) {
+        angleDelta -= 0x1000;
+    }
+    updateRacePlayerLeanAngle(player, 0x10000, 0);
+
+    temp_a1 = player->unk80;
+    if (1) {}
+    if (1) {}
+    if (1) {}
+    if (temp_a1 != 0) {
+        angleDelta /= temp_a1;
+        if (gRaceCourseStartEntries[gRaceCourseIndex.signedValue].launchRampTargetZ) {}
+        player->facingAngle += angleDelta;
+        tempX = player->pos.x;
+        tempZ = player->pos.z;
+        if (temp_a1) {}
+        if (1) {
+            player->pos.x =
+                tempX -
+                (0 - ((gRaceCourseStartEntries[gRaceCourseIndex.signedValue].launchRampTargetX - tempX) / temp_a1));
+        }
+        player->pos.z =
+            tempZ - (0 - ((gRaceCourseStartEntries[gRaceCourseIndex.signedValue].launchRampTargetZ - tempZ) / temp_a1));
+    }
+
+    if (--player->stateTimer == 0) {
+        player->pos.x = gRaceCourseStartEntries[gRaceCourseIndex.signedValue].launchRampTargetX;
+        player->pos.z = gRaceCourseStartEntries[gRaceCourseIndex.signedValue].launchRampTargetZ;
+        player->updateState++;
+        player->updateTimer = 0;
+        player->stateTimer = 0;
+        setRaceMotionAnimation(player, 5);
+        setRaceCameraMode(player->playerIndex, 3);
+    }
+}
+
+void updateRacePlayerMode07StartLaunchRamp(RacePlayer *player) {
+    if (stepRaceMotionAnimationUntilEnd(player) != 0) {
+        player->updateState++;
+        player->updateTimer = 0;
+        player->facingAngle = player->unk2FA;
+        player->pos.x = gRaceCourseStartEntries[gRaceCourseIndex.signedValue].launchRampTargetX;
+        player->pos.z = gRaceCourseStartEntries[gRaceCourseIndex.signedValue].launchRampTargetZ;
+    }
+}
 
 void updateRacePlayerMode07LaunchRampTakeoff(RacePlayer *player) {
     s16 updateTimer;
@@ -3103,9 +3744,123 @@ void updateRacePlayerMode07LaunchRampDrift(RacePlayer *player) {
     stepRaceMotionAnimationUntilEnd(player);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_800953D4.s")
+void updateRacePlayerMode07LaunchRampClimb(RacePlayer *player) {
+    PlayerTransformScratch80095A88 scratch;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80095530.s")
+    if (player->updateTimer == 0) {
+        player->updateTimer++;
+        player->stateTimer = 0x64;
+    }
+
+    if (player->unk80 > 0) {
+        if (player->unk80 < 0xA0000) {
+            player->unk80 += 0x2000;
+        }
+        makeFixedRotationXY((s16 *)scratch.matrix, -0x100, player->facingAngle);
+    } else {
+        if (player->unk80 >= -0x9FFFF) {
+            player->unk80 -= 0x2000;
+        }
+        makeFixedRotationXY((s16 *)scratch.matrix, 0x100, ((0, player))->facingAngle);
+    }
+
+    scratch.sourceX = 0;
+    scratch.sourceY = 0;
+    scratch.sourceZ = player->unk80;
+    transformVec3iByFixedMatrix((s16 *)scratch.matrix, (Vec3i *)&scratch.sourceX, (Vec3i *)&scratch.transformedX);
+    player->pos.x = player->pos.x + scratch.transformedX;
+    player->pos.y += scratch.transformedY;
+    player->pos.z += scratch.transformedZ;
+
+    player->stateTimer--;
+    if (player->stateTimer == 0) {
+        player->updateTimer = 0;
+        player->updateState++;
+    }
+
+    if (player->stateTimer < 0x3C) {
+        player->stateFlags |= 0x80000;
+        if (gRaceCameras[(u16)player->playerIndex].initialized.signedValue != 0) {
+            gRaceCameras[(u16)player->playerIndex].initialized.signedValue = 2;
+        }
+    }
+}
+
+void updateRacePlayerMode07SpiralExit(RacePlayer *player) {
+    PlayerTransformScratch80095A88 scratch;
+
+    if (player->updateTimer == 0) {
+        player->updateTimer++;
+        scratch.sourceX = -0x200000;
+        scratch.sourceY = 0;
+        scratch.sourceZ = 0x400000;
+        makeFixedRotationY(
+            (s16 *)scratch.matrix,
+            gRaceCourseStartEntries[gRaceCourseIndex.signedValue].liftExitObjectAngle
+        );
+        transformVec3iByFixedMatrix((s16 *)scratch.matrix, (Vec3i *)&scratch.sourceX, (Vec3i *)&player->pos);
+        player->pos.x += gRaceCourseStartEntries[gRaceCourseIndex.signedValue].liftExitOrigin.x;
+        player->pos.y += gRaceCourseStartEntries[gRaceCourseIndex.signedValue].liftExitOrigin.y + 0x80000;
+        player->pos.z += gRaceCourseStartEntries[gRaceCourseIndex.signedValue].liftExitOrigin.z;
+        player->coursePathIndex = gRaceCourseStartEntries[gRaceCourseIndex.signedValue].liftExitSurfaceIndex;
+        player->lapDigit++;
+        player->previousPosition = player->pos;
+        player->stateTimer = 0x28;
+        player->stateFlags &= 0xFBFFFBFF;
+        player->facingAngle = gRaceCourseStartEntries[gRaceCourseIndex.signedValue].liftExitObjectAngle;
+        player->coursePathOffset =
+            -projectRaceCourseSurfaceProgress(player->coursePathIndex, player->pos.x, player->pos.z);
+        setRaceCameraMode(player->playerIndex, 1);
+        gRaceCameras[player->playerIndex].prevPos.x = player->pos.x;
+        gRaceCameras[player->playerIndex].prevPos.y = player->pos.y;
+        gRaceCameras[player->playerIndex].prevPos.z = player->pos.z;
+        createCallbackTask((CallbackTaskCallback)initLiftExitCourseObject, 0, 0x64);
+        if (player->lapDigit >= (gRaceLapCount - 1)) {
+            createCallbackTaskWithUserIdPreservingArgs(waitForRaceSetupNamePlate, 0, 0x64, player->playerIndex);
+        }
+    }
+
+    player->stateFlags &= ~0x80000;
+    scratch.sourceX = 0;
+    scratch.sourceY = 0;
+    scratch.sourceZ = -0x40000;
+    makeFixedRotationY(
+        (s16 *)scratch.matrix,
+        gRaceCourseStartEntries[gRaceCourseIndex.signedValue].liftExitObjectAngle
+    );
+    transformVec3iByFixedMatrix((s16 *)scratch.matrix, (Vec3i *)&scratch.sourceX, (Vec3i *)&scratch.transformedX);
+    player->pos.x += scratch.transformedX;
+    player->pos.z += scratch.transformedZ;
+    player->stateTimer--;
+
+    if (player->stateTimer == 0) {
+        player->mode = 1;
+        player->updateState = 0;
+        player->updateTimer = 0;
+        player->stateFlags = 0;
+
+        /* Rank-dependent course-object exit displacement: add 0/1/2/4 times
+         * current X/Z velocity for first through fourth, for humans and CPUs. */
+        if (player->rankIndex == 1) {
+            player->pos.x += player->velocity.x;
+            player->pos.z += player->velocity.z;
+        }
+
+        if (player->rankIndex == 2) {
+            player->pos.x += player->velocity.x * 2;
+            player->pos.z += player->velocity.z * 2;
+        }
+
+        if (player->rankIndex == 3) {
+            player->pos.x += player->velocity.x * 4;
+            player->pos.z += player->velocity.z * 4;
+        }
+
+        if (gRaceCameras[player->playerIndex].initialized.signedValue != 0) {
+            gRaceCameras[player->playerIndex].initialized.signedValue = 1;
+        }
+    }
+}
 
 s32 tryStartRacePlayerCourseObjectMode(s16 arg0) {
     s32 delta;
@@ -3145,7 +3900,12 @@ s32 tryStartRacePlayerCourseObjectMode(s16 arg0) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80095AC8.s")
+void dispatchRacePlayerMode30Attack(RacePlayer *player) {
+    gRacePlayerMode30StateHandlers[player->updateState](player);
+    if (player->collisionRadius < 0xF0000) {
+        player->collisionRadius += 0x8000;
+    }
+}
 
 void updateRacePlayerMode30AttackApproach(RacePlayer *player) {
     s16 updateTimer;
@@ -3491,7 +4251,38 @@ void updateRacePlayerMode35Character5(RacePlayer *player) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/updateRacePlayersPostUpdate.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80096984.s")
+void updateRacePlayerPostUpdate(RacePlayer *player) {
+    unsigned long long random;
+
+    gRacePlayerModePostUpdateHandlers[player->mode](player);
+    if (!(gMenuFlowState & 1) && !(player->stateFlags & 0x41000) && (player->soundDisabled == 0)) {
+        if (player->groundContactMask & 3) {
+            random = randomNextMain();
+            spawnRaceItemTrackSparkBurst(
+                &player->groundMarkerSources[0],
+                &player->groundMarkerSources[1],
+                &player->groundMarkerSources[4],
+                &player->groundMarkerSources[5],
+                random,
+                player->unk330
+            );
+        }
+        if (player->groundContactMask & 0xC) {
+            random = randomNextMain();
+            spawnRaceItemTrackSparkBurst(
+                &player->groundMarkerSources[2],
+                &player->groundMarkerSources[3],
+                &player->groundMarkerSources[6],
+                &player->groundMarkerSources[7],
+                random,
+                player->unk330
+            );
+        }
+    }
+    updateRacePlayerFinalLapStatus(player);
+    resolveRacePlayerCollisionVolumes(player);
+    updateRacePlayerRumble(player);
+}
 
 void updateRacePlayerPostUpdateNoop(RacePlayer *player) {
     updateRacePlayerSurfaceContact(player);
@@ -3748,7 +4539,32 @@ void updateRacePlayerPostUpdateNudge(RacePlayer *player) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8009725C.s")
+void updateRacePlayerPostUpdateMode29(RacePlayer *player) {
+    u16 playerIndex;
+
+    updateRacePlayerSurfaceContact(player);
+    if (!(player->stateFlags & 0x02000000)) {
+        player->mode = 1;
+        player->updateState = 0;
+        player->updateTimer = 0;
+        if ((gRaceSplitscreenMode == 1) && (gRaceTypeSelection == 2)) {
+            player->trickAttackPointTotal *= 2;
+            if (player->trickAttackPointTotal >= 0x2710) {
+                player->trickAttackPointTotal = 0x270F;
+            }
+            createCallbackTaskPreservingArgs((CallbackTaskCallback)initRaceUiCrashScorePopup, 0, 0x64);
+            enqueueSoundEffect(0x51, 0x32);
+        }
+        if (gRaceSplitscreenMode == 0) {
+            addRacePlayerScore(player, 0x12C);
+            playerIndex = player->playerIndex;
+            if (gRacePlayerHudStatuses[playerIndex].active != 0) {
+                spawnRaceUiScorePopup((void *)0x12C, (s16)playerIndex);
+                enqueueSoundEffect(0x51, 0x32);
+            }
+        }
+    }
+}
 
 void updateRacePlayerPostUpdateAttack(RacePlayer *player) {
     updateRacePlayerSurfaceContact(player);

@@ -721,7 +721,7 @@ void drawScaledAssetTableSpriteWithExplicitPalette(
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/func_80047B5C.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/func_80047DCC.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/drawMenuAsciiChar.s")
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/drawMenuAsciiTextDefaultScale.s")
 

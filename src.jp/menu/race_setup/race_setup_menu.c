@@ -105,7 +105,8 @@ void initRaceSetupSaveMenu(void) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_menu/updateRaceSetupSaveMenu.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_menu/func_8000412C.s")
+void raceSetupMenuNoop(void) {
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_menu/func_80004134.s")
 
