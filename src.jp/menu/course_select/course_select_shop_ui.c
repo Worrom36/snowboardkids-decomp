@@ -29,6 +29,8 @@ enum {
     COURSE_DETAILS_OPTION_COUNT = 10,
     COURSE_DETAILS_ROW_SPACING = 0x13
 };
+
+extern s32 gMenuFlowState;
 extern u8 gMenuExitSelection;
 extern ShopMenuFrameTileMap gShopMenuPanelFrameTilemaps[2];
 extern const char gShopMenuMoneyFormat[];
@@ -126,7 +128,39 @@ void drawShopMenuSidePanel(ShopMenuWidgetActor *arg0) {
     );
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuSidePanel.s")
+void updateShopMenuSidePanel(ShopMenuWidgetActor *arg0) {
+    u8 state = arg0->sprite.bytes.state;
+
+    switch (state) {
+        case 0:
+            arg0->x += 0x20;
+            if (arg0->x >= -0x88) {
+                arg0->x = -0x88;
+                arg0->sprite.bytes.state = 1;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->sprite.bytes.state = 2;
+            }
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x < -0x10D) {
+                arg0->sprite.bytes.state = 3;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuSidePanel, arg0);
+}
 
 void initShopMenuSidePanel(ShopMenuWidgetActor *arg0) {
     arg0->x = -0x108;
@@ -421,7 +455,35 @@ void drawShopMenuSparkles(ShopMenuWidgetActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuSparkles.s")
+void updateShopMenuSparkles(ShopMenuWidgetActor *arg0) {
+    s16 temp_v0;
+    u8 var_v0;
+
+    var_v0 = arg0->slide.slideState;
+    switch (var_v0) {
+        case 0:
+            temp_v0 = arg0->sprite.index;
+            arg0->x -= 0x20;
+            if (temp_v0 >= arg0->x) {
+                arg0->x = temp_v0;
+                arg0->slide.slideState = 1U;
+            }
+            var_v0 = arg0->slide.slideState;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->slide.slideState = 2U;
+                var_v0 = 2 & 0xFF;
+            }
+            break;
+    }
+    var_v0 = arg0->slide.slideState;
+    if (var_v0 == 2) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuSparkles, arg0);
+}
 
 void initShopMenuSparkles(ShopMenuWidgetActor *arg0) {
     s16 *entry;
@@ -439,9 +501,16 @@ void initShopMenuSparkles(ShopMenuWidgetActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002ECC8.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002EE9C.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateCourseUnlockPricePanel.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/initCourseUnlockPricePanel.s")
+void initCourseUnlockPricePanel(ShopMenuWidgetActor *arg0) {
+    arg0->x = 0x20;
+    arg0->y = -8;
+    arg0->item.price = gCourseUnlockPrices[gRacePlayers[0].menuSelection];
+    arg0->sprite.index = 0;
+    arg0->slide.bytes.state = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseUnlockPricePanel);
+}
 
 void drawCourseUnlockPurchasePrompt(ShopMenuWidgetActor *arg0) {
     volatile u64 unused;
@@ -530,7 +599,24 @@ void drawCourseUnlockPurchasePrompt(ShopMenuWidgetActor *arg0) {
     );
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateCourseUnlockPurchasePrompt.s")
+void updateCourseUnlockPurchasePrompt(ShopMenuWidgetActor *arg0) {
+    ShopMenuWidgetActor *temp_a2;
+
+    arg0->item.price = gCurrentGameTask->callbackData1;
+    temp_a2 = arg0;
+    if (arg0->transition.counter < 0x10) {
+        arg0->sprite.index -= 9;
+    } else {
+        temp_a2->sprite.index += 9;
+    }
+    temp_a2->transition.counter = (temp_a2->transition.counter + 1) & 0x1F;
+    if (gMenuFlowState == 1) {
+        removeCallbackTask(temp_a2);
+        gMenuFlowState = 0;
+    } else {
+        addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseUnlockPurchasePrompt, temp_a2);
+    }
+}
 
 void initCourseUnlockPurchasePrompt(ShopMenuWidgetActor *arg0) {
     arg0->x = -0x76;

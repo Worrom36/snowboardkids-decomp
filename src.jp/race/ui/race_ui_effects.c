@@ -70,6 +70,13 @@
 #define RACE_UI_TIME_TRIAL_SAVE_DATA ((RaceUiTimeTrialSaveData *)&gGameSaveDataBuffer[0])
 
 typedef struct {
+    s32 displayListAddress;
+    u16 textureAssetId;
+    u8 useOverlayQueue;
+    u8 soundSourceIndex;
+} RaceCourseScrollingTextureInit;
+
+typedef struct {
     u8 pad0[0x4E];
     RaceTimer courseStatsNames[10][5];
 } RaceUiCourseStatsNameData;
@@ -100,6 +107,12 @@ typedef struct {
     u8 pad0[0x12A];
     RaceTimer timeTrialRecordSplitTimes[11];
 } RaceUiTimeTrialSaveData;
+
+extern RaceCourseScrollingTextureInit gRaceCourseScrollingTextureInit[RACE_COURSE_SCROLLING_TEXTURE_COUNT];
+
+extern s16 gDizzyLandFerrisWheelYaws[];
+
+extern Vec3i gDizzyLandFerrisWheelPositions[];
 
 extern Vec3i D_800D6030[];
 extern const char gRaceUiTrickScorePopupBonusFormat[0xC];
@@ -201,7 +214,19 @@ void updateRaceCourseScrollingTexture(RaceCourseScrollingTextureActor *arg0) {
     addRenderCallback(&gRaceObjectRenderCallbackList, (RenderCallback)renderRaceCourseScrollingTexture, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/initRaceCourseScrollingTexture.s")
+void initRaceCourseScrollingTexture(RaceCourseScrollingTextureActor *arg0) {
+    arg0->textureScrollOffset = 0;
+    getAssetTableImageAndPalette(
+        getRelocatableHeapBlockBase(ASSET_HANDLE(0x1C)),
+        gRaceCourseScrollingTextureInit[arg0->task.userId].textureAssetId,
+        &arg0->texture,
+        &arg0->palette
+    );
+    arg0->displayList = (Gfx *)gRaceCourseScrollingTextureInit[arg0->task.userId].displayListAddress;
+    arg0->useOverlayQueue = gRaceCourseScrollingTextureInit[arg0->task.userId].useOverlayQueue;
+    arg0->soundSourceIndex = gRaceCourseScrollingTextureInit[arg0->task.userId].soundSourceIndex;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceCourseScrollingTexture);
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_80057234.s")
 
@@ -872,7 +897,14 @@ void updateRaceUiCourseStatsFadeInRows(RaceUiCourseStatsActor *arg0) {
     addRenderCallback(&gMenuForegroundRenderCallbackList, (RenderCallback)drawRaceUiCourseStatsLapTimeLabel, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRaceUiCourseStatsFadeInTitle.s")
+void updateRaceUiCourseStatsFadeInTitle(RaceUiCourseStatsActor *arg0) {
+    arg0->titleAlpha += 0x10;
+    if (arg0->titleAlpha >= 0x100) {
+        arg0->titleAlpha = 0xFF;
+        setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiCourseStatsFadeInRows);
+    }
+    addRenderCallback(&gMenuForegroundRenderCallbackList, (RenderCallback)drawRaceUiCourseStatsLapTimeLabel, arg0);
+}
 
 void initRaceUiCourseStats(RaceUiCourseStatsActor *arg0) {
     arg0->titleAlpha = 0;
@@ -2052,7 +2084,20 @@ void updateRaceUiScorePopupSlideIn(RaceUiPopupActor *arg0) {
     addRenderCallback(&gRaceOverlayRenderCallbackList, (RenderCallback)drawRaceUiScorePopup, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/initRaceUiScorePopup.s")
+void initRaceUiScorePopup(RaceUiPopupActor *arg0) {
+    if (gViewportStates[arg0->playerIndex].active != 0) {
+        if (gPlayerCount == 1) {
+            arg0->y.word = -0x24;
+        } else {
+            arg0->y.word = -0x16;
+        }
+        arg0->velocity = 0x38;
+        arg0->x = 0x1A4;
+        setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiScorePopupSlideIn);
+    } else {
+        removeCallbackTask(arg0);
+    }
+}
 
 void spawnRaceUiScorePopup(void *arg0, s16 arg1) {
     RaceUiPopupActor *temp = createCallbackTask((CallbackTaskCallback)initRaceUiScorePopup, 0, 0x64);
@@ -2300,7 +2345,27 @@ void renderRaceUiSingleTrailEffect(RaceUiSingleTrailActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRaceUiSingleTrailEffect.s")
+void updateRaceUiSingleTrailEffect(RaceUiSingleTrailActor *arg0) {
+    composeFixedTransforms(
+        &arg0->localTransform,
+        &gRacePlayers[arg0->task.userId].modelPartTransforms[7],
+        &arg0->copyBlock
+    );
+
+    if (gRaceUpdatePaused == 0) {
+        arg0->timer--;
+        if (!(gRacePlayers[arg0->task.userId].stateFlags & 0x2000)) {
+            arg0->timer = 0;
+        }
+    }
+
+    if (arg0->timer == 0) {
+        removeCallbackTask(arg0);
+        return;
+    }
+
+    addRenderCallback(&gRaceModelEffectRenderCallbackList, (RenderCallback)renderRaceUiSingleTrailEffect, (void *)arg0);
+}
 
 void initRaceUiSingleTrailEffect(RaceUiSingleTrailActor *arg0) {
     arg0->timer = RACE_UI_SINGLE_TRAIL_TIMER;
@@ -2744,7 +2809,11 @@ void updateDizzyLandFerrisWheel(DizzyLandFerrisWheelActor *arg0) {
     addRenderCallback(&gRaceModelEffectRenderCallbackList, (RenderCallback)renderDizzyLandFerrisWheel, (void *)arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/initDizzyLandFerrisWheel.s")
+void initDizzyLandFerrisWheel(DizzyLandFerrisWheelActor *arg0) {
+    arg0->pos = gDizzyLandFerrisWheelPositions[arg0->task.userId];
+    arg0->yaw = gDizzyLandFerrisWheelYaws[arg0->task.userId];
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateDizzyLandFerrisWheel);
+}
 
 void renderDizzyLandSpinningCabinRide(DizzyLandSpinningCabinRideActor *arg0) {
     struct {
@@ -3218,7 +3287,27 @@ void initForwardActionProjectileEffect(RaceUiProjectileActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiProjectileInitialFall);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawTimeTrialRecordDeltaPopup.s")
+void drawTimeTrialRecordDeltaPopup(RaceUiTimeTrialRecordDeltaPopupActor *arg0) {
+    if (gCurrentViewportIndex == 0) {
+        if (arg0->isSlowerThanRecord != 0) {
+            drawAssetTableSprite(
+                (s16)(arg0->x - 0x66),
+                arg0->y.half.lo,
+                getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)),
+                0x98
+            );
+            drawRaceUiPackedTime(&arg0->delta, arg0->x + 0x26, arg0->y.word, 0xC);
+            return;
+        }
+        drawAssetTableSprite(
+            (s16)(arg0->x - 0x62),
+            arg0->y.half.lo,
+            getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)),
+            0x97
+        );
+        drawRaceUiPackedTime(&arg0->delta, arg0->x + 0x22, arg0->y.word, 0x10);
+    }
+}
 
 void updateTimeTrialRecordDeltaPopupSlideOut(RaceUiTimeTrialRecordDeltaPopupActor *arg0) {
     arg0->x -= arg0->velocity;
@@ -3348,7 +3437,39 @@ void updateRaceStartOverlayFallOut(RaceUiOverlayActor *arg0) {
     addRenderCallback(&gRaceModelEffectRenderCallbackList, (RenderCallback)renderRaceStartOverlay, actor);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRaceStartOverlayAnimate.s")
+void updateRaceStartOverlayAnimate(RaceUiOverlayActor *arg0) {
+    s16 temp_v0;
+    s32 temp_v0_2;
+    void *temp_v0_3;
+    RaceUiOverlayActor *temp_s0;
+
+    temp_v0 = arg0->timer;
+    temp_s0 = arg0;
+    if (temp_v0 == 0) {
+        if (arg0->assetTimer == 0) {
+            enqueuePositionalSoundEffect(9, &temp_s0->pos, 0x7F, 0x32);
+        }
+        temp_v0_3 = getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F));
+        getAssetTableImageAndPalette(
+            temp_v0_3,
+            (temp_s0->assetTimer >> 1) + 0x3B,
+            &temp_s0->panelBImage,
+            &temp_s0->panelBPalette
+        );
+        temp_s0->assetTimer++;
+        if (temp_s0->assetTimer >= 0xB) {
+            temp_s0->timer = 0x3C;
+            setCallbackTaskCallback(temp_s0, (CallbackTaskCallback)updateRaceStartOverlayFallOut);
+        }
+    } else {
+        temp_s0->timer = temp_v0 - 1;
+    }
+
+    temp_v0_2 = temp_s0->velocity;
+    temp_s0->pos.y += temp_v0_2;
+    temp_s0->velocity = temp_v0_2 + 0xC00;
+    addRenderCallback(&gRaceModelEffectRenderCallbackList, (RenderCallback)renderRaceStartOverlay, temp_s0);
+}
 
 void updateRaceStartOverlayRiseIn(RaceUiOverlayActor *arg0) {
     s16 timer = arg0->timer;

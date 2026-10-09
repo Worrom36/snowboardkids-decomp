@@ -20,9 +20,22 @@ void updateMainMenuTitleLogo(MainMenuTitleLogoActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_title_ui/func_80032404.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_title_ui/func_80032470.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_title_ui/drawMainMenuTitleOptions.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_title_ui/updateMainMenuTitleOptions.s")
+void updateMainMenuTitleOptions(MainMenuTitleOptionsActor *arg0) {
+    if (gCurrentGameTask->callbackData1 != (u16)(0, arg0->selectedOption)) {
+        arg0->blinkAlpha = 0x100;
+        arg0->blinkTimer = 0;
+        arg0->selectedOption = gCurrentGameTask->callbackData1;
+    }
+    if ((s32)(u16)arg0->blinkTimer < 0x10) {
+        arg0->blinkAlpha -= 9;
+    } else {
+        arg0->blinkAlpha += 9;
+    }
+    arg0->blinkTimer = ((u16)arg0->blinkTimer + 1) & 0x1F;
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawMainMenuTitleOptions, arg0);
+}
 
 void initMainMenuTitleOptions(MainMenuTitleOptionsActor *arg0) {
     arg0->common.x = -0x2C;

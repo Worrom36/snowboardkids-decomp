@@ -229,9 +229,40 @@ void initRaceSetupThreePlayerOption(MenuItemActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupThreePlayerOption);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/func_80014C9C.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupFourPlayerOption.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupFourPlayerOption.s")
+void updateRaceSetupFourPlayerOption(MenuItemActor *arg0) {
+    MenuItemActor *actor = arg0;
+    s16 x;
+
+    switch (actor->state) {
+        case 0:
+            actor->x -= 0x20;
+            x = actor->x;
+            if (x == -0x50) {
+                actor->state = 1;
+                createCallbackTask((CallbackTaskCallback)initRaceSetupPlayerCountCursor, 0, 0x63);
+                x = actor->x;
+            }
+            break;
+        case 1:
+            x = actor->x;
+            break;
+        case 2:
+            actor->x -= 0x20;
+            x = actor->x;
+            break;
+        default:
+            x = actor->x;
+            break;
+    }
+    if (x < -0x108) {
+        removeCallbackTask(actor);
+        gCurrentGameTask->callbackData1 = 2;
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSetupFourPlayerOption, (void *)actor);
+}
 
 void initRaceSetupFourPlayerOption(MenuItemActor *arg0) {
     MenuItemActor *actor = arg0;
@@ -520,7 +551,20 @@ void drawScrollingMenuBackdropActor(void *arg0) {
     drawMenuTilemapSprite(&actor->sprite.render, MENU_TILEMAP_TEXEL_4B, actor->x, actor->y);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateScrollingMenuBackdropActor.s")
+void updateScrollingMenuBackdropActor(SpriteActor *arg0) {
+    SpriteActor *temp_a2;
+    MenuTilemapSprite *temp_v0;
+    SpriteActor *actor = arg0;
+
+    temp_a2 = actor;
+    actor->sprite.render.scrollX--;
+    temp_v0 = &temp_a2->sprite;
+    if (actor->sprite.render.scrollX < 0) {
+        actor->sprite.render.scrollX = 0x2FF;
+    }
+    temp_v0->render.scrollY = (temp_v0->render.scrollY + 1) & 0x1FF;
+    addRenderCallback(&gMenuOverlayRenderCallbackList, (RenderCallback)drawScrollingMenuBackdropActor, (void *)temp_a2);
+}
 
 void initScrollingMenuBackdropActor(SpriteActor *arg0) {
     SpriteActor *temp_a2 = arg0;

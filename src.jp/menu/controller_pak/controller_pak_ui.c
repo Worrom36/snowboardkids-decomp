@@ -16,9 +16,44 @@
 
 extern u8 gControllerPakMenuCursorState;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/func_80030490.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/drawControllerPakContinuePrompt.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/updateControllerPakContinuePrompt.s")
+void updateControllerPakContinuePrompt(ControllerPakOptionsActor *arg0) {
+    s32 temp_v0;
+    s32 state;
+    ControllerPakOptionsActor *temp_a2 = arg0;
+
+    state = arg0->blinkState;
+    temp_v0 = gControllerPakContinuePromptTransition.state;
+    if (state != temp_v0) {
+        arg0->blinkState = temp_v0;
+        state = temp_v0 & 0xFF;
+        arg0->scale = gControllerPakContinuePromptTransition.x;
+    }
+
+    temp_v0 = state;
+    switch (temp_v0 ^ 0) {
+        case 1:
+            temp_a2->selectedOption = gCurrentGameTask->callbackData1;
+            if (temp_a2->timer < 0x10) {
+                temp_a2->scale -= 9;
+            } else {
+                temp_a2->scale += 9;
+            }
+            temp_a2->timer = (temp_a2->timer + 1) & 0x1F;
+            state = temp_a2->blinkState;
+            break;
+        case 0:
+        case 2:
+            break;
+    }
+
+    if (state == 3) {
+        removeCallbackTask(temp_a2);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawControllerPakContinuePrompt, (void *)temp_a2);
+}
 
 void initControllerPakContinuePrompt(ControllerPakOptionsActor *arg0) {
     arg0->common.x = -0x70;

@@ -99,7 +99,39 @@ void drawRaceSplitscreenSelectCornerSprites(RaceSplitscreenSelectCornerSpriteAct
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectCornerSprites.s")
+void updateRaceSplitscreenSelectCornerSprites(RaceSplitscreenSelectCornerSpriteActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->x += 0x20;
+            if (arg0->x >= -0x88) {
+                arg0->x = -0x88;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->state = 2;
+            }
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x < -0x10D) {
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectCornerSprites, arg0);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectCornerSprites(RaceSplitscreenSelectCornerSpriteActor *arg0) {
@@ -402,7 +434,39 @@ void drawRaceSplitscreenSelectArrowPrompt(RaceSplitscreenSelectAnimatedWidgetAct
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectArrowPrompt.s")
+void updateRaceSplitscreenSelectArrowPrompt(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->state = 2;
+            }
+            break;
+        case 2:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectArrowPrompt, arg0);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectArrowPrompt(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
@@ -433,7 +497,39 @@ void drawRaceSplitscreenSelectEntryFee(RaceSplitscreenSelectAnimatedWidgetActor 
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectEntryFee.s")
+void updateRaceSplitscreenSelectEntryFee(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->state = 2;
+            }
+            break;
+        case 2:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectEntryFee, arg0);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectEntryFee(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {

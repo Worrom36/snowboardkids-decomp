@@ -36,6 +36,8 @@ typedef struct {
     u8 rightTargets[0x10];
 } MainMenuModeSelectByteData;
 
+extern MenuGlyphScript *mainMenuModeDescriptionTexts[];
+
 extern MenuGlyphScript mainMenuModeSelectTitleText[];
 extern MainMenuModeSelectByteData gMainMenuModeSelectByteData;
 extern u8 gMainMenuModeSelection;
@@ -158,9 +160,16 @@ void scrollMainMenuModeDescriptionPanelOut(MenuPanelActor *arg0) {
     addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawMainMenuModeDescriptionPanel, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_panel_ui/func_80051AA4.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_panel_ui/updateMainMenuModeDescriptionPanel.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_panel_ui/initMainMenuModeDescriptionPanel.s")
+void initMainMenuModeDescriptionPanel(MenuPanelActor *arg0) {
+    arg0->x = -0x80;
+    arg0->y = 4;
+    arg0->selectionState = 0;
+    arg0->inputRepeatTimer = 0;
+    arg0->tileList = mainMenuModeDescriptionTexts[gMainMenuModeSelection];
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateMainMenuModeDescriptionPanel);
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_panel_ui/drawMainMenuModeSelectMenuOptions.s")
 

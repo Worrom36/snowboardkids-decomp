@@ -36,15 +36,55 @@
 #define interpolateRaceMotionJointAnimationFrame(player, animIndex, frameTimer, frameTimerReset) \
     interpolateRaceMotionJointAnimationFrame(RACE_MOTION_STATE(player), (animIndex), (frameTimer), (frameTimerReset))
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/initRacePlayers.s")
+extern s8 gRacePlayerCount;
+extern u8 gRaceUpdatePaused;
+extern void (*gRacePlayerTrickSubstateHandlers[])(RacePlayer *);
+
+void initRacePlayers(void) {
+    gRacePlayers[0].playerIndex = 0;
+    gRacePlayers[1].playerIndex = 1;
+    gRacePlayers[2].playerIndex = 2;
+    gRacePlayers[3].playerIndex = 3;
+    if (gRacePlayers[0].isActive != 0) {
+        initRacePlayer(&gRacePlayers[0]);
+    }
+    if (gRacePlayers[1].isActive != 0) {
+        initRacePlayer(&gRacePlayers[1]);
+    }
+    if (gRacePlayers[2].isActive != 0) {
+        initRacePlayer(&gRacePlayers[2]);
+    }
+    if (gRacePlayers[3].isActive != 0) {
+        initRacePlayer(&gRacePlayers[3]);
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8008B8BC.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8008B9F8.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/initRacePlayer.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/updateRacePlayers.s")
+void updateRacePlayers(void) {
+    s32 i;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8008C130.s")
+    gRacePlayers[0].unk582 = 0;
+    gRacePlayers[1].unk582 = 0;
+    gRacePlayers[2].unk582 = 0;
+    gRacePlayers[3].unk582 = 0;
+    if (gRaceUpdatePaused == 0) {
+        updateRacePlayerInput(&gRacePlayers[0]);
+        updateRacePlayerInput(&gRacePlayers[1]);
+        updateRacePlayerInput(&gRacePlayers[2]);
+        updateRacePlayerInput(&gRacePlayers[3]);
+        updateRacePlayerRankDisplay();
+        for (i = 0; i < gRacePlayerCount; i++) {
+            updateRacePlayer(&gRacePlayers[i]);
+        }
+        resolveRacePlayerBodyCollisions();
+        updateRacePlayerRankings();
+    }
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/updateRacePlayer.s")
 
 void updateRacePlayerMotionFeedback(RacePlayer *player) {
     s16 angleDiff;
@@ -287,7 +327,9 @@ void resetRacePlayerTrickSubstate(RacePlayer *player) {
     player->unk2A0 = 0;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/updateRacePlayerTrickSubstate.s")
+void updateRacePlayerTrickSubstate(RacePlayer *player) {
+    gRacePlayerTrickSubstateHandlers[player->subState](player);
+}
 
 void updateRacePlayerTrickSubstateStart(RacePlayer *player) {
     s16 inputMask;

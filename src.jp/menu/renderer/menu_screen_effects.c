@@ -29,6 +29,8 @@ typedef struct {
     s32 pad20;
 } TitleMenuRotatingBoardScratch;
 
+extern u8 titleMenuSparkleTileFrames[16];
+
 extern s16 gMenuFadeAlpha;
 extern s16 raceSetupCharacterFocusSoundIds[6];
 extern u8 raceSetupCharacterFocusAnimationIds[8];
@@ -68,7 +70,23 @@ extern void drawMainMenuRotatingBoardModel(MenuScreenEffectActor *);
 extern void drawMainMenuStaticBoardModel(void *);
 extern void renderMainMenuBoardModels(MenuScreenEffectActor *arg0);
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/drawFallingConfetti.s")
+void drawFallingConfetti(MenuScreenEffectActor *arg0) {
+    void *texture;
+
+    if (gCurrentViewportIndex == arg0->index) {
+        texture = getRelocatableHeapBlockBase(gAssetHandles[42]);
+        drawMenuSprite(
+            (s16)(arg0->unk18.half.hi >> 4),
+            (s16)(arg0->unk18.half.lo >> 4),
+            texture,
+            arg0->unk1C.half.hi + 2,
+            arg0->timer,
+            arg0->timer,
+            0,
+            arg0->unk2A + 2
+        );
+    }
+}
 
 void updateFallingConfettiDrift(MenuScreenEffectActor *arg0) {
     s16 temp_v0;
@@ -342,7 +360,23 @@ void drawRaceStartPlayerEffectSprite(MenuScreenEffectActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_80054174.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/drawTitleMenuSparkle.s")
+void drawTitleMenuSparkle(MenuScreenEffectActor *arg0) {
+    if ((gFrameCounter & 0x3E) >= 0x1F) {
+        drawAssetTableSprite(
+            arg0->unk18.half.hi,
+            arg0->unk18.half.lo,
+            getRelocatableHeapBlockBase(gAssetHandles[6]),
+            1
+        );
+    } else {
+        drawAssetTableSprite(
+            arg0->unk18.half.hi,
+            arg0->unk18.half.lo,
+            getRelocatableHeapBlockBase(gAssetHandles[6]),
+            titleMenuSparkleTileFrames[(gFrameCounter & 0x1E) >> 1]
+        );
+    }
+}
 
 void renderTitleMenuSparkle(MenuScreenEffectActor *arg0) {
     addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawTitleMenuSparkle, arg0);

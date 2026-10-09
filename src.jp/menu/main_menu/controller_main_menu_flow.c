@@ -166,7 +166,19 @@ void requestControllerPakRepair(u16 controllerIndex) {
     osRecvMesg(&gControllerSubsystemReplyQueue, &msg, OS_MESG_BLOCK);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/repairControllerPakId.s")
+void repairControllerPakId(u16 controllerIndex) {
+    OSPfs **sp18;
+    OSPfs *pfs;
+    s32 ret;
+
+    pfs = &gControllerPakHandles[controllerIndex];
+    sp18 = &pfs;
+    osPfsInitPak(&gControllerEventQueue, *sp18, controllerIndex);
+    ret = osPfsRepairId(pfs);
+    if ((ret == 4) || (ret == 0xA)) {
+        gControllerPakRetryCounts[controllerIndex] += 1;
+    }
+}
 
 void requestControllerPakFileList(void) {
     OSMesg msg;
