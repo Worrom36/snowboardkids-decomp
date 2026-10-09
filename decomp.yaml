@@ -15,6 +15,18 @@ versions:
       expected_dir: "expected/"
       asm: "asm"
       nonmatchings: "asm/nonmatchings"
+  - name: jp
+    fullname: jp
+    sha1: 96480c8fa7285d9e850f6ba002e56bcb7ada9796
+    paths:
+      target: "snowboardkids.jp.z64"
+      build_dir: "build/jp"
+      map: "build/jp/snowboardkids.map"
+      compiled_target: "build/jp/snowboardkids.z64"
+      elf: "build/jp/snowboardkids.elf"
+      expected_dir: "expected/jp/"
+      asm: "asm.jp"
+      nonmatchings: "asm.jp/nonmatchings"
 tools:
   mapfile_parser:
     progress_report:
