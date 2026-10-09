@@ -3061,3 +3061,14 @@ updateControllerPakRaceRecordSaveStatusMessage = 0x8002C0CC; // type:func
 updateCourseDetailsMenu = 0x8002F780; // type:func
 updateEndingObjectSpriteDebugViewer = 0x8003B9BC; // type:func
 drawEndingObjectSpriteDebugViewer = 0x8003B920; // type:func rom:0x3C520 size:0x9C
+
+drawMenuSpriteFixedScale = 0x80010764; // type:func rom:0x11364
+gMenuSpriteFlipScales = 0x800B4AF0; // type:s16 rom:0xB56F0 size:0x10
+initControllerPakFileDeleteFlow = 0x8000C3F0; // type:func rom:0xCFF0
+initRaceSetupMenu = 0x80003110; // type:func rom:0x3D10
+initCharacterSelectMenu = 0x80004930; // type:func rom:0x5530
+openRaceTypeSelectFlow = 0x80073104; // type:func rom:0x73D04
+updateRaceFlowFrame = 0x8007778C; // type:func rom:0x7838C
+startRaceGameplayFlow = 0x800742E0; // type:func rom:0x74EE0
+updateRaceGameplayFlow = 0x80074458; // type:func rom:0x75058
+drawMenuSolidRect = 0x800138B4; // type:func rom:0x144B4

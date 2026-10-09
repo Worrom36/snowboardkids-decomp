@@ -1,4 +1,655 @@
+#include "common.h"
+#include "game/menu/menu_scratch.h"
+#include "game/race/race_state.h"
+#include "font_encoding.h"
+#include <PR/os_libc.h>
+#include "game/save_data.h"
+#include "game/engine/asset_manager.h"
+#include "game/engine/render_callback.h"
+#include "game/engine/relocatable_heap.h"
+#include "game/engine/callback_task_scheduler.h"
+#include "game/engine/game_task_scheduler.h"
+#include "game/menu/renderer/menu_renderer.h"
+#include "game/menu/renderer/menu_render_utils.h"
+#include "game/menu/character_select/character_select_menu.h"
+#include "game/menu/course_select/course_select_menu.h"
 #include "game/menu/course_select/course_select_ui.h"
+#include "game/menu/course_select/course_select_shop_ui.h"
+#include "game/menu/main_menu/controller_main_menu_flow.h"
+#include "game/math/fixed_point_math.h"
+#include "game/race/player/race_player_model_renderer.h"
+#include "game/race/player/race_player_input.h"
+
+extern s16 gCourseSelectIconListXLayout[][4];
+extern s16 gCourseSelectIconListYLayout[][6];
+extern s16 gCourseSelectStatsPanelLayout[][4];
+extern const char D_800E0DB8[];
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80023810.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectPreviewModelIn.s")
+
+void initCourseSelectPreviewModelIn(void *arg0) {
+    CourseSelectAnimatedActor *actor;
+    Vec3i position;
+    s32 i;
+
+    actor = arg0;
+    i = 0;
+    do {
+        actor->modelOffsets[i].x = 0xC00000;
+        actor->modelOffsets[i].y = 0;
+        actor->modelOffsets[i].z = 0;
+        actor->rotationAngle[i] = 0;
+        makeFixedRotationY(actor->modelTransforms[i].rotation, actor->rotationAngle[i]);
+        transformVec3iByFixedMatrix(actor->modelTransforms[i].rotation, &actor->modelOffsets[i], &position);
+        actor->modelTransforms[i].translation.x = position.x;
+        actor->modelTransforms[i].translation.y = position.y;
+        actor->modelTransforms[i].translation.z = position.z;
+        i++;
+        actor->transitionState[i - 1] = 0;
+    } while (i < 4);
+
+    actor->viewTransform.translation.x = 0;
+    actor->viewTransform.translation.y = 0;
+    actor->viewTransform.translation.z = 0;
+    makeFixedRotationYX(actor->viewTransform.rotation, 0x400, 0x280);
+    setCallbackTaskCallback(actor, (CallbackTaskCallback)updateCourseSelectPreviewModelIn);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_800240F8.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectPreviewModelOut.s")
+
+void initCourseSelectPreviewModelOut(void *arg0) {
+    CourseSelectAnimatedActor *actor;
+    Vec3i position;
+    s32 i;
+
+    actor = arg0;
+    for (i = 0; i < 4; i++) {
+        actor->modelOffsets[i].x = 0;
+        actor->modelOffsets[i].y = 0x800000;
+        actor->modelOffsets[i].z = 0;
+        actor->rotationAngle[i] = 0;
+        makeFixedRotationY(actor->modelTransforms[i].rotation, actor->rotationAngle[i]);
+        transformVec3iByFixedMatrix(actor->modelTransforms[i].rotation, &actor->modelOffsets[i], &position);
+        actor->modelTransforms[i].translation.x = position.x;
+        actor->modelTransforms[i].translation.y = position.y;
+        actor->modelTransforms[i].translation.z = position.z;
+        actor->transitionState[i] = 1;
+        gCourseSelectStatus.outgoingPreviewModelState[i] = 1;
+    }
+
+    actor->viewTransform.translation.x = 0;
+    actor->viewTransform.translation.y = 0;
+    actor->viewTransform.translation.z = 0;
+    makeFixedRotationYX(actor->viewTransform.rotation, 0x400, 0x280);
+    setCallbackTaskCallback(actor, (CallbackTaskCallback)updateCourseSelectPreviewModelOut);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80024A20.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80024E28.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/initCourseSelectCourseIconList.s")
+
+void drawCourseSelectCourseCursors(CourseSelectCourseCursorsActor *arg0) {
+    u8 *actor;
+    s16 *drawPosPtr;
+    s32 i;
+    u8 *statePtr;
+    s16 *posPtr;
+    int cursorStride;
+    s16 *handles;
+    u8 *cursorBytes;
+    s32 tileIndex;
+    s32 handleIndex;
+    s32 one;
+    s32 playerCount;
+    u8 *cursorBase;
+
+    actor = (u8 *)arg0;
+    if (gCourseSelectInputLocked == 0) {
+        playerCount = gPlayerCount;
+        i = 0;
+        if ((playerCount - 1) >= 0) {
+            statePtr = (u8 *)arg0;
+            cursorStride = 2;
+            handles = gAssetHandles;
+            one = 1;
+            do {
+                if (statePtr[0x30] < cursorStride) {
+                    cursorBase = actor;
+                    posPtr = (s16 *)((cursorBytes = cursorBase) + (i * cursorStride));
+                    if (one == gPlayerCount) {
+                        tileIndex = 7;
+                        handleIndex = 0x25;
+                    } else {
+                        tileIndex = 0x13;
+                        handleIndex = 0x21;
+                    }
+                    drawMenuSpriteWithAlpha(
+                        posPtr[0xC],
+                        (s16)((drawPosPtr = posPtr)[0x10] +
+                              (gCharacterSelectHighlightedRosterIndices[i] * statePtr[0x38])),
+                        getRelocatableHeapBlockBase(handles[handleIndex]),
+                        tileIndex,
+                        0x20,
+                        0x20,
+                        0,
+                        drawPosPtr[0x14],
+                        (short)0
+                    );
+                }
+                i++;
+                statePtr++;
+            } while (i < gPlayerCount);
+        }
+    }
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectCourseCursors.s")
+
+void initCourseSelectCourseCursors(CourseSelectCourseCursorsActor *arg0) {
+    CourseSelectCourseCursorsActor *actor;
+    u8 *courseUnlocked;
+    s16 *yLayout;
+    s16 *xLayout;
+    char mask;
+    s32 unlockState;
+    s32 hasExtraCourse;
+    s32 playerIndex;
+    s32 layoutIndex;
+
+    actor = arg0;
+    // clang-format off
+    mask = 0xFFFFFFFFFFFFFFFFu; \
+    if ((s32)gPlayerCount < 3) { \
+        layoutIndex = gPlayerCount - 1; \
+    } else { \
+        layoutIndex = 2; \
+    } \
+    playerIndex = 0; \
+    if ((s32)gPlayerCount > 0) { \
+        courseUnlocked = gCourseSelectHasExtraCourse; \
+        yLayout = gCourseSelectIconListYLayout[layoutIndex]; \
+        xLayout = gCourseSelectIconListXLayout[layoutIndex]; \
+        do { \
+            unlockState = *courseUnlocked & mask; \
+            courseUnlocked++; \
+            hasExtraCourse = (((0, unlockState) == 0) || (gRacePlayers[playerIndex].selectedCharacterId == 5)) ? 0 : 1;
+            // clang-format on
+            actor->horizontalSpacing[playerIndex] = yLayout[hasExtraCourse];
+            actor->y[playerIndex] = yLayout[((playerIndex & 1) * 2) + hasExtraCourse + 2];
+            actor->x[playerIndex] = xLayout[((playerIndex >= 2) * 2) + 1];
+            actor->alpha[playerIndex] = 0;
+            actor->state[playerIndex] = 0;
+            actor->pulseTimer[playerIndex] = 0;
+            playerIndex++;
+        } while (playerIndex < (s32)gPlayerCount);
+    }
+    setCallbackTaskCallback(actor, (CallbackTaskCallback)updateCourseSelectCourseCursors);
+}
+
+void drawCourseSelectCourseListBackdrop(CourseSelectCourseListBackdropActor *arg0) {
+    drawMenuSprite(arg0->x, arg0->y, getRelocatableHeapBlockBase(gAssetHandles[0x25]), 3, 0x20, 0x20, 0, 0);
+    drawMenuSprite(
+        (s16)(arg0->x + 0x40),
+        arg0->y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x25]),
+        4,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    drawMenuSprite(
+        arg0->x,
+        (s16)(arg0->y + 0x40),
+        getRelocatableHeapBlockBase(gAssetHandles[0x25]),
+        5,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    drawMenuSprite(
+        (s16)(arg0->x + 0x40),
+        (s16)(arg0->y + 0x40),
+        getRelocatableHeapBlockBase(gAssetHandles[0x25]),
+        6,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectCourseListBackdrop.s")
+
+void initCourseSelectCourseListBackdrop(CourseSelectCourseListBackdropActor *arg0) {
+    arg0->x = -0x108;
+    arg0->y = 8;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectCourseListBackdrop);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80026404.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectCourseStats.s")
+
+void initCourseSelectCourseStats(CourseSelectCourseStatsActor *arg0) {
+    s32 row;
+    s32 i;
+    CourseSelectCourseStatsActor *temp_a3;
+    s16(*table)[4];
+
+    temp_a3 = arg0;
+    if (gPlayerCount < 3) {
+        row = gPlayerCount - 1;
+    } else {
+        row = 2;
+    }
+
+    i = 0;
+    if ((s32)gPlayerCount > 0) {
+        table = &gCourseSelectStatsPanelLayout[row];
+        do {
+            temp_a3->x[i] = (*table)[(i & 1) * 2] + ((i >= 2) * 0x8C);
+            temp_a3->y[i] = (*table)[(i & 1) * 2 + 1];
+            i++;
+        } while (i < (s32)gPlayerCount);
+    }
+
+    temp_a3->alpha = 0;
+    temp_a3->state = 0;
+    setCallbackTaskCallback(temp_a3, (CallbackTaskCallback)updateCourseSelectCourseStats);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80026C78.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectCourseDescription.s")
+
+void initCourseSelectCourseDescription(CourseSelectCourseDescriptionActor *arg0) {
+    arg0->x = -0x84;
+    arg0->y = 0xC;
+    arg0->alpha = 0;
+    arg0->state = 0;
+    arg0->selectionLocked = 0;
+    arg0->selectedBoardLevel = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectCourseDescription);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80027424.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectExtraCourseBadge.s")
+
+void initCourseSelectExtraCourseBadge(CourseSelectExtraCourseBadgeActor *arg0) {
+    arg0->x = -0x8;
+    arg0->y = -0x5C;
+    arg0->alpha = 0;
+    arg0->state = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectExtraCourseBadge);
+}
+
+void drawCourseSelectExtraCourseIconList(CourseSelectExtraCourseIconListActor *arg0) {
+    s32 overlayTile;
+    s32 iconAlpha;
+    s32 playerIndex;
+    s32 iconIndex;
+
+    for (playerIndex = 0; playerIndex < gPlayerCount; playerIndex++) {
+        if (gMenuChoicePromptState[playerIndex] != 0) {
+            if (gMenuChoicePromptState[playerIndex] != 9) {
+                overlayTile = (playerIndex >= 2) * 0x8C;
+                for (iconIndex = arg0->itemCounts[playerIndex] - 1; iconIndex >= 0; iconIndex--) {
+                    if (gMenuChoicePromptState[playerIndex] == 1) {
+                        iconAlpha = 0x100;
+                    } else if ((iconIndex + 2) == gMenuChoicePromptState[playerIndex]) {
+                        iconAlpha = 0x100;
+                    } else {
+                        iconAlpha = 0x60;
+                    }
+                    drawMenuSpriteWithAlphaClipped(
+                        arg0->iconX[playerIndex][iconIndex],
+                        arg0->iconY[playerIndex][iconIndex],
+                        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                        arg0->tileIndices[playerIndex][iconIndex],
+                        0x20,
+                        0x20,
+                        0,
+                        iconAlpha,
+                        0,
+                        arg0->clipLeft - overlayTile,
+                        arg0->clipTop,
+                        arg0->clipRight,
+                        arg0->clipBottom
+                    );
+                }
+                if (gCourseSelectInputLocked == 0) {
+                    if ((gMenuChoicePromptState[playerIndex] >= 2) && (gMenuChoicePromptState[playerIndex] < 5)) {
+                        if (gPlayerCount == 1) {
+                            overlayTile = 0xF;
+                        } else {
+                            overlayTile = 0x1B;
+                        }
+                        drawMenuSpriteWithAlpha(
+                            arg0->iconX[playerIndex][0],
+                            (s16)(arg0->iconY[playerIndex][0] +
+                                  ((gMenuChoicePromptState[playerIndex] - 2) * arg0->rowSpacing[playerIndex])),
+                            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                            overlayTile,
+                            0x20,
+                            0x20,
+                            0,
+                            ((CourseSelectExtraCourseIconListActor *)&((u8 *)&arg0->task)[playerIndex * 2])->alpha[0],
+                            0
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80027868.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80027930.s")
+
+void updateCourseSelectExtraCourseIconListClose(CourseSelectExtraCourseIconListActor *arg0) {
+    s32 i;
+    s32 j;
+    CourseSelectExtraCourseIconListActor *temp_a2 = arg0;
+
+    i = 0;
+    if ((s32)gPlayerCount > 0) {
+        do {
+            j = 0;
+            if ((s32)arg0->itemCounts[i] > 0) {
+                do {
+                    temp_a2->iconX[i][j] -= 0x20;
+                    j++;
+                } while (j < (s32)arg0->itemCounts[i]);
+            }
+            i++;
+        } while (i < (s32)gPlayerCount);
+    }
+
+    if ((gPlayerCount == 1) && (temp_a2->itemCounts[0] == 0)) {
+        removeCallbackTask(temp_a2);
+        return;
+    }
+
+    if (temp_a2->iconX[0][0] < -0xDF) {
+        removeCallbackTask(temp_a2);
+        finishCourseSelectUiTask(8);
+        gMenuScratch2.task = 0;
+        return;
+    }
+
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseSelectExtraCourseIconList, temp_a2);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80027B14.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/initCourseSelectExtraCourseIconList.s")
+
+void drawCourseSelectPlayerPanels(CourseSelectPlayerPanelListActor *arg0) {
+    s32 j;
+    s32 i;
+    s32 middleCount;
+    u8 tile;
+    s32 alpha;
+    s32 count;
+    u8 text[4];
+    s32 offset;
+    CourseSelectPlayerPanelListActor *actor = (CourseSelectPlayerPanelListActor *)arg0;
+
+    if (gPlayerCount == 2) {
+        count = 2;
+    } else {
+        count = 4;
+    }
+
+    for (i = 0; i < count; i++) {
+        if (i == gPlayerCount) {
+            alpha = 0xC0;
+        } else {
+            alpha = 0x100;
+        }
+
+        if (i == 0) {
+            tile = 2;
+        } else {
+            tile = i + 5;
+        }
+
+        drawMenuSpriteWithAlphaWideArgs(
+            actor->x[i],
+            actor->y[i],
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            0x22,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            tile
+        );
+
+        if (gPlayerCount == 2) {
+            middleCount = 0xB;
+        } else {
+            middleCount = 3;
+        }
+
+        for (j = 0, offset = 0x38; j < middleCount; j++, offset += 0x10) {
+            drawMenuSpriteWithAlphaWideArgs(
+                (s16)(actor->x[i] + offset),
+                actor->y[i],
+                getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                0x23,
+                0x20,
+                0x20,
+                0,
+                alpha,
+                tile
+            );
+        }
+
+        drawMenuSpriteWithAlphaWideArgs(
+            (s16)(actor->x[i] + offset),
+            actor->y[i],
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            0x24,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            tile
+        );
+
+        if (gPlayerCount == 2) {
+            offset = 0xF8;
+        } else {
+            offset = 0x78;
+        }
+
+        for (j = 0; j < 4; j++) {
+            drawMenuSpriteWithAlphaWideArgs(
+                actor->x[i],
+                (s16)(actor->y[i] + j * 0x10 + 0x10),
+                getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                0x25,
+                0x20,
+                0x20,
+                0,
+                alpha,
+                tile
+            );
+
+            drawMenuSpriteWithAlphaWideArgs(
+                (s16)(actor->x[i] + offset),
+                (s16)(actor->y[i] + j * 0x10 + 0x10),
+                getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                0x26,
+                0x20,
+                0x20,
+                0,
+                alpha,
+                tile
+            );
+        }
+
+        drawMenuSpriteWithAlphaWideArgs(
+            actor->x[i],
+            (s16)(actor->y[i] + 0x50),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            0x27,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            tile
+        );
+
+        if (gPlayerCount == 2) {
+            middleCount = 0xE;
+        } else {
+            middleCount = 6;
+        }
+
+        for (j = 0; j < middleCount; j++) {
+            drawMenuSpriteWithAlphaWideArgs(
+                (s16)(actor->x[i] + j * 0x10 + 0x10),
+                (s16)(actor->y[i] + 0x50),
+                getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                0x28,
+                0x20,
+                0x20,
+                0,
+                alpha,
+                tile
+            );
+        }
+
+        drawMenuSpriteWithAlphaWideArgs(
+            (s16)(actor->x[i] + offset - 8),
+            (s16)(actor->y[i] + 0x50),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            0x29,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            tile
+        );
+
+        sprintf(text, D_800E0DB8, i + 1);
+        drawMenuAsciiText((s16)(actor->x[i] + 0x34), (s16)(actor->y[i] + 2), text, 0, alpha);
+
+        if (alpha == 0xC0) {
+            drawMenuSpriteWithAlphaWideArgs(
+                (s16)(actor->x[i] + 2),
+                (s16)(actor->y[i] + 0x24),
+                getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                0x90,
+                0x20,
+                0x20,
+                0,
+                0xF0,
+                0
+            );
+        }
+    }
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectPlayerPanels.s")
+
+void initCourseSelectPlayerPanels(CourseSelectPlayerPanelListActor *arg0) {
+    if (gPlayerCount == 2) {
+        arg0->exitTargetX = 0xA0;
+        arg0->x[0] = 0x90;
+        arg0->y[0] = -0xC8;
+        arg0->x[1] = -0x18C;
+        arg0->y[1] = 0x6C;
+        arg0->targetX[0] = -0x7E;
+        arg0->targetX[1] = -0x7E;
+        arg0->deltaX[0] = -1;
+        arg0->deltaX[1] = 1;
+        arg0->deltaY[0] = 1;
+        arg0->deltaY[1] = -1;
+        arg0->period[0] = 0x10E;
+        arg0->period[1] = 0x10E;
+        arg0->speed[0] = 0x68;
+        arg0->speed[1] = 0x68;
+    } else {
+        arg0->x[0] = -0x118;
+        arg0->x[1] = -0x118;
+        arg0->deltaX[0] = 1;
+        arg0->deltaY[0] = 1;
+        arg0->deltaX[1] = 1;
+        arg0->deltaY[2] = 1;
+        arg0->exitTargetX = -0x128;
+        arg0->y[0] = -0xC8;
+        arg0->y[1] = 0x6C;
+        arg0->x[2] = 0x94;
+        arg0->y[2] = -0xC8;
+        arg0->x[3] = 0x94;
+        arg0->y[3] = 0x6C;
+        arg0->targetX[0] = -0x88;
+        arg0->targetX[1] = -0x88;
+        arg0->targetX[2] = 4;
+        arg0->targetX[3] = 4;
+        arg0->deltaY[1] = -1;
+        arg0->deltaX[2] = -1;
+        arg0->deltaX[3] = -1;
+        arg0->deltaY[3] = -1;
+        arg0->period[0] = 0x90;
+        arg0->speed[0] = 0x68;
+        arg0->period[1] = 0x90;
+        arg0->speed[1] = 0x68;
+        arg0->period[2] = 0x90;
+        arg0->speed[2] = 0x68;
+        arg0->period[3] = 0x90;
+        arg0->speed[3] = 0x68;
+    }
+    arg0->timer[1] = 0;
+    arg0->state[1] = 0;
+    arg0->timer[2] = 0;
+    arg0->state[2] = 0;
+    arg0->timer[3] = 0;
+    arg0->state[3] = 0;
+    arg0->timer[0] = 0;
+    arg0->state[0] = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectPlayerPanels);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80028D18.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectCompletePanels.s")
+
+void initCourseSelectCompletePanels(CourseSelectCompletePanelsActor *arg0) {
+    s32 var_v0;
+    CourseSelectCompletePanelsActor *var_v1;
+
+    if (gPlayerCount == 2) {
+        arg0->x = -0x6E;
+        arg0->y = -0x4C;
+    } else {
+        arg0->x = -0x8C;
+        arg0->y = -0x46;
+    }
+    var_v0 = 0;
+    var_v1 = arg0;
+    if ((s32)gPlayerCount > 0) {
+        do {
+            var_v1->playerPanelFadeAlpha[0] = 0;
+            var_v0++;
+            var_v1 = (CourseSelectCompletePanelsActor *)((u8 *)var_v1 + sizeof(s16));
+        } while (var_v0 < (s32)gPlayerCount);
+    }
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectCompletePanels);
+}
 
 void finishCourseSelectUiTask(s32 arg0) {
 }

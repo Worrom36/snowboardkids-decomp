@@ -1,4 +1,535 @@
+#include "common.h"
+#include "game/menu/menu_scratch.h"
+#include <PR/os_libc.h>
+#include "font_encoding.h"
+#include "game/save_data.h"
+#include "game/audio/sound_manager.h"
+#include "game/engine/asset_manager.h"
+#include "game/engine/render_callback.h"
+#include "game/engine/relocatable_heap.h"
+#include "game/engine/callback_task_scheduler.h"
+#include "game/engine/game_task_scheduler.h"
+#include "game/menu/renderer/menu_renderer.h"
+#include "game/menu/main_menu/controller_main_menu_flow.h"
+#include "game/menu/character_select/character_select_course_menu.h"
+#include "game/menu/race_setup/race_setup_menu.h"
 #include "game/menu/race_setup/race_setup_ui.h"
+#include "game/race/player/race_player_input.h"
+
+#define TITLE_MENU_FRAME_TEXTURE_HANDLE (gAssetHandles[33])
+#define TITLE_MENU_BANNER_TEXTURE_HANDLE (gAssetHandles[41])
+#define SAVE_STATUS_FADE_STEP 0x26
+#define SAVE_STATUS_TRANSITION_NONE 0
+#define SAVE_STATUS_TRANSITION_FADE_IN 1
+#define SAVE_STATUS_TRANSITION_FADE_OUT 2
+#define SAVE_STATUS_TRANSITION_DONE 3
+
+extern MenuGlyphScript gRaceSetupPlayerCountPromptText[5][0x34];
+extern s32 gMenuFlowState;
+
+void drawRaceSetupPlayerCountPrompt(MenuIntroActor *arg0) {
+    s32 i;
+    s32 j;
+    s32 selected;
+    s32 limit;
+    MenuIntroActor *actor;
+
+    actor = arg0;
+    drawMenuSpriteWithAlpha(
+        (s16)(actor->x - 4),
+        (s16)(actor->y - 4),
+        getRelocatableHeapBlockBase(TITLE_MENU_BANNER_TEXTURE_HANDLE),
+        2,
+        0x20,
+        0x20,
+        0,
+        actor->alpha,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(actor->x + 0xD4),
+        (s16)(actor->y - 4),
+        getRelocatableHeapBlockBase(TITLE_MENU_BANNER_TEXTURE_HANDLE),
+        4,
+        0x20,
+        0x20,
+        0,
+        actor->alpha,
+        0
+    );
+    i = 0;
+    do {
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->x + i),
+            (s16)(actor->y - 4),
+            getRelocatableHeapBlockBase(TITLE_MENU_BANNER_TEXTURE_HANDLE),
+            3,
+            0x20,
+            0x20,
+            0,
+            actor->alpha,
+            0
+        );
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->x + i),
+            (s16)(actor->y + 0x24),
+            getRelocatableHeapBlockBase(TITLE_MENU_BANNER_TEXTURE_HANDLE),
+            8,
+            0x20,
+            0x20,
+            0,
+            actor->alpha,
+            0
+        );
+        i += 0x10;
+    } while (i < 0xE0);
+    drawMenuSpriteWithAlpha(
+        (s16)(actor->x - 4),
+        (s16)(actor->y + 0x24),
+        getRelocatableHeapBlockBase(TITLE_MENU_BANNER_TEXTURE_HANDLE),
+        7,
+        0x20,
+        0x20,
+        0,
+        actor->alpha,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(actor->x + 0xD4),
+        (s16)(actor->y + 0x24),
+        getRelocatableHeapBlockBase(TITLE_MENU_BANNER_TEXTURE_HANDLE),
+        9,
+        0x20,
+        0x20,
+        0,
+        actor->alpha,
+        0
+    );
+    i = (actor->state == 4) * 0;
+    limit = 0xE0;
+    do {
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->x - 4),
+            (s16)(actor->y + i),
+            getRelocatableHeapBlockBase(TITLE_MENU_BANNER_TEXTURE_HANDLE),
+            5,
+            0x20,
+            0x20,
+            0,
+            actor->alpha,
+            0
+        );
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->x + 0xD4),
+            (s16)(actor->y + i),
+            getRelocatableHeapBlockBase(TITLE_MENU_BANNER_TEXTURE_HANDLE),
+            6,
+            0x20,
+            0x20,
+            0,
+            actor->alpha,
+            0
+        );
+        j = 0;
+        do {
+            drawMenuSpriteWithAlpha(
+                (s16)(actor->x + j),
+                (s16)(actor->y + i),
+                getRelocatableHeapBlockBase(TITLE_MENU_BANNER_TEXTURE_HANDLE),
+                0xB,
+                0x20,
+                0x20,
+                0,
+                actor->alpha,
+                0
+            );
+            j += 0x10;
+        } while (j != limit);
+        i += 0x10;
+    } while (i <= 0x2F);
+
+    if (actor->state < 3) {
+        selected = 0;
+    } else {
+        selected = actor->state - 2;
+        if (actor->state < 5) {
+            if (gPlayerCount == 1) {
+                selected = 1;
+            } else {
+                selected = 2;
+            }
+        } else if (selected >= 5) {
+            selected = 4;
+        }
+    }
+    drawMenuGlyphScript(actor->x, actor->y, gRaceSetupPlayerCountPromptText[selected], 0, actor->alpha, 0);
+
+    if ((actor->state == 1) || (actor->state == 6)) {
+        drawMenuSprite(
+            (s16)(actor->x + 0xD0),
+            (s16)(actor->y + 0x20),
+            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+            (actor->timer >= 8) + 5,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+    }
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupPlayerCountPrompt.s")
+
+void initRaceSetupPlayerCountPrompt(void *arg0) {
+    MenuIntroActor *actor = arg0;
+
+    actor->x = -0x70;
+    actor->y = -0x1C;
+    actor->alpha = 0;
+    actor->state = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupPlayerCountPrompt);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/func_80014168.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupOnePlayerOption.s")
+
+void initRaceSetupOnePlayerOption(MenuItemActor *arg0) {
+    MenuItemActor *actor = arg0;
+
+    actor->x = 0x90;
+    actor->y = -0x18;
+    actor->state = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupOnePlayerOption);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/func_8001453C.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupTwoPlayerOption.s")
+
+void initRaceSetupTwoPlayerOption(MenuItemActor *arg0) {
+    MenuItemActor *actor = arg0;
+
+    actor->x = 0x90;
+    actor->y = 8;
+    actor->state = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupTwoPlayerOption);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/func_800148EC.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupThreePlayerOption.s")
+
+void initRaceSetupThreePlayerOption(MenuItemActor *arg0) {
+    MenuItemActor *actor = arg0;
+
+    actor->x = 0x90;
+    actor->y = 0x28;
+    actor->state = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupThreePlayerOption);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/func_80014C9C.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupFourPlayerOption.s")
+
+void initRaceSetupFourPlayerOption(MenuItemActor *arg0) {
+    MenuItemActor *actor = arg0;
+
+    actor->x = 0x90;
+    actor->y = 0x48;
+    actor->state = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupFourPlayerOption);
+}
+
+void drawRaceSetupPlayerCountCursor(void *arg0) {
+    FadeItemActor *actor = arg0;
+
+    drawMenuSpriteWithAlpha(
+        actor->x,
+        (s16)((actor->y + (gPlayerCount << 5)) - 0x20),
+        getRelocatableHeapBlockBase(gAssetHandles[33]),
+        4,
+        0x20,
+        0x20,
+        0,
+        actor->uAlpha,
+        0
+    );
+}
+
+void updateRaceSetupPlayerCountCursor(FadeItemActor *arg0) {
+    FadeItemActor *actor = arg0;
+    u16 temp_v0;
+    s16 temp_t6;
+    FadeItemActor *temp_a2;
+
+    temp_v0 = actor->alpha;
+    temp_a2 = actor;
+    if ((((((((((temp_v0 & 0xFFFFu) & 0xFFFFu) & 0xFFFFu) & 0xFFFFu) & 0xFFFFu) & 0xFFFFu) & 0xFFFFu) & 0xFFFFu) &
+         0xFFFFu) != 0x100) {
+        temp_t6 = temp_v0 + 0x28;
+        actor->alpha = temp_t6;
+        if ((temp_t6 & 0xFFFF) >= 0x100) {
+            actor->alpha = 0x100;
+            gCurrentGameTask->callbackData1 = 1;
+        }
+    } else if (gMenuFlowState != 0) {
+        temp_a2->x = temp_a2->x - 0x20;
+    }
+    if (temp_a2->x < -0x90) {
+        removeCallbackTask(temp_a2);
+    } else {
+        addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSetupPlayerCountCursor, (void *)temp_a2);
+    }
+}
+
+void initRaceSetupPlayerCountCursor(FadeItemActor *arg0) {
+    FadeItemActor *actor = arg0;
+
+    actor->x = -0x68;
+    actor->y = -0x14;
+    actor->alpha = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupPlayerCountCursor);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/func_8001516C.s")
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupSavePanelFrame.s")
+
+void initRaceSetupSavePanelFrame(RectListActor *arg0) {
+    RectListActor *actor = arg0;
+
+    actor->rects[0].x0 = -0x114;
+    actor->rects[1].x0 = -0xA4;
+    actor->rects[0].y0 = -0x114;
+    actor->rects[1].y0 = 0x48;
+    actor->rects[0].x1 = 0x90;
+    actor->rects[1].x1 = -0xA4;
+    actor->rects[0].y1 = 0x90;
+    actor->rects[1].y1 = 0x48;
+    actor->stepLimit = 0x8C;
+    actor->stepIncrement = 0x44;
+    actor->frame = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupSavePanelFrame);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupSavePanelIcons.s")
+
+void updateRaceSetupSavePanelIcons(void *arg0) {
+    RectListActor *temp_a2;
+    RectListActor *actor = arg0;
+    s32 i;
+
+    for (i = 0; i < 4; i++) {
+        actor->rectCoords[i] = gRaceSetupSavePanelRects[0][i];
+        actor->rectCoords[i + 4] = gRaceSetupSavePanelRects[1][i];
+    }
+    temp_a2 = actor;
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSetupSavePanelIcons, (void *)temp_a2);
+}
+
+void initRaceSetupSavePanelIcons(RectListActor *arg0) {
+    RectListActor *actor = arg0;
+
+    actor->rects[0].x0 = -0x114;
+    actor->rects[1].x0 = -0xA4;
+    actor->rects[0].y0 = -0x114;
+    actor->rects[1].y0 = 0x48;
+    actor->rects[0].x1 = 0x90;
+    actor->rects[1].x1 = -0xA4;
+    actor->rects[0].y1 = 0x90;
+    actor->rects[1].y1 = 0x48;
+    actor->stepLimit = 4;
+    actor->stepIncrement = 0x11;
+    actor->stepAccumulator = 2;
+    actor->unk2E = 0x27;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupSavePanelIcons);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupSaveStatusWidgets.s")
+
+void updateRaceSetupSaveStatusWidgets(TitleMenuWidgetActor *arg0) {
+    s32 transitionStateSum;
+    TitleMenuWidgetActor *actor;
+    s32 playerIndex;
+    TitleMenuWidgetActor *panelPositions;
+
+    panelPositions = gMenuScratch0.saveWidgets;
+    actor = arg0;
+    for (playerIndex = 0; playerIndex < (s32)gPlayerCount; playerIndex++) {
+        actor->x[playerIndex] = panelPositions->x[playerIndex];
+        actor->y[playerIndex] = panelPositions->y[playerIndex];
+
+        if (gRaceSetupMenuSubState.statusTransitionStates[playerIndex] != actor->statusTransitionStates[playerIndex]) {
+            actor->statusTransitionStates[playerIndex] = gRaceSetupMenuSubState.statusTransitionStates[playerIndex];
+            actor->nextStatusCodes[playerIndex] = gRaceSetupMenuSubState.nextStatusCodes[playerIndex];
+        }
+
+        switch (actor->statusTransitionStates[playerIndex]) {
+            case SAVE_STATUS_TRANSITION_FADE_IN:
+                actor->alpha[playerIndex] += SAVE_STATUS_FADE_STEP;
+                if (actor->alpha[playerIndex] >= 0x100) {
+                    actor->alpha[playerIndex] = 0x100;
+                    actor->statusTransitionStates[playerIndex] = SAVE_STATUS_TRANSITION_NONE;
+                }
+                break;
+            case SAVE_STATUS_TRANSITION_FADE_OUT:
+                actor->alpha[playerIndex] -= SAVE_STATUS_FADE_STEP;
+                if (actor->alpha[playerIndex] <= 0) {
+                    actor->alpha[playerIndex] = 0;
+                    actor->statusTransitionStates[playerIndex] = SAVE_STATUS_TRANSITION_FADE_IN;
+                    gControllerPakStatusCodes[playerIndex] = arg0->nextStatusCodes[playerIndex];
+                }
+                break;
+            case SAVE_STATUS_TRANSITION_NONE:
+            case SAVE_STATUS_TRANSITION_DONE:
+                break;
+        }
+
+        gRaceSetupMenuSubState.statusTransitionStates[playerIndex] = actor->statusTransitionStates[playerIndex];
+    }
+
+    arg0->frame = (arg0->frame + 1) & 0xF;
+    transitionStateSum = 0;
+    for (playerIndex = 0; playerIndex < (s32)gPlayerCount; playerIndex++) {
+        transitionStateSum += actor->statusTransitionStates[playerIndex];
+    }
+
+    if (transitionStateSum == (gPlayerCount * SAVE_STATUS_TRANSITION_DONE)) {
+        removeCallbackTask(arg0);
+    } else {
+        addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSetupSaveStatusWidgets, (void *)arg0);
+    }
+}
+
+void initRaceSetupSaveStatusWidgets(TitleMenuWidgetActor *arg0) {
+    s32 i;
+    TitleMenuWidgetActor *new_var;
+
+    arg0->x[0] = -0x114;
+    arg0->y[0] = -0xA4;
+    arg0->x[1] = -0x114;
+    arg0->y[1] = 0x48;
+    arg0->x[2] = 0x90;
+    new_var = arg0;
+    new_var->y[2] = -0xA4;
+    new_var->x[3] = 0x90;
+    new_var->y[3] = 0x48;
+
+    for (i = 0; i < gPlayerCount; i++) {
+        new_var->alpha[i] = 0x100;
+        new_var->statusTransitionStates[i] = SAVE_STATUS_TRANSITION_NONE;
+    }
+
+    setCallbackTaskCallback(new_var, (CallbackTaskCallback)updateRaceSetupSaveStatusWidgets);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupSaveChoicePrompts.s")
+
+void updateRaceSetupSaveChoicePrompts(TitleMenuTransitionActor *arg0) {
+    TitleMenuTransitionActor *actor;
+    s32 i;
+    s32 step;
+    s32 stepAmount;
+    u32 new_var;
+    s16 state;
+
+    actor = arg0;
+    i = 0;
+    if (gPlayerCount > 0) {
+        do {
+            if (gRaceSetupMenuSubState.pendingStatusCodes[i] != actor->selection[i]) {
+                actor->selection[i] = gRaceSetupMenuSubState.pendingStatusCodes[i];
+            }
+
+            state = gMenuChoicePromptState[i];
+            new_var = 4;
+            if ((state != 0) && ((state ^ 0) != 3) && (state != new_var)) {
+                if (state < 5) {
+                    step = 1;
+                } else {
+                    step = -1;
+                }
+
+                stepAmount = step * 8;
+                actor->slideOffset[i] += stepAmount;
+                state = actor->slideOffset[i];
+                new_var = 0x20;
+                if (state == new_var) {
+                    gMenuChoicePromptState[i] += 2;
+                    actor->alphaTimer[i] = 0;
+                    actor->alpha[i] = 0x100;
+                    state = actor->slideOffset[i];
+                }
+
+                if (stepAmount == 8) {
+                    if (state < 0x18) {
+                        actor->y[i] += 8;
+                    }
+                    actor->topY[i] += 8;
+                    state = gMenuChoicePromptState[i];
+                } else {
+                    if (state < 0x10) {
+                        actor->y[i] -= 8;
+                    }
+                    actor->topY[i] -= 8;
+                    state = gMenuChoicePromptState[i];
+                }
+            }
+
+            new_var = 4;
+            if (((state ^ 0) == 3) || (state == new_var)) {
+                if ((s32)(u16)actor->alphaTimer[i] < 0x10) {
+                    actor->alpha[i] -= 9;
+                } else {
+                    actor->alpha[i] += 9;
+                }
+                actor->alphaTimer[i] = ((u16)(*actor).alphaTimer[i] + 1) & 0x1F;
+            }
+            i++;
+        } while (i < gPlayerCount);
+
+        if (((!state) && (!state)) && (!state)) {}
+    }
+
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSetupSaveChoicePrompts, (void *)arg0);
+}
+
+void initRaceSetupSaveChoicePrompts(RectListActor *arg0) {
+    RectListActor *actor = arg0;
+
+    actor->rects[0].x0 = -0x70;
+    actor->rects[1].x0 = -0x34;
+    actor->rects[2].x0 = -0x34;
+    actor->rects[0].y0 = -0x70;
+    actor->rects[1].y0 = 0x30;
+    actor->rects[2].y0 = 0x30;
+    actor->rects[0].x1 = 0x1C;
+    actor->rects[1].x1 = -0x34;
+    actor->rects[2].x1 = -0x34;
+    actor->rects[0].y1 = 0x1C;
+    actor->rects[1].y1 = 0x30;
+    actor->rects[2].y1 = 0x30;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupSaveChoicePrompts);
+}
+
+void drawScrollingMenuBackdropActor(void *arg0) {
+    SpriteActor *actor = arg0;
+
+    drawMenuTilemapSprite(&actor->sprite.render, MENU_TILEMAP_TEXEL_4B, actor->x, actor->y);
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateScrollingMenuBackdropActor.s")
+
+void initScrollingMenuBackdropActor(SpriteActor *arg0) {
+    SpriteActor *temp_a2 = arg0;
+
+    initMenuTilemapSprite(&temp_a2->sprite, getRelocatableHeapBlockBase(gAssetHandles[38]));
+    temp_a2->x = temp_a2->sprite.render.tilemapWidth;
+    temp_a2->y = temp_a2->sprite.render.tilemapHeight;
+    setCallbackTaskCallback(temp_a2, (CallbackTaskCallback)updateScrollingMenuBackdropActor);
+}
 
 void initMenuTilemapSprite(MenuTilemapSprite *arg0, MenuTilemapSpriteAsset *arg1) {
     MenuTilemapSprite *dst = arg0;

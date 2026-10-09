@@ -180,14 +180,17 @@ else
 
 fi
 
+FUNC_NAME="${FUNC_NAME##*/}"
+
 # Setup working directory
 # Use the function name (without .s extension) for directory naming
 if [ "$USE_SCRATCH_SOURCE" = true ]; then
     # Strip .s extension if present from DIFF_LABEL for directory name
     DIR_NAME="${DIFF_LABEL%.s}"
 else
-    # Use original argument for directory name
-    DIR_NAME="$ARG"
+    # A full assembly path still gets a single function workspace directory
+    DIR_NAME="${ARG##*/}"
+    DIR_NAME="${DIR_NAME%.s}"
 fi
 
 if [ -n "$ID" ]; then
@@ -238,10 +241,14 @@ elif [ "$BOOTSTRAP" = true ]; then
         # asm/nonmatchings/10AD0/func_8000FED0_10AD0.s -> src.us/10AD0.c
         # asm/nonmatchings/levels/crazy_jungle_boss/func_800BB2B0_ABAE0.s -> src.us/levels/crazy_jungle_boss.c
         ASM_DIR=$(dirname "$ASM_PATH")
-        # Remove the "asm/nonmatchings/" or "asm/matchings/" prefix
-        RELATIVE_DIR=${ASM_DIR#asm/nonmatchings/}
-        RELATIVE_DIR=${RELATIVE_DIR#asm/matchings/}
-        C_FILE="src.us/${RELATIVE_DIR}.c"
+        # Select the region and remove the assembly-directory prefix
+        SOURCE_ROOT=src.us
+        [[ "$ASM_DIR" != asm.jp/* ]] || SOURCE_ROOT=src.jp
+        RELATIVE_DIR=${ASM_DIR#asm.jp/}
+        RELATIVE_DIR=${RELATIVE_DIR#asm/}
+        RELATIVE_DIR=${RELATIVE_DIR#nonmatchings/}
+        RELATIVE_DIR=${RELATIVE_DIR#matchings/}
+        C_FILE="${SOURCE_ROOT}/${RELATIVE_DIR}.c"
 
         # Generate context file if the C file exists
         CONTEXT_ARG=""

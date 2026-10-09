@@ -1,0 +1,143 @@
+#include "common.h"
+#include <PR/os_libc.h>
+#include "game/engine/asset_manager.h"
+#include "game/engine/render_callback.h"
+#include "game/engine/relocatable_heap.h"
+#include "game/engine/callback_task_scheduler.h"
+#include "game/engine/controller_input.h"
+#include "game/ending/ending_credits_ui.h"
+#include "game/ending/ending_credits_flow.h"
+#include "font_encoding.h"
+#include <PR/rmon.h>
+#include "game/menu/renderer/menu_renderer.h"
+
+#define ENDING_CREDITS_TEXT_FADE_MAX 0x100
+#define ENDING_CREDITS_PAGE_FADE_STEP 0xA
+#define ENDING_CREDITS_PAGE_RESET_DELAY 0x20
+#define ENDING_CREDITS_PAGE_VISIBLE_FRAMES 0x96
+#define ENDING_CREDITS_PAGE_COUNT 0x19
+
+typedef struct EndingObjectSpriteDebugViewerActor {
+    u8 pad0[0x18];
+    s16 x;
+    s16 y;
+    s16 spriteId;
+    u8 enabled;
+    u8 palette;
+} EndingObjectSpriteDebugViewerActor;
+
+extern void drawEndingCreditsPageText(EndingCreditsPageTextActor *arg0);
+extern void updateEndingCreditsTheEndTextFadeIn(EndingCreditsPageTextActor *arg0);
+extern void updateEndingCreditsPageText(EndingCreditsPageTextActor *arg0);
+extern void updateEndingObjectSpriteDebugViewer(EndingObjectSpriteDebugViewerActor *arg0);
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/ending/ending_credits_ui/drawEndingCreditsPageText.s")
+
+void drawEndingCreditsTheEndText(EndingCreditsPageTextActor *arg0) {
+    drawMenuSpriteWithAlpha(
+        arg0->x,
+        arg0->y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        0x35,
+        0x20,
+        0x20,
+        0,
+        arg0->alpha,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(arg0->x + 0x40),
+        arg0->y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        0x36,
+        0x20,
+        0x20,
+        0,
+        arg0->alpha,
+        0
+    );
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/ending/ending_credits_ui/updateEndingCreditsTheEndTextFadeIn.s")
+
+void updateEndingCreditsPageText(EndingCreditsPageTextActor *arg0) {
+    switch (arg0->state) {
+        case 0:
+            arg0->alpha += ENDING_CREDITS_PAGE_FADE_STEP;
+            if (!(arg0->alpha < ENDING_CREDITS_TEXT_FADE_MAX)) {
+                arg0->alpha = ENDING_CREDITS_TEXT_FADE_MAX;
+                arg0->state = 1;
+                arg0->timer = 0;
+            }
+            break;
+        case 1:
+            arg0->timer = arg0->timer + 1;
+            if (arg0->timer == ENDING_CREDITS_PAGE_VISIBLE_FRAMES) {
+                arg0->timer = 0;
+                arg0->state = 2;
+            }
+            break;
+        case 2:
+            arg0->alpha -= ENDING_CREDITS_PAGE_FADE_STEP;
+            if (!(arg0->alpha > 0)) {
+                arg0->alpha = 0;
+                arg0->state = 3;
+                arg0->pageIndex = arg0->pageIndex + 1;
+                if (arg0->pageIndex == ENDING_CREDITS_PAGE_COUNT) {
+                    arg0->pageIndex = 0;
+                    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateEndingCreditsTheEndTextFadeIn);
+                }
+                if (gEndingCreditsSequencePhase == 0) {
+                    gEndingCreditsSequencePhase = 1;
+                }
+            }
+            break;
+        case 3:
+            arg0->timer = arg0->timer + 1;
+            if (!(arg0->timer < ENDING_CREDITS_PAGE_RESET_DELAY)) {
+                arg0->timer = 0;
+                arg0->state = 0;
+            }
+            break;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawEndingCreditsPageText, arg0);
+}
+
+void initEndingCreditsPageTextActor(EndingCreditsPageTextActor *arg0) {
+    arg0->state = 3;
+    arg0->pageIndex = 0;
+    arg0->x = -0x40;
+    arg0->y = 0x10;
+    arg0->alpha = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateEndingCreditsPageText);
+}
+
+void drawEndingObjectSpriteDebugViewer(EndingObjectSpriteDebugViewerActor *arg0) {
+    char sp38[0x10];
+
+    if (arg0->enabled == 1) {
+        drawMenuSprite(
+            arg0->x,
+            arg0->y,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            (u16)arg0->spriteId,
+            0x20,
+            0x20,
+            arg0->palette,
+            0
+        );
+        sprintf(sp38, "ENDOBJ %2d \n", arg0->spriteId);
+        drawMenuAsciiText(0x40, -0x66, sp38, 0, 0x100);
+    }
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/ending/ending_credits_ui/updateEndingObjectSpriteDebugViewer.s")
+
+void initEndingObjectSpriteDebugViewerActor(EndingObjectSpriteDebugViewerActor *arg0) {
+    arg0->x = 0;
+    arg0->y = 0;
+    arg0->spriteId = 0;
+    arg0->enabled = 0;
+    arg0->palette = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateEndingObjectSpriteDebugViewer);
+}
