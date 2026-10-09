@@ -45,6 +45,16 @@ typedef struct {
     u8 rightTargets[0x10];
 } MainMenuModeSelectByteData;
 
+extern MenuGlyphScript *raceRecordLapCountTexts[];
+
+extern MenuGlyphScript raceRecordSettingsTitleText[];
+
+extern s16 courseRecordDigitTileOffsets[];
+
+extern s16 gRaceLapCount;
+
+extern MenuGlyphScript mainMenuSettingsTitleText[];
+
 extern MenuGlyphScript *mainMenuModeDescriptionTitles[];
 
 extern s16 gMenuFadeAlpha;
@@ -572,7 +582,53 @@ void updateRaceGhostUnavailableMessage(void *arg0) {
     addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceGhostUnavailableMessage, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_panel_ui/drawMainMenuSettingsPanel.s")
+void drawMainMenuSettingsPanel(void *arg0) {
+    s32 y;
+    s32 edgeX;
+    s32 edgeY;
+    s32 yOrigin;
+    s32 xOrigin;
+
+    xOrigin = -0x74;
+    yOrigin = 0x54;
+
+    drawMenuSprite(-0x84, -0x64, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 2, 0x20, 0x20, 0, 0);
+    drawMenuSprite(0x78, -0x64, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 4, 0x20, 0x20, 0, 0);
+
+    edgeX = xOrigin;
+    for (;;) {
+        drawMenuSprite(edgeX, -0x64, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 3, 0x20, 0x20, 0, 0);
+        drawMenuSprite(edgeX, -0x2C, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 8, 0x20, 0x20, 0, 0);
+        edgeX += 0x10;
+
+        if (!(edgeX < 0x7C)) {
+            break;
+        }
+    }
+
+    drawMenuSprite(-0x84, -0x2C, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 7, 0x20, 0x20, 0, 0);
+    drawMenuSprite(0x78, -0x2C, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 9, 0x20, 0x20, 0, 0);
+
+    edgeY = -yOrigin;
+    for (;;) {
+        drawMenuSprite(-0x84, edgeY, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 5, 0x20, 0x20, 0, 0);
+        drawMenuSprite(0x78, edgeY, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 6, 0x20, 0x20, 0, 0);
+        edgeY += 0x10;
+
+        if (!(edgeY < -0x24)) {
+            break;
+        }
+    }
+
+    if (yOrigin) {}
+
+    for (edgeX = xOrigin; edgeX != 0x7C; edgeX += 0x10) {
+        for (y = -yOrigin; y != -0x24; y += 0x10) {
+            drawMenuSprite(edgeX, y, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 0xB, 0x20, 0x20, 0, 0);
+        }
+    }
+    drawMenuColoredGlyphScript(-0x70, -0x58, mainMenuSettingsTitleText, 0, 0x100, 5, 0x29);
+}
 
 void drawMainMenuSettingsOptions(void *arg0) {
     s32 var_v0;
@@ -662,7 +718,123 @@ void initMainMenuSettingsPanel(MenuPanelActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateMainMenuSettingsPanel);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_panel_ui/drawRaceRecordSettingsPanel.s")
+void drawRaceRecordSettingsPanel(void *arg0) {
+    s32 x;
+    s32 x2;
+    s16 xStart;
+    s32 y1;
+    s32 y;
+    s32 y2;
+
+    xStart = 0x74;
+
+    drawMenuSprite(-0x84, 0x1C, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 2, 0x20, 0x20, 0, 0);
+    drawMenuSprite(0x78, 0x1C, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 4, 0x20, 0x20, 0, 0);
+    x = -xStart;
+    for (;;) {
+        drawMenuSprite((s16)x, 0x1C, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 3, 0x20, 0x20, 0, 0);
+        drawMenuSprite((s16)x, 0x54, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 8, 0x20, 0x20, 0, 0);
+        x += 0x10;
+
+        if (!(x < 0x7C)) {
+            break;
+        }
+    }
+    drawMenuSprite(-0x84, 0x54, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 7, 0x20, 0x20, 0, 0);
+    drawMenuSprite(0x78, 0x54, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 9, 0x20, 0x20, 0, 0);
+    y1 = 0x2C;
+    for (;;) {
+        drawMenuSprite(-0x84, (s16)y1, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 5, 0x20, 0x20, 0, 0);
+        drawMenuSprite(0x78, (s16)y1, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 6, 0x20, 0x20, 0, 0);
+        y1 = (y1 + 0x10) * 1;
+
+        if (!(y1 < 0x5C)) {
+            break;
+        }
+    }
+    for (x = -0x74; x < 0x7C; x += 0x10) {
+        for (y = 0x2C; y != 0x5C; y += 0x10) {
+            drawMenuSprite(
+                (s16)x,
+                (s16)y,
+                getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE),
+                0xB,
+                0x20,
+                0x20,
+                0,
+                0
+            );
+        }
+    }
+    drawMenuColoredGlyphScript(-0x70, 0x28, raceRecordSettingsTitleText, 0, 0x100, 7, 0x29);
+    drawMenuSprite(-0x40, -0x30, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 2, 0x20, 0x20, 0, 0);
+    drawMenuSprite(0x30, -0x30, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 4, 0x20, 0x20, 0, 0);
+    x2 = -0x30;
+    for (;;) {
+        drawMenuSprite((s16)x2, -0x30, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 3, 0x20, 0x20, 0, 0);
+        drawMenuSprite((s16)x2, 0, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 8, 0x20, 0x20, 0, 0);
+        x2 = (x2 + 0x10) * 1;
+
+        if (!(x2 < 0x30)) {
+            break;
+        }
+    }
+    y2 = -0x20;
+    for (;;) {
+        drawMenuSprite(-0x40, (s16)y2, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 5, 0x20, 0x20, 0, 0);
+        drawMenuSprite(0x30, (s16)y2, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 6, 0x20, 0x20, 0, 0);
+        y2 += 0x10;
+
+        if (!((y2 - 0) < 0)) {
+            break;
+        }
+    }
+    for (x2 = -0x30; x2 != 0x30; x2 += 0x10) {
+        for (y = -0x20; y != 0; y += 0x10) {
+            drawMenuSprite(
+                (s16)x2,
+                (s16)y,
+                getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE),
+                0xB,
+                0x20,
+                0x20,
+                0,
+                0
+            );
+        }
+    }
+    drawMenuSprite(-0x40, 0, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 7, 0x20, 0x20, 0, 0);
+    drawMenuSprite(0x30, 0, getRelocatableHeapBlockBase(MENU_PANEL_TEXTURE_HANDLE), 9, 0x20, 0x20, 0, 0);
+    if (gMenuFlowState == 0) {
+        if (gRaceLapCount != 1) {
+            if (gUiBlinkTimer & 8) {
+                drawAssetTableSprite(-0x30, -0x2A, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 0xC);
+            }
+        }
+        if ((gRaceLapCount != 9) && (gUiBlinkTimer & 8)) {
+            drawAssetTableSprite(-0x30, -6, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 0xD);
+        }
+    }
+    if ((gMenuFlowState != 0) && (gUiBlinkTimer & 1)) {
+        drawMenuColoredGlyphScript(-0x30, -0x18, raceRecordLapCountTexts[gRaceLapCount], 0, 0x100, 0, 0x29);
+    } else {
+        drawMenuColoredGlyphScript(-0x30, -0x18, raceRecordLapCountTexts[gRaceLapCount], 0, 0x100, 5, 0x29);
+    }
+    drawAssetTableSprite(-0x54, -0x60, getRelocatableHeapBlockBase(gAssetHandles[0x1C]), 0x5D);
+    drawAssetTableSprite(4, -0x60, getRelocatableHeapBlockBase(gAssetHandles[0x1C]), 0x5E);
+    drawAssetTableSprite(
+        -0x4C,
+        -0x5C,
+        getRelocatableHeapBlockBase(gAssetHandles[0x1D]),
+        (u16)courseRecordDigitTileOffsets[gRaceCourseIndex.signedValue]
+    );
+    drawAssetTableSprite(
+        4,
+        -0x5C,
+        getRelocatableHeapBlockBase(gAssetHandles[0x1D]),
+        courseRecordDigitTileOffsets[gRaceCourseIndex.signedValue] + 1
+    );
+}
 
 void updateRaceRecordSettingsPanel(MenuPanelActor *arg0) {
     addRenderCallback(&gMenuRenderCallbackList, drawRaceRecordSettingsPanel, arg0);

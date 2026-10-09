@@ -14,6 +14,8 @@
 #include "game/menu/race_setup/race_setup_ui.h"
 #include "game/race/player/race_player_input.h"
 
+extern MenuGlyphScript gControllerPakContinuePromptText[8];
+
 extern MenuGlyphScript gControllerPakCouldNotEraseNoteText[56];
 
 extern MenuGlyphScript gControllerPakRumblePakText[20];
@@ -30,7 +32,174 @@ extern u8 gControllerPakDeletePromptState;
 
 extern u8 gControllerPakMenuCursorState;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/drawControllerPakContinuePrompt.s")
+void drawControllerPakContinuePrompt(ControllerPakOptionsActor *arg0) {
+    s32 i;
+    s32 j;
+    u16 alpha;
+
+    drawMenuSprite(
+        (s16)(arg0->common.x - 4),
+        (s16)(arg0->common.y - 4),
+        getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+        2,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    drawMenuSprite(
+        (s16)(arg0->common.x + 0xD4),
+        (s16)(arg0->common.y - 4),
+        getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+        4,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+
+    i = 0;
+    for (;;) {
+        drawMenuSprite(
+            (s16)(arg0->common.x + i),
+            (s16)(arg0->common.y - 4),
+            getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+            3,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+        drawMenuSprite(
+            (s16)(arg0->common.x + i),
+            (s16)(arg0->common.y + 0x24),
+            getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+            8,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+        i += 0x10;
+
+        if (!(i < 0xE0)) {
+            break;
+        }
+    }
+
+    drawMenuSprite(
+        (s16)(arg0->common.x - 4),
+        (s16)(arg0->common.y + 0x24),
+        getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+        7,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    drawMenuSprite(
+        (s16)(arg0->common.x + 0xD4),
+        (s16)(arg0->common.y + 0x24),
+        getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+        9,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+
+    i = 0;
+loop_outer:
+    drawMenuSprite(
+        (s16)(arg0->common.x - 4),
+        (s16)(arg0->common.y + i),
+        getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+        5,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    drawMenuSprite(
+        (s16)(arg0->common.x + 0xD4),
+        (s16)(arg0->common.y + i),
+        getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+        6,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    j = 0;
+    for (;;) {
+        drawMenuSprite(
+            (s16)(arg0->common.x + j),
+            (s16)(arg0->common.y + i),
+            getRelocatableHeapBlockBase(gAssetHandles[0x29]),
+            0xB,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+        j += 0x10;
+
+        if (!(j != 0xE0)) {
+            break;
+        }
+    }
+    i += 0x10;
+    if (i != 0x30) {
+        // IDO register allocation nudge for matching codegen.
+        if (1) {}
+        goto loop_outer;
+    }
+
+    drawMenuGlyphScript((s16)(arg0->common.x + 8), arg0->common.y, gControllerPakContinuePromptText, 0, 0x100, 0);
+
+    alpha = (arg0->selectedOption == 0) ? 0x100 : 0x60;
+
+    drawMenuSpriteWithAlpha(
+        (s16)(arg0->common.x + 0x4C),
+        (s16)(arg0->common.y + 0x10),
+        getRelocatableHeapBlockBase(gAssetHandles[0x24]),
+        0x17,
+        0x20,
+        0x20,
+        0,
+        alpha,
+        0
+    );
+
+    if (alpha == 0x100) {
+        alpha = 0x60;
+    } else {
+        alpha = 0x100;
+    }
+
+    drawMenuSpriteWithAlpha(
+        (s16)(arg0->common.x + 0x4C),
+        (s16)(arg0->common.y + 0x20),
+        getRelocatableHeapBlockBase(gAssetHandles[0x24]),
+        0x18,
+        0x20,
+        0x20,
+        0,
+        alpha,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(arg0->common.x + 0x4C),
+        (s16)(arg0->common.y + (arg0->selectedOption * 0x10) + 0x10),
+        getRelocatableHeapBlockBase(gAssetHandles[0x24]),
+        0x12,
+        0x20,
+        0x20,
+        0,
+        arg0->scale,
+        0
+    );
+}
 
 void updateControllerPakContinuePrompt(ControllerPakOptionsActor *arg0) {
     s32 temp_v0;

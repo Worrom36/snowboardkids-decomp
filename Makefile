@@ -427,6 +427,9 @@ $(BUILD_DIR)/src.jp/race/ui/race_hud.o: C_OBJ_POSTPROCESS = \
 $(BUILD_DIR)/src.jp/ending/ending_credits_ui.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .rodata 16
 
+$(BUILD_DIR)/src.jp/menu/character_select/character_select_course_ui.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .rodata 4
+
 endif
 
 # Patch ll.o for modern binutils, matching the upstream libultra build.

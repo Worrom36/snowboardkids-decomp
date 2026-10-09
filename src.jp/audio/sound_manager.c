@@ -701,4 +701,44 @@ void enqueuePlayerPositionalSoundEffect(s16 arg0, Vec3i *arg1, s16 arg2, s16 arg
     enqueuePositionalSoundRequest(arg0, arg1, arg2, arg3, 0.0f, arg4 + 4, minVolume);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/playPendingPositionalSoundRequests.s")
+void playPendingPositionalSoundRequests(void) {
+    PositionalSoundRequest *node;
+    s16 mode;
+
+    osStopThread(&gAudioThread);
+    node = gPendingPositionalSoundRequests;
+
+    while (node != NULL) {
+        mode = node->mode;
+        switch (mode) {
+            case -1:
+                enqueueSoundEffectWithVolume(
+                    node->soundId,
+                    calculatePositionalSoundVolume(&node->pos, node->volume),
+                    node->priority
+                );
+                break;
+
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+                updatePlayerLoopingPositionalSound(node->soundId, mode, node->volume, node->pitch);
+                break;
+
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+                playPlayerPositionalSound(node->soundId, mode - 4, node->volume, node->minVolume);
+                break;
+
+            case 10:
+                updateSingleLoopingPositionalSound(node->soundId, &node->pos, node->volume);
+                break;
+        }
+        node = node->next;
+    }
+
+    osStartThread(&gAudioThread);
+}

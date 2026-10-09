@@ -17,7 +17,9 @@ extern void redrawTrainingCourseLessonEndMenu(TrainingCourseUiActor *arg0);
 extern void drawTrainingCourseLessonEndMenu(TrainingCourseUiActor *arg0);
 extern void updateTrainingCourseLessonEndMenu(TrainingCourseUiActor *);
 extern void drawTrainingCourseDialog(TrainingCourseUiActor *);
-extern void updateTrainingCourseDialog(TrainingCourseUiActor *);
+extern void redrawTrainingCourseDialog(TrainingCourseUiActor *);
+
+void updateTrainingCourseDialog(TrainingCourseUiActor *);
 extern void drawTrainingCourseLessonTitlePanel(TrainingCourseUiActor *);
 extern void updateTrainingCourseLessonTitlePanelScrollOut(TrainingCourseUiActor *);
 extern void updateTrainingCourseLessonTitlePanel(TrainingCourseUiActor *);
@@ -277,7 +279,76 @@ void updateTrainingCourseDialogScrollOut(TrainingCourseUiActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/training/training_course_ui/updateTrainingCourseDialog.s")
+void updateTrainingCourseDialog(TrainingCourseUiActor *arg0) {
+    TrainingCourseUiScript *scan;
+    s32 keepScanning;
+    u16 token;
+
+    switch (arg0->scriptState) {
+        case 0:
+            keepScanning = 1;
+            if ((gPlayerInputPressed[0] & A_BUTTON) || (gPlayerInputPressed[0] & START_BUTTON)) {
+                scan = arg0->layout.script;
+                arg0->state.script.visibleGlyphCount = 0;
+                for (keepScanning = 1; keepScanning;) {
+                    token = *scan;
+                    if (token < 0xFF00) {
+                        scan++;
+                        arg0->state.script.visibleGlyphCount++;
+                    } else {
+                        if (token == 0xFFFD) {
+                            scan++;
+                        }
+                        if (token == 0xFFFE) {
+                            scan++;
+                            arg0->state.script.visibleGlyphCount++;
+                        }
+                        if (token == 0xFFFC) {
+                            scan += 2;
+                        }
+                        if (token == 0xFFFB) {
+                            keepScanning = 0;
+                        }
+                        if (token == 0xFFFF) {
+                            keepScanning = 0;
+                        }
+                    }
+                }
+            }
+            break;
+        case 1:
+            arg0->confirmBlinkTimer = (arg0->confirmBlinkTimer + 1) & 0xF;
+            if ((A_BUTTON & gPlayerInputPressed[0]) || (gPlayerInputPressed[0] & START_BUTTON)) {
+                enqueueSoundEffect(1, 0x32);
+                arg0->confirmBlinkTimer = 0;
+                gMainMenuSelectionResult = 1;
+                if (arg0->keepVisibleAfterConfirm == 0) {
+                    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateTrainingCourseDialogScrollOut);
+                } else {
+                    setCallbackTaskCallback(arg0, (CallbackTaskCallback)redrawTrainingCourseDialog);
+                }
+            }
+            break;
+        case 2:
+            arg0->confirmBlinkTimer = (arg0->confirmBlinkTimer + 1) & 0xF;
+            if ((gPlayerInputPressed[0] & A_BUTTON) || (gPlayerInputPressed[0] & START_BUTTON)) {
+                enqueueSoundEffect(1, 0x32);
+
+                while (*arg0->layout.script != 0xFFFB) {
+                    arg0->layout.script++;
+                }
+
+                arg0->layout.script++;
+                arg0->scriptState = 0;
+                arg0->state.script.visibleGlyphCount = 1;
+                arg0->glyphTimer = 0;
+                arg0->confirmBlinkTimer = 0;
+            }
+            break;
+    }
+
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawTrainingCourseDialog, (void *)arg0);
+}
 
 void initTrainingCourseOpeningDialog(TrainingCourseUiActor *arg0) {
     arg0->x = -0x80;

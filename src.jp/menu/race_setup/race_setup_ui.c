@@ -33,6 +33,14 @@ typedef struct {
     u8 saveChoicePromptTopSprites[0x41];
 } RaceSetupSavePromptData;
 
+extern MenuGlyphScript gRaceSetupFourPlayerOptionText[10];
+
+extern MenuGlyphScript gRaceSetupThreePlayerOptionText[10];
+
+extern MenuGlyphScript gRaceSetupTwoPlayerOptionText[10];
+
+extern MenuGlyphScript gRaceSetupOnePlayerOptionText[10];
+
 extern const char D_800DFDB4[];
 
 extern const char D_800DFDB0[];
@@ -287,7 +295,85 @@ void initRaceSetupPlayerCountPrompt(void *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupPlayerCountPrompt);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupOnePlayerOption.s")
+void drawRaceSetupOnePlayerOption(void *arg0) {
+    MenuItemActor *actor = arg0;
+    s16 unused;
+    s16 width;
+    s16 xOffset;
+    s16 yOffset;
+    u16 alpha;
+
+    if (actor->state == 0) {
+        alpha = 0x100;
+        width = 0x18;
+        xOffset = 0x10;
+        yOffset = 0;
+    } else if (gPlayerCount == 1) {
+        alpha = 0x100;
+        width = 0x20;
+        xOffset = 0xC;
+        yOffset = 8;
+    } else {
+        alpha = 0x60;
+        width = 0x10;
+        xOffset = 0x14;
+        yOffset = -4;
+    }
+
+    if ((gMenuSelectionConfirmTimer == 0) || (gMenuSelectionConfirmTimer & 1) || (gPlayerCount != 1)) {
+        drawMenuSpriteWithAlpha(
+            actor->x,
+            actor->y,
+            getRelocatableHeapBlockBase(gAssetHandles[33]),
+            3,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            0
+        );
+        if (width == 0x20) {
+            drawMenuSpriteWithAlpha(
+                (s16)(actor->x + xOffset),
+                (s16)(actor->y - yOffset),
+                getRelocatableHeapBlockBase(gAssetHandles[31]),
+                0,
+                width,
+                width,
+                0,
+                alpha,
+                0
+            );
+        } else {
+            drawMenuSpriteWithPaletteScale(
+                (s16)(actor->x + xOffset),
+                (s16)(actor->y - yOffset),
+                getRelocatableHeapBlockBase(gAssetHandles[31]),
+                0,
+                alpha
+            );
+        }
+        drawMenuGlyphScriptDefaultFont(
+            (s16)(actor->x + 0x30),
+            (s16)(actor->y + 4),
+            gRaceSetupOnePlayerOptionText,
+            0,
+            alpha
+        );
+    }
+
+    drawMenuSpriteWithAlpha(
+        (s16)(actor->x + 0x80),
+        actor->y,
+        getRelocatableHeapBlockBase(gAssetHandles[33]),
+        7,
+        0x20,
+        0x20,
+        0,
+        alpha,
+        0
+    );
+}
 
 void updateRaceSetupOnePlayerOption(MenuItemActor *arg0) {
     MenuItemActor *child;
@@ -340,7 +426,88 @@ void initRaceSetupOnePlayerOption(MenuItemActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupOnePlayerOption);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupTwoPlayerOption.s")
+void drawRaceSetupTwoPlayerOption(MenuItemActor *arg0) {
+    MenuItemActor *actor = arg0;
+    s16 unused;
+    s16 width;
+    s16 xOffset;
+    s16 yOffset;
+    u16 alpha;
+    s32 i;
+
+    if (actor->state == 0) {
+        alpha = 0x100;
+        width = 0x18;
+        xOffset = 0x10;
+        yOffset = 0;
+    } else if (gPlayerCount == 2) {
+        alpha = 0x100;
+        width = 0x20;
+        xOffset = 0xC;
+        yOffset = 8;
+    } else {
+        alpha = 0x60;
+        width = 0x10;
+        xOffset = 0x14;
+        yOffset = -4;
+    }
+
+    if ((gMenuSelectionConfirmTimer == 0) || (gMenuSelectionConfirmTimer & 1) || (gPlayerCount != 2)) {
+        drawMenuSpriteWithAlpha(
+            actor->x,
+            actor->y,
+            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+            3,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            2
+        );
+        if (width == 0x20) {
+            drawMenuSpriteWithAlpha(
+                (s16)(actor->x + xOffset),
+                (s16)(actor->y - yOffset),
+                getRelocatableHeapBlockBase(TITLE_MENU_SECONDARY_TEXTURE_HANDLE),
+                1,
+                width,
+                width,
+                0,
+                alpha,
+                0
+            );
+        } else {
+            drawMenuSpriteWithPaletteScale(
+                (s16)(actor->x + xOffset),
+                (s16)(actor->y - yOffset),
+                getRelocatableHeapBlockBase(TITLE_MENU_SECONDARY_TEXTURE_HANDLE),
+                1,
+                alpha
+            );
+        }
+        drawMenuGlyphScriptDefaultFont(
+            (s16)(actor->x + 0x30),
+            (s16)(actor->y + 4),
+            gRaceSetupTwoPlayerOptionText,
+            0,
+            alpha
+        );
+    }
+
+    for (i = 0; i != 0x28; i += 0x14) {
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->x + i + 0x80),
+            actor->y,
+            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+            7,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            0
+        );
+    }
+}
 
 void updateRaceSetupTwoPlayerOption(MenuItemActor *arg0) {
     MenuItemActor *child;
@@ -387,7 +554,88 @@ void initRaceSetupTwoPlayerOption(MenuItemActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupTwoPlayerOption);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupThreePlayerOption.s")
+void drawRaceSetupThreePlayerOption(void *arg0) {
+    MenuItemActor *actor = arg0;
+    s16 unused;
+    s16 width;
+    s16 xOffset;
+    s16 yOffset;
+    u16 alpha;
+    s32 i;
+
+    if (actor->state == 0) {
+        alpha = 0x100;
+        width = 0x18;
+        xOffset = 0x10;
+        yOffset = 0;
+    } else if (gPlayerCount == 3) {
+        alpha = 0x100;
+        width = 0x20;
+        xOffset = 0xC;
+        yOffset = 8;
+    } else {
+        alpha = 0x60;
+        width = 0x10;
+        xOffset = 0x14;
+        yOffset = -4;
+    }
+
+    if ((gMenuSelectionConfirmTimer == 0) || (gMenuSelectionConfirmTimer & 1) || (gPlayerCount != 3)) {
+        drawMenuSpriteWithAlpha(
+            actor->x,
+            actor->y,
+            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+            3,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            3
+        );
+        if (width == 0x20) {
+            drawMenuSpriteWithAlpha(
+                (s16)(actor->x + xOffset),
+                (s16)(actor->y - yOffset),
+                getRelocatableHeapBlockBase(TITLE_MENU_SECONDARY_TEXTURE_HANDLE),
+                2,
+                width,
+                width,
+                0,
+                alpha,
+                0
+            );
+        } else {
+            drawMenuSpriteWithPaletteScale(
+                (s16)(actor->x + xOffset),
+                (s16)(actor->y - yOffset),
+                getRelocatableHeapBlockBase(TITLE_MENU_SECONDARY_TEXTURE_HANDLE),
+                2,
+                alpha
+            );
+        }
+        drawMenuGlyphScriptDefaultFont(
+            (s16)(actor->x + 0x28),
+            (s16)(actor->y + 4),
+            gRaceSetupThreePlayerOptionText,
+            0,
+            alpha
+        );
+    }
+
+    for (i = 0; i != 0x3C; i += 0x14) {
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->x + i + 0x80),
+            actor->y,
+            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+            7,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            0
+        );
+    }
+}
 
 void updateRaceSetupThreePlayerOption(MenuItemActor *arg0) {
     MenuItemActor *child;
@@ -434,7 +682,88 @@ void initRaceSetupThreePlayerOption(MenuItemActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupThreePlayerOption);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupFourPlayerOption.s")
+void drawRaceSetupFourPlayerOption(void *arg0) {
+    MenuItemActor *actor = arg0;
+    s16 unused;
+    s16 width;
+    s16 xOffset;
+    s16 yOffset;
+    u16 alpha;
+    s32 i;
+
+    if (actor->state == 0) {
+        alpha = 0x100;
+        width = 0x18;
+        xOffset = 0x10;
+        yOffset = 0;
+    } else if (gPlayerCount == 4) {
+        alpha = 0x100;
+        width = 0x20;
+        xOffset = 0xC;
+        yOffset = 8;
+    } else {
+        alpha = 0x60;
+        width = 0x10;
+        xOffset = 0x14;
+        yOffset = -4;
+    }
+
+    if ((gMenuSelectionConfirmTimer == 0) || (gMenuSelectionConfirmTimer & 1) || (gPlayerCount != 4)) {
+        drawMenuSpriteWithAlpha(
+            actor->x,
+            actor->y,
+            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+            3,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            4
+        );
+        if (width == 0x20) {
+            drawMenuSpriteWithAlpha(
+                (s16)(actor->x + xOffset),
+                (s16)(actor->y - yOffset),
+                getRelocatableHeapBlockBase(TITLE_MENU_SECONDARY_TEXTURE_HANDLE),
+                3,
+                width,
+                width,
+                0,
+                alpha,
+                0
+            );
+        } else {
+            drawMenuSpriteWithPaletteScale(
+                (s16)(actor->x + xOffset),
+                (s16)(actor->y - yOffset),
+                getRelocatableHeapBlockBase(TITLE_MENU_SECONDARY_TEXTURE_HANDLE),
+                3,
+                alpha
+            );
+        }
+        drawMenuGlyphScriptDefaultFont(
+            (s16)(actor->x + 0x30),
+            (s16)(actor->y + 4),
+            gRaceSetupFourPlayerOptionText,
+            0,
+            alpha
+        );
+    }
+
+    for (i = 0; i != 0x50; i += 0x14) {
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->x + i + 0x80),
+            actor->y,
+            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+            7,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            0
+        );
+    }
+}
 
 void updateRaceSetupFourPlayerOption(MenuItemActor *arg0) {
     MenuItemActor *actor = arg0;

@@ -4,7 +4,7 @@
 ANIMAL_LAND_COURSE_TRIGGER_VOLUME_DISPLAY_LIST_command_000000 = 0x02006988;
 BIG_SNOWMAN_COURSE_GRAPHICS_command_000060 = 0x02000060;
 BIG_SNOWMAN_COURSE_GRAPHICS_command_000088 = 0x02000088;
-D_800E42A0 = gControllerSubsystemBssPadding + 0x350;
+gControllerPakSaveFileIdentity = gControllerSubsystemBssPadding + 0x350;
 D_800E42AA = gControllerSubsystemBssPadding + 0x35A;
 D_800E42AE = gControllerSubsystemBssPadding + 0x35E;
 GRASS_VALLEY_COURSE_RANK_MODEL_FINAL_LAP_DISPLAY_LIST_command_000190 = 0x0200BA10;
@@ -362,3 +362,5 @@ gControllerPakRaceRecordSaveStatusTransitionStep = gControllerPakRaceRecordSaveS
 SOUND_POINTER_BANK_ROM_START = 0x00275940;
 SOUND_POINTER_BANK_ROM_END = 0x0027E320;
 _27E290_ROM_START = 0x0027E320;
+
+gControllerPakFileNos = gControllerSubsystemBssPadding;

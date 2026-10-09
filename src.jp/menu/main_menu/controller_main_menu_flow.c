@@ -33,6 +33,12 @@
 #define CONTROLLER_PAK_U16_AT(cursor, field) (*(u16 *)((cursor) + CONTROLLER_PAK_SAVE_FIELD_OFFSET(field)))
 #define CONTROLLER_PAK_SAVE_FIELD_OFFSET(field) ((u32) & (((GameSaveData *)0)->field))
 
+extern u8 gControllerPakSaveExtNameBytesEnd[0x84];
+
+extern s32 gControllerPakFileNos[];
+
+extern SaveFileIdentity gControllerPakSaveFileIdentity;
+
 extern u8 gMainMenuSecretCodeStep;
 
 extern u8 gRumblePakConnectedMask;
@@ -194,7 +200,60 @@ void requestControllerPakSaveStatus(u16 controllerIndex) {
     osRecvMesg(&gControllerSubsystemReplyQueue, &msg, OS_MESG_BLOCK);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/checkControllerPakSaveStatus.s")
+void checkControllerPakSaveStatus(u16 controllerIndex) {
+    s32 ret;
+    s32 maxFiles;
+    s32 filesUsed;
+    s32 freeBytes;
+    s32 i;
+
+    gControllerPakSaveFileIdentity.size = CONTROLLER_PAK_SAVE_NOTE_SIZE;
+    gControllerPakSaveFileIdentity.gameCode = 'NSKJ';
+    gControllerPakSaveFileIdentity.companyCode = 'EB';
+
+    i = 0;
+    while (i < 4) {
+        gControllerPakSaveFileIdentity.extName[i] = gControllerPakSaveExtNameBytes[i];
+        i++;
+    }
+
+    i = 0;
+    while (i < 16) {
+        gControllerPakSaveFileIdentity.gameName[i] = gControllerPakSaveGameNameBytes[i];
+        i++;
+    }
+
+    osPfsInitPak(&gControllerEventQueue, &gControllerPakHandles[controllerIndex], controllerIndex);
+
+    ret = osPfsFindFile(
+        &gControllerPakHandles[controllerIndex],
+        gControllerPakSaveFileIdentity.companyCode,
+        gControllerPakSaveFileIdentity.gameCode,
+        gControllerPakSaveFileIdentity.gameName,
+        gControllerPakSaveFileIdentity.extName,
+        &gControllerPakFileNos[controllerIndex]
+    );
+    if (ret == 0) {
+        gControllerPakStatusCodes[controllerIndex] = 2;
+    } else {
+        osPfsNumFiles(&gControllerPakHandles[controllerIndex], &maxFiles, &filesUsed);
+        if (filesUsed == 0x10) {
+            gControllerPakStatusCodes[controllerIndex] = CONTROLLER_PAK_STATUS_DIRECTORY_FULL;
+        } else {
+            osPfsFreeBlocks(&gControllerPakHandles[controllerIndex], &freeBytes);
+            maxFiles = freeBytes / 256;
+            if (maxFiles < 0x79) {
+                gControllerPakStatusCodes[controllerIndex] = CONTROLLER_PAK_STATUS_INSUFFICIENT_SPACE;
+            } else if (ret == 5) {
+                gControllerPakStatusCodes[controllerIndex] = CONTROLLER_PAK_STATUS_SAVE_NOT_FOUND;
+            }
+        }
+    }
+
+    if (ret != 0) {
+        gControllerPakOperationCounts[controllerIndex]++;
+    }
+}
 
 void requestControllerPakSaveRead(u16 controllerIndex) {
     OSMesg msg;
@@ -209,7 +268,95 @@ void requestControllerPakSaveRead(u16 controllerIndex) {
     osRecvMesg(&gControllerSubsystemReplyQueue, &msg, OS_MESG_BLOCK);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/readControllerPakSave.s")
+void readControllerPakSave(u16 controllerIndex) {
+    u8 *cursor;
+    s32 offset;
+    s32 readStatus;
+    u16 checksumFailed;
+    GameSaveData *save;
+    s32 checksum;
+
+    checksumFailed = 0;
+    osPfsInitPak(&gControllerEventQueue, &gControllerPakHandles[controllerIndex], controllerIndex);
+
+    gControllerPakSaveFileIdentity.gameCode = 'NSKJ';
+    gControllerPakSaveFileIdentity.companyCode = 'EB';
+
+    offset = 0;
+    for (;;) {
+        gControllerPakSaveFileIdentity.extName[offset] = gControllerPakSaveExtNameBytes[offset];
+        offset++;
+
+        if (!(&gControllerPakSaveExtNameBytes[offset] < gControllerPakSaveExtNameBytesEnd)) {
+            break;
+        }
+    }
+
+    offset = 0;
+    for (;;) {
+        gControllerPakSaveFileIdentity.gameName[offset] = gControllerPakSaveGameNameBytes[offset];
+        offset++;
+
+        if (!(&gControllerPakSaveGameNameBytes[offset] < gControllerPakSaveExtNameBytes)) {
+            break;
+        }
+    }
+
+    osPfsFindFile(
+        &gControllerPakHandles[controllerIndex],
+        gControllerPakSaveFileIdentity.companyCode,
+        gControllerPakSaveFileIdentity.gameCode,
+        gControllerPakSaveFileIdentity.gameName,
+        gControllerPakSaveFileIdentity.extName,
+        &gControllerPakFileNos[controllerIndex]
+    );
+
+    save = &gGameSaveDataBuffer[controllerIndex];
+    readStatus = osPfsReadWriteFile(
+        &gControllerPakHandles[controllerIndex],
+        gControllerPakFileNos[controllerIndex],
+        0,
+        0,
+        CONTROLLER_PAK_SAVE_READ_SIZE,
+        (u8 *)save
+    );
+
+    if (readStatus == 0) {
+        checksum = 0;
+        cursor = (u8 *)save->highScores;
+        offset = CONTROLLER_PAK_CHECKSUM_START_OFFSET;
+        while (offset != CONTROLLER_PAK_SAVE_READ_SIZE) {
+            checksum += *cursor++;
+            offset++;
+        }
+
+        if (checksum != save->checksum) {
+            checksumFailed = 1;
+        }
+
+        cursor = &gControllerPakRetryCounts[controllerIndex];
+        if (checksumFailed == 0) {
+            if (validateControllerPakSave(controllerIndex) == 0) {
+                gControllerPakRetryCounts[controllerIndex] = 0;
+            }
+            cursor = &gControllerPakRetryCounts[controllerIndex];
+        } else {
+            (*cursor)++;
+        }
+    } else {
+        goto read_failed;
+    read_failed:
+        cursor = &gControllerPakRetryCounts[controllerIndex];
+        (*cursor)++;
+    }
+
+    if ((readStatus != 0) || (*cursor != 0)) {
+        if (*cursor != CONTROLLER_PAK_MAX_READ_RETRIES) {
+            return;
+        }
+    }
+    gControllerPakOperationCounts[controllerIndex]++;
+}
 
 void requestControllerPakSaveWrite(u16 controllerIndex) {
     OSMesg msg;
@@ -224,7 +371,78 @@ void requestControllerPakSaveWrite(u16 controllerIndex) {
     osRecvMesg(&gControllerSubsystemReplyQueue, &msg, OS_MESG_BLOCK);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/writeControllerPakSave.s")
+void writeControllerPakSave(u16 controllerIndex) {
+    s32 *fileNo;
+    GameSaveData *save;
+    u8 *src;
+    s32 i;
+    s32 checksum;
+    OSPfs *handle;
+    OSPfs *volatile pfs;
+
+    handle = &gControllerPakHandles[controllerIndex];
+    gControllerPakSaveFileIdentity.size = CONTROLLER_PAK_SAVE_NOTE_SIZE;
+    gControllerPakSaveFileIdentity.gameCode = 'NSKJ';
+    gControllerPakSaveFileIdentity.companyCode = 'EB';
+
+    i = 0;
+    for (;;) {
+        gControllerPakSaveFileIdentity.extName[i] = gControllerPakSaveExtNameBytes[i];
+        i++;
+
+        if (!(&gControllerPakSaveExtNameBytes[i] < gControllerPakSaveExtNameBytesEnd)) {
+            break;
+        }
+    }
+
+    i = 0;
+    for (;;) {
+        gControllerPakSaveFileIdentity.gameName[i] = gControllerPakSaveGameNameBytes[i];
+        i++;
+
+        if (!(&gControllerPakSaveGameNameBytes[i] < gControllerPakSaveExtNameBytes)) {
+            break;
+        }
+    }
+
+    fileNo = &gControllerPakFileNos[controllerIndex];
+    osPfsInitPak(&gControllerEventQueue, (pfs = handle), controllerIndex);
+
+    if (osPfsFindFile(
+            pfs,
+            gControllerPakSaveFileIdentity.companyCode,
+            gControllerPakSaveFileIdentity.gameCode,
+            gControllerPakSaveFileIdentity.gameName,
+            gControllerPakSaveFileIdentity.extName,
+            fileNo
+        ) == 5) {
+        osPfsAllocateFile(
+            pfs,
+            gControllerPakSaveFileIdentity.companyCode,
+            gControllerPakSaveFileIdentity.gameCode,
+            gControllerPakSaveFileIdentity.gameName,
+            gControllerPakSaveFileIdentity.extName,
+            0x7900,
+            fileNo
+        );
+    }
+
+    save = &gGameSaveDataBuffer[controllerIndex];
+    checksum = 0;
+    src = (u8 *)save->highScores;
+    i = 4;
+    while (i != 0x78E0) {
+        checksum += *src++;
+        i++;
+    }
+    gGameSaveDataBuffer[controllerIndex].checksum = checksum;
+
+    if (osPfsReadWriteFile(pfs, *fileNo, 1, 0, 0x78E0, (u8 *)save) == 0) {
+        gControllerPakRetryCounts[controllerIndex] = 0;
+    } else {
+        gControllerPakRetryCounts[controllerIndex]++;
+    }
+}
 
 void requestControllerPakRepair(u16 controllerIndex) {
     OSMesg msg;

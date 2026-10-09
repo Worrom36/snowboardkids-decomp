@@ -1,3 +1,4 @@
+#include "game/engine/system_render.h"
 #include "common.h"
 #include <PR/os_libc.h>
 #include "font_encoding.h"
@@ -575,7 +576,57 @@ void initRaceTypeSelectOption2Frame(RaceTypeSelectOptionFrameActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceTypeSelectOption2Frame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/drawRaceTypeSelectOption3Frame.s")
+void drawRaceTypeSelectOption3Frame(RaceTypeSelectExitFrameActor *arg0) {
+    s32 i;
+    s32 tileOffset;
+    s32 offset;
+
+    tileOffset = 0;
+    for (i = 0; i < 16; i++, tileOffset++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + ((i & 3) << 5),
+            arg0->y + ((i / 4) << 5),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gRaceTypeSelectFrameTileMaps.exitFrame.centerTiles[tileOffset],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            (gMenuViewportHeight / 2) - 0x2F
+        );
+    }
+
+    tileOffset = 0;
+    // clang-format off
+    offset = 0; i = 0x80; for (;;) {
+        drawMenuSpriteTileClipped(arg0->x + 0x80, arg0->y + offset, getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                      gRaceTypeSelectFrameTileMaps.exitFrame.rightEdgeTiles[tileOffset], 0, 0x100, gMenuViewportWidth / 2,
+            (gMenuViewportHeight / 2) - 0x2F);
+        drawMenuSpriteTileClipped(arg0->x + offset, arg0->y + 0x80, getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                      gRaceTypeSelectFrameTileMaps.exitFrame.bottomEdgeTiles[tileOffset], 0, 0x100, gMenuViewportWidth / 2,
+            (gMenuViewportHeight / 2) - 0x2F);
+        // clang-format on
+        i = 0x80;
+        offset += 0x40;
+        tileOffset++;
+
+        if (!(offset != i)) {
+            break;
+        }
+    }
+    i++;
+    i--;
+
+    drawMenuSpriteTileClipped(
+        arg0->x + 0x80,
+        arg0->y + 0x80,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        gRaceTypeSelectFrameTileMaps.exitFrameCornerTile,
+        0,
+        0x100,
+        gMenuViewportWidth / 2,
+        (gMenuViewportHeight / 2) - 0x2F
+    );
+}
 
 void updateRaceTypeSelectOption3Frame(RaceTypeSelectExitFrameActor *arg0) {
     int state;

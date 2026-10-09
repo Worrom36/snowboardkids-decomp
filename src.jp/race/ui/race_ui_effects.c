@@ -176,6 +176,22 @@ typedef struct {
     RaceTimer timeTrialRecordSplitTimes[11];
 } RaceUiTimeTrialSaveData;
 
+extern RaceUiRankTextRenderEntry *D_800D761C[];
+
+extern const char gRaceUiPendingTrickPrizeLabel[];
+
+extern const char gRaceUiPendingMoneyLabel[];
+
+extern const char gRaceUiPendingCompleteBonusLabel[];
+
+extern const char gRaceUiPendingMakeBonusLabel[];
+
+extern const char gRaceUiTrickAttackResultsTrickLabel[0x8];
+
+extern const char gRaceUiTrickAttackResultsTimeOutLabel[0xC];
+
+extern const char gRaceUiTrickAttackResultsMakeLabel[0x8];
+
 extern Vtx D_800D5680[];
 
 extern Vtx D_800D5C98[];
@@ -578,7 +594,33 @@ void updateRaceUiPrizePayoutContinuePrompt(void *arg0) {
     addRenderCallback(&gMenuRenderCallbackList, drawRaceUiPrizePayoutContinuePrompt, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiPrizePayoutRankPanel.s")
+void drawRaceUiPrizePayoutRankPanel(RaceUiAlpha18Actor *arg0) {
+    if (gRacePlayers[0].rankIndex != 0) {
+        if (arg0->alpha != 0xFF) {
+            gDPPipeSync(gRegionAllocPtr++);
+            gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+            gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+            gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 255, 255, 255, arg0->alpha);
+        }
+        drawAssetTableSprite(-0x68, -0x2C, getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)), 0x4D);
+        drawAssetTableSprite(-0x42, -0xC, getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)), gRacePlayers[0].rankIndex);
+        drawAssetTableSprite(
+            -0x22,
+            4,
+            getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)),
+            gRacePlayers[0].rankIndex + 0x48
+        );
+        drawAssetTableSprite(
+            -0x68,
+            6,
+            getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)),
+            gRacePlayers[0].characterId + 0x91
+        );
+        if (arg0->alpha != 0xFF) {
+            gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+        }
+    }
+}
 
 void drawRaceUiPrizePayoutRankPrize(RaceUiAlpha18Actor *arg0) {
     volatile u8 padding[0x18];
@@ -1207,7 +1249,21 @@ void drawRaceUiCourseStatsRows(RaceUiCourseStatsActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiCourseStatsElapsedTime.s")
+void drawRaceUiCourseStatsElapsedTime(RaceUiAlpha1AActor *arg0) {
+
+    {
+        if (arg0->alpha != 0xFF) {
+            gDPPipeSync(gRegionAllocPtr++);
+            gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+            gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+            gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 255, 255, 255, arg0->alpha);
+        }
+        drawRaceUiPackedTime(&gRaceElapsedTimer, -0x6C, -0x30, 0xC);
+        if (arg0->alpha != 0xFF) {
+            gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+        }
+    }
+}
 
 void drawRaceUiCourseStatsLapTimeLabel(RaceUiAlpha18Actor *arg0) {
     Gfx *gfx;
@@ -1776,7 +1832,21 @@ void initRaceUiHitPrizePayout(RaceUiCounterActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiHitPrizeFadeIn);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiCourseRecordElapsedTime.s")
+void drawRaceUiCourseRecordElapsedTime(RaceUiAlphaActor *arg0) {
+
+    {
+        if (arg0->alpha != 0xFF) {
+            gDPPipeSync(gRegionAllocPtr++);
+            gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+            gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+            gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 255, 255, 255, arg0->alpha);
+        }
+        drawRaceUiPackedTime(&gRaceElapsedTimer, -0x68, -0x37, 0xC);
+        if (arg0->alpha != 0xFF) {
+            gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+        }
+    }
+}
 
 void drawRaceUiCourseRecordPayoutCounters(RaceUiDualCounterActor *arg0) {
     volatile u8 pad[4];
@@ -2558,9 +2628,59 @@ void drawRaceUiTrickAttackCourseValues(RaceUiCourseStatsActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiTrickAttackResultLabels.s")
+void drawRaceUiTrickAttackResultLabels(RaceUiAlpha18Actor *arg0) {
+    const char *new_var2;
+    s32 w0;
+    s32 new_var;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiTrickPrizePayoutLabels.s")
+    {
+        if (arg0->alpha != 0xFF) {
+            gDPPipeSync(gRegionAllocPtr++);
+            gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+
+            gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+            gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 255, 255, 255, arg0->alpha);
+        }
+        drawMenuAsciiTextDefaultScale(-0x68, -0x40, new_var2 = gRaceUiTrickAttackResultsTrickLabel, 6);
+        drawMenuAsciiTextDefaultScale(-0x64, -0x1C, gRaceUiTrickAttackResultsMakeLabel, 5);
+        w0 = 8;
+        if (gRaceChallengeFailed != 0) {
+            new_var = w0;
+            drawMenuAsciiTextDefaultScale(-0x6C, new_var, gRaceUiTrickAttackResultsTimeOutLabel, 4);
+        }
+        if (arg0->alpha != 0xFF) {
+            gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+        }
+    }
+}
+
+void drawRaceUiTrickPrizePayoutLabels(RaceUiAlpha18Actor *arg0) {
+    s32 y;
+    RaceUiAlpha18Actor **arg0p = &arg0;
+
+    {
+        if ((*arg0p)->alpha != 0xFF) {
+            gDPPipeSync(gRegionAllocPtr++);
+
+            gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+            gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+            gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 255, 255, 255, (*arg0p)->alpha);
+        }
+
+        y = -0x50;
+        drawMenuAsciiTextDefaultScale(-0xC, (s16)y, gRaceUiPendingTrickPrizeLabel, 5);
+        y += 0x28;
+        drawMenuAsciiTextDefaultScale(-8, (s16)y, gRaceUiPendingMakeBonusLabel, 5);
+        y += 0x28;
+        drawMenuAsciiTextDefaultScale(-8, (s16)y, gRaceUiPendingCompleteBonusLabel, 5);
+        y += 0x28;
+        drawMenuAsciiTextDefaultScale(-0xC, (s16)y, gRaceUiPendingMoneyLabel, 5);
+
+        if ((*arg0p)->alpha != 0xFF) {
+            gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+        }
+    }
+}
 
 void drawRaceUiTrickAttackPointLabels(void *arg0) {
     drawMenuAsciiTextDefaultScale(0x30, -0x48, gRaceUiTrickValuePointLabelRow1, 6);
@@ -5324,7 +5444,41 @@ void initRaceStartOverlay(RaceUiOverlayActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceStartOverlayRiseIn);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/renderRaceScoreAttackRings.s")
+void renderRaceScoreAttackRings(RaceUiRankTextRenderActor *arg0) {
+    RaceUiRankTextRenderEntry *var_s4;
+    s32 var_s6;
+    s32 var_fp;
+    Gfx *temp_s0;
+    Gfx *temp_s2;
+    Gfx *temp_s3;
+
+    var_s4 = D_800D694C[gRaceCourseIndex.signedValue];
+    var_fp = TRUE;
+    var_s6 = 0;
+
+    while (var_s4->active != -1) {
+        if ((var_s4->active != 0) && (isPositionNearCurrentRaceViewportCamera(&var_s4->position) != 0)) {
+            if (var_fp != 0) {
+                gDPPipeSync(gRegionAllocPtr++);
+
+                temp_s2 = gRegionAllocPtr++;
+                var_fp = FALSE;
+                gSPSegment(temp_s2, 0x02, getRelocatableHeapBlockBase(gAssetHandles[0xA]));
+
+                temp_s3 = gRegionAllocPtr++;
+                gSPSegment(temp_s3, 0x03, getRelocatableHeapBlockBase(gAssetHandles[0xB]));
+            }
+
+            temp_s0 = gRegionAllocPtr++;
+            gSPMatrix(temp_s0, &arg0->matrices[var_s6], G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+
+            temp_s0 = gRegionAllocPtr++;
+            gSPDisplayList(temp_s0, &_ADDR_20019C0_VRAM);
+        }
+        var_s4++;
+        var_s6++;
+    }
+}
 
 void updateRaceScoreAttackRings(void *arg0) {
     volatile u8 pad[8];

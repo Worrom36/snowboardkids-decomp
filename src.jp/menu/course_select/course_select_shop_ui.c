@@ -14,6 +14,19 @@
 #include "game/menu/renderer/menu_renderer.h"
 #include "game/race/player/race_player_input.h"
 
+typedef u16 CourseNumberGlyphScript[5];
+
+typedef enum {
+    COURSE_DETAILS_STATE_REVEAL_LIST = 0,
+    COURSE_DETAILS_STATE_FADE_IN_CURSOR = 1,
+    COURSE_DETAILS_STATE_IDLE = 2,
+    COURSE_DETAILS_STATE_SLIDE_PAGE_OUT = 3,
+    COURSE_DETAILS_STATE_SLIDE_PAGE_IN = 4,
+    COURSE_DETAILS_STATE_EXIT = 5,
+    COURSE_DETAILS_STATE_RESET_CURSOR = 6,
+    COURSE_DETAILS_STATE_DONE = 7
+} CourseDetailsMenuState;
+
 typedef MenuGlyphScript ShopDescriptionText[0x46];
 
 typedef struct {
@@ -31,6 +44,10 @@ enum {
     COURSE_DETAILS_OPTION_COUNT = 10,
     COURSE_DETAILS_ROW_SPACING = 0x13
 };
+
+typedef u16 CourseDetailsMenuEntryTilePages[COURSE_DETAILS_PAGE_COUNT][COURSE_DETAILS_COURSES_PER_PAGE];
+
+extern CourseDetailsMenuEntryTilePages gCourseDetailsMenuEntryTiles;
 
 extern u16 gCourseDetailsPreviewExtraTiles[];
 
@@ -859,7 +876,39 @@ void drawShopMenuMoneyPanel(ShopMenuWidgetActor *arg0) {
     drawMenuAsciiText((s16)(arg0->x + 0x10), (s16)(arg0->y + 0x10), sp40, 0, arg0->sprite.index);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuMoneyPanel.s")
+void updateShopMenuMoneyPanel(ShopMenuWidgetActor *arg0) {
+    u8 state = arg0->transition.bytes.state;
+
+    switch (state) {
+        case 0:
+            arg0->sprite.index += 0x26;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->transition.bytes.state = 1;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->transition.bytes.state = 2;
+            }
+            break;
+        case 2:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuMoneyPanel, arg0);
+}
 
 void initShopMenuMoneyPanel(ShopMenuWidgetActor *arg0) {
     arg0->x = 0x30;
@@ -903,7 +952,13 @@ void updateShopMenuMoneyPanelForCourseSelectReturn(ShopMenuWidgetActor *arg0) {
     addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuMoneyPanel, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002EA20.s")
+void initShopMenuMoneyPanelForCourseSelectReturn(ShopMenuWidgetActor *arg0) {
+    arg0->x = 0x30;
+    arg0->y = 0x40;
+    arg0->sprite.index = 0;
+    arg0->transition.bytes.state = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateShopMenuMoneyPanelForCourseSelectReturn);
+}
 
 void drawShopMenuSparkles(ShopMenuWidgetActor *arg0) {
     s32 patternOffset;
@@ -1224,9 +1279,207 @@ void initCourseUnlockPurchasePrompt(ShopMenuWidgetActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseUnlockPurchasePrompt);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002F4B4.s")
+void drawCourseDetailsMenu(ShopMenuWidgetActor *actor) {
+    u16 *entryTile;
+    s32 entryIndex;
+    s32 yOffset;
+    CourseNumberGlyphScript courseNumberScript;
+    s32 courseNumber;
+    s32 tensDigit;
+    s16 selectionX;
+    s16 drawX;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateCourseDetailsMenu.s")
+    /* Keeping the loop setup together preserves IDO's original scheduling. */
+    // clang-format off
+    entryIndex = 0; yOffset = 0; entryTile = gCourseDetailsMenuEntryTiles[0]; while (entryIndex < COURSE_DETAILS_COURSES_PER_PAGE) {
+        drawMenuSprite(actor->cursorPositions[entryIndex], (s16)(actor->targetY + yOffset),
+                       getRelocatableHeapBlockBase(gAssetHandles[0x27]),
+                       entryTile[gCourseDetailsPreviewPage * COURSE_DETAILS_COURSES_PER_PAGE],
+                       0x20, 0x20, 0, 0);
+        // clang-format on
+        courseNumber = ((gCourseDetailsPreviewPage * COURSE_DETAILS_COURSES_PER_PAGE) + entryIndex) + 1;
+        if (actor && actor) { /* preserves IDO's original register allocation */
+        }
+        tensDigit = courseNumber / 10;
+        if (tensDigit == 0) {
+            courseNumberScript[0] = -2;
+        } else {
+            courseNumberScript[0] = tensDigit;
+        }
+        courseNumberScript[1] = courseNumber % 10;
+        courseNumberScript[2] = -1;
+        drawMenuGlyphScriptDefaultFont(
+            (s16)(actor->cursorPositions[entryIndex] - 0x12),
+            (s16)(actor->targetY + yOffset),
+            courseNumberScript,
+            1,
+            0x100
+        );
+
+        yOffset += COURSE_DETAILS_ROW_SPACING;
+        entryTile++;
+        entryIndex++;
+    }
+
+    entryIndex = COURSE_DETAILS_COURSES_PER_PAGE;
+    yOffset = COURSE_DETAILS_COURSES_PER_PAGE * COURSE_DETAILS_ROW_SPACING;
+    while (entryIndex != COURSE_DETAILS_OPTION_COUNT) {
+        drawMenuSprite(
+            actor->cursorPositions[entryIndex],
+            (s16)(actor->targetY + yOffset),
+            getRelocatableHeapBlockBase(gAssetHandles[0x27]),
+            (u16)entryIndex,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+        yOffset += COURSE_DETAILS_ROW_SPACING;
+        entryIndex++;
+    }
+
+    if ((actor->state != COURSE_DETAILS_STATE_REVEAL_LIST) && (gCourseDetailsCloseFromBack == 0)) {
+        if (actor->state < COURSE_DETAILS_STATE_EXIT) {
+            selectionX = actor->targetX;
+        } else {
+            selectionX = actor->cursorPositions[0];
+        }
+        drawX = selectionX;
+        drawMenuSpriteWithAlpha(
+            drawX,
+            (s16)(actor->targetY + (gCourseDetailsMenuSelection * COURSE_DETAILS_ROW_SPACING)),
+            getRelocatableHeapBlockBase(gAssetHandles[0x25]),
+            0x12,
+            0x20,
+            0x20,
+            0,
+            actor->prompt.bytes.pulseAlpha,
+            0
+        );
+    }
+}
+
+void updateCourseDetailsMenu(ShopMenuWidgetActor *arg0) {
+    ShopMenuWidgetActor *visibleActor;
+    s32 i;
+    s32 movingEntryCount;
+    s32 menuState;
+    u8 state;
+    s32 screenState;
+    u16 visibleCount;
+    s16 cursorX;
+
+    visibleActor = arg0;
+    menuState = gCourseSelectSubmenuState;
+    state = arg0->state;
+    if ((menuState & 0xFFFFFFFF) != state) {
+        state = menuState;
+        arg0->state = menuState;
+    }
+
+    screenState = gCurrentGameTask->callbackData2;
+    if (((screenState == 3) || (screenState == 9)) && (state < COURSE_DETAILS_STATE_EXIT)) {
+        state = (arg0->state = COURSE_DETAILS_STATE_EXIT);
+        arg0->prompt.bytes.pulseAlpha = 0x100;
+    }
+
+    switch (state) {
+        case COURSE_DETAILS_STATE_REVEAL_LIST:
+            movingEntryCount = 0;
+            for (menuState = 0; menuState < (u16)visibleActor->visibleCount; menuState++) {
+                cursorX = arg0->cursorPositions[menuState];
+                if (cursorX < arg0->targetX) {
+                    arg0->cursorPositions[menuState] = cursorX + 0x10;
+                    movingEntryCount++;
+                    if (arg0->cursorPositions[menuState] >= arg0->targetX) {
+                        arg0->cursorPositions[menuState] = arg0->targetX;
+                    }
+                }
+            }
+
+            arg0->spawnTimer++;
+            if (!(arg0->spawnTimer & 1)) {
+                visibleCount = arg0->visibleCount;
+                if ((s32)visibleCount < COURSE_DETAILS_OPTION_COUNT) {
+                    arg0->visibleCount = visibleCount + 1;
+                    if ((u16)arg0->visibleCount == COURSE_DETAILS_OPTION_COUNT) {
+                        createCallbackTask((CallbackTaskCallback)initCourseDetailsPreviewTile, 0, 0x63);
+                    }
+                }
+            }
+            if (movingEntryCount == 0) {
+                arg0->state = COURSE_DETAILS_STATE_FADE_IN_CURSOR;
+            }
+            state = arg0->state;
+            break;
+        case COURSE_DETAILS_STATE_FADE_IN_CURSOR:
+            arg0->prompt.bytes.pulseAlpha += 0x26;
+            if (arg0->prompt.bytes.pulseAlpha >= 0x100) {
+                arg0->prompt.bytes.pulseAlpha = 0x100;
+                arg0->state = COURSE_DETAILS_STATE_IDLE;
+            }
+            state = arg0->state;
+            break;
+        case COURSE_DETAILS_STATE_SLIDE_PAGE_OUT:
+            for (i = 0; i < COURSE_DETAILS_COURSES_PER_PAGE; i++) {
+                arg0->cursorPositions[i] -= 0x20;
+                if (arg0->cursorPositions[i] < -0x117) {
+                    arg0->cursorPositions[i] = -0x118;
+                }
+            }
+            if (arg0->cursorPositions[0] == -0x118) {
+                arg0->state = COURSE_DETAILS_STATE_SLIDE_PAGE_IN;
+                gCourseDetailsPreviewPage = (gCourseDetailsPreviewPage + 1) % COURSE_DETAILS_PAGE_COUNT;
+            }
+            state = arg0->state;
+            break;
+        case COURSE_DETAILS_STATE_SLIDE_PAGE_IN:
+            for (i = 0; i < COURSE_DETAILS_COURSES_PER_PAGE; i++) {
+                arg0->cursorPositions[i] += 0x20;
+                if (arg0->cursorPositions[i] >= arg0->targetX) {
+                    arg0->cursorPositions[i] = arg0->targetX;
+                }
+            }
+            if (arg0->targetX == arg0->cursorPositions[0]) {
+                arg0->state = COURSE_DETAILS_STATE_IDLE;
+            }
+            state = arg0->state;
+            break;
+        case COURSE_DETAILS_STATE_EXIT:
+            for (i = 0; i < COURSE_DETAILS_OPTION_COUNT; i++) {
+                arg0->cursorPositions[i] -= 0x20;
+            }
+            if (arg0->cursorPositions[0] < -0x117) {
+                arg0->state = COURSE_DETAILS_STATE_DONE;
+            }
+            state = arg0->state;
+            break;
+        case COURSE_DETAILS_STATE_RESET_CURSOR:
+            arg0->prompt.bytes.pulseAlpha = 0x100;
+            arg0->prompt.bytes.pulseTimer = 0;
+            state = arg0->state;
+            break;
+        case COURSE_DETAILS_STATE_DONE:
+            break;
+    }
+
+    if ((state >= COURSE_DETAILS_STATE_IDLE) && (state < COURSE_DETAILS_STATE_EXIT)) {
+        if ((s32)(u16)arg0->prompt.bytes.pulseTimer < 0x10) {
+            arg0->prompt.bytes.pulseAlpha -= 9;
+        } else {
+            arg0->prompt.bytes.pulseAlpha += 9;
+        }
+        arg0->prompt.bytes.pulseTimer = (arg0->prompt.bytes.pulseTimer + 1) & 0x1F;
+        state = arg0->state;
+    }
+
+    gCourseSelectSubmenuState = state;
+    if (arg0->state == COURSE_DETAILS_STATE_DONE) {
+        removeCallbackTask((CallbackTask *)arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseDetailsMenu, arg0);
+}
 
 void initCourseDetailsMenu(ShopMenuWidgetActor *arg0) {
     s32 i;

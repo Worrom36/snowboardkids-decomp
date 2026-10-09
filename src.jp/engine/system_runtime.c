@@ -20,6 +20,9 @@
 #include "PR/ucode.h"
 #include "game/audio/audio_engine.h"
 
+#define MAIN_THREAD_ID 2
+#define PI_MANAGER_PRIORITY 150
+#define PI_MANAGER_MSG_COUNT 200
 #define BOOT_THREAD_ID 1
 #define THREAD_PRIORITY 10
 #define DMA_CHUNK_SIZE 0x2000
@@ -34,6 +37,14 @@ typedef struct {
     RenderCallbackQueueSlot queue2;
     RenderCallbackQueueSlot queue3;
 } RenderCallbackQueueGroup;
+
+extern OSMesgQueue gPiManagerQueue;
+
+extern OSThread gGameThread;
+
+extern OSMesg gPiManagerMessages[];
+
+extern u8 gGameThreadStack[GAME_THREAD_STACK_SIZE];
 
 extern u8 gBootThreadStack[BOOT_THREAD_STACK_SIZE];
 
@@ -58,11 +69,26 @@ void main(void *arg) {
     osStartThread(&gBootThread);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/bootThreadMain.s")
+void bootThreadMain(void *arg) {
+    osCreatePiManager(PI_MANAGER_PRIORITY, &gPiManagerQueue, gPiManagerMessages, PI_MANAGER_MSG_COUNT);
+    osCreateThread(
+        &gGameThread,
+        MAIN_THREAD_ID,
+        gameThreadMain,
+        arg,
+        gGameThreadStack + sizeof(gGameThreadStack),
+        THREAD_PRIORITY
+    );
+    osStartThread(&gGameThread);
+    osSetThreadPri(NULL, 0);
+    while (1) {
+        ;
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/func_800990D0.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/func_800991F8.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/gameThreadMain.s")
 
 void dmaReadRom(u32 romOffset, void *ramAddress, s32 size) {
     OSIoMesg dmaRequest;
