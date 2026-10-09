@@ -14,6 +14,34 @@
 #define SOUND_MANAGER_QUEUE_MASK (SOUND_MANAGER_QUEUE_CAPACITY - 1)
 #define SOUND_MANAGER_QUEUE_CAPACITY 64
 
+typedef struct SoundHandleNode {
+    struct SoundHandleNode *prev;
+    struct SoundHandleNode *next;
+    s32 handle;
+    u16 priority;
+    u8 stopRequested;
+    u8 volume;
+} SoundHandleNode;
+
+typedef struct PositionalSoundRequest {
+    struct PositionalSoundRequest *next;
+    Vec3i pos;
+    s16 soundId;
+    s16 volume;
+    s16 minVolume;
+    s16 priority;
+    s16 mode;
+    f32 pitch;
+} PositionalSoundRequest;
+
+typedef union SoundHalfArg {
+    s32 word;
+    struct {
+        s16 unused;
+        s16 value;
+    } half;
+} SoundHalfArg;
+
 typedef struct SoundRomRange {
     u32 romStart;
     u32 romEnd;
@@ -28,6 +56,12 @@ typedef struct SoundQueueEntry {
     u8 unk5;
 } SoundQueueEntry;
 
+extern u16 gCourseMusicSequenceBanks[14];
+extern PositionalSoundRequest *gPendingPositionalSoundRequests;
+extern SoundHandleNode *gActiveSoundHandleListHead;
+extern SoundHandleNode *gActiveSoundHandleListTail;
+extern SoundHandleNode *gFreeSoundHandleStack[13];
+extern s32 gFreeSoundHandleCount;
 extern s32 gMusicSequenceStopped;
 extern s32 gCurrentMusicSequenceHandle;
 extern SoundRomRange gRaceMusicSequenceRomRanges[9];
@@ -42,6 +76,7 @@ extern SchedulerThread gAudioThread;
 extern u8 gCurrentQueuedSoundType;
 extern s32 gSharedLoopingPositionalSoundHandle;
 
+void *allocRenderCallbackScratch(s32 size);
 extern void stopCurrentMusicSequence(s32 arg0);
 extern s32 reserveSoundEffectQueueWriteIndex(void);
 extern s32 calculatePositionalSoundVolume(Vec3i *pos, s32 volume);
@@ -109,15 +144,54 @@ s32 reserveSoundEffectQueueReadIndex(void) {
     return temp_v1;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/func_80071738.s")
+void releaseSoundEffectHandleNode(SoundHandleNode *arg0) {
+    SoundHandleNode *temp_v0;
+    SoundHandleNode *temp_v1;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/func_800717D4.s")
+    temp_v0 = arg0->prev;
+    if (temp_v0 == NULL) {
+        gActiveSoundHandleListHead = arg0->next;
+        temp_v1 = arg0->next;
+        if (temp_v1 != NULL) {
+            temp_v1->prev = arg0->prev;
+        } else {
+            gActiveSoundHandleListTail = NULL;
+        }
+    } else {
+        temp_v0->next = arg0->next;
+        temp_v1 = arg0->next;
+        if (temp_v1 != NULL) {
+            temp_v1->prev = arg0->prev;
+        } else {
+            gActiveSoundHandleListTail = arg0->prev;
+        }
+    }
+    gFreeSoundHandleStack[gFreeSoundHandleCount] = arg0;
+    gFreeSoundHandleCount++;
+}
+
+SoundHandleNode *acquireSoundEffectHandleNode(void) {
+    s32 count;
+
+    count = gFreeSoundHandleCount;
+    if (count == 0) {
+        return NULL;
+    }
+    gFreeSoundHandleCount--;
+    return gFreeSoundHandleStack[gFreeSoundHandleCount];
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/func_80071810.s")
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/func_800719D0.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/requestMusicSequenceBank.s")
+void requestMusicSequenceBank(s32 arg0) {
+    if (arg0 != gCurrentMusicSequenceBank) {
+        gCurrentMusicSequenceBank = arg0;
+        gPendingMusicCommand = 1;
+        gPendingMusicCommandArg = arg0;
+    }
+}
 
 void requestMusicSequenceStop(s32 arg0) {
     gPendingMusicCommand = 2;
@@ -247,7 +321,9 @@ void updateSingleLoopingPositionalSound(s16 soundId, Vec3i *pos, s16 volume) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/requestCourseMusicSequence.s")
+void requestCourseMusicSequence(void) {
+    requestMusicSequenceBank(gCourseMusicSequenceBanks[gRaceCourseIndex.signedValue]);
+}
 
 void countActiveSoundPlayers(void) {
     MusAsk(3);
@@ -257,9 +333,34 @@ s32 countActiveMusicSequences(void) {
     return MusAsk(2);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/clearPendingPositionalSoundRequests.s")
+void clearPendingPositionalSoundRequests(void) {
+    gPendingPositionalSoundRequests = NULL;
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/enqueuePositionalSoundRequest.s")
+void enqueuePositionalSoundRequest(
+    s32 soundId,
+    Vec3i *pos,
+    s32 volume,
+    s32 priority,
+    f32 pitch,
+    s32 mode,
+    s32 minVolume
+) {
+    PositionalSoundRequest *node;
+
+    node = allocRenderCallbackScratch(sizeof(PositionalSoundRequest));
+    if (node != NULL) {
+        node->next = gPendingPositionalSoundRequests;
+        node->pos = *pos;
+        node->soundId = ((SoundHalfArg *)&soundId)->half.value;
+        node->volume = ((SoundHalfArg *)&volume)->half.value;
+        node->minVolume = ((SoundHalfArg *)&minVolume)->half.value;
+        node->priority = ((SoundHalfArg *)&priority)->half.value;
+        node->mode = ((SoundHalfArg *)&mode)->half.value;
+        node->pitch = pitch;
+        gPendingPositionalSoundRequests = node;
+    }
+}
 
 void enqueuePlayerLoopingPositionalSoundRequest(s32 arg0, Vec3i *arg1, s32 arg2, s32 arg3, f32 arg4, s16 mode) {
     s32 temp_a0 = arg0 << 16;

@@ -3,6 +3,11 @@
 #include "PR/gu.h"
 
 ViewportState gViewportStates[4];
+extern const f32 gMenuViewportOverlayFarClip[1];
+extern const f32 gMenuViewportFarClip[1];
+extern const f32 gRaceViewportOverlayFarClip[1];
+extern const f32 gCustomViewportOverlayFarClip[1];
+extern const f32 gDefaultViewportOverlayFarClip[1];
 
 void resetAllViewports(void) {
     s32 i;
@@ -40,13 +45,275 @@ void resetViewport(s32 arg0) {
     viewport->viewport.vp.vtrans[3] = 0;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/viewport_manager/configureViewport.s")
+void configureViewport(
+    s32 viewportIndex,
+    s32 centerX,
+    s32 centerY,
+    u16 width,
+    u16 height,
+    u16 scaleX,
+    u16 scaleY,
+    f32 aspect
+) {
+    gViewportStates[viewportIndex].active = 1;
+    gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
+    gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;
+    gViewportStates[viewportIndex].viewport.vp.vscale[0] = scaleX * 2;
+    gViewportStates[viewportIndex].viewport.vp.vscale[1] = scaleY * 2;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/viewport_manager/configureViewportWithFovAndFarClip.s")
+    gViewportStates[viewportIndex].left = centerX - (width / 2);
+    gViewportStates[viewportIndex].top = centerY - (height / 2);
+    gViewportStates[viewportIndex].right = (width / 2) + centerX;
+    gViewportStates[viewportIndex].bottom = (height / 2) + centerY;
+    gViewportStates[viewportIndex].screenBoundsValid = 1;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/viewport_manager/configureRaceViewport.s")
+    if (gViewportStates[viewportIndex].right < 0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].bottom < 0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].left >= 0x140) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].top >= 0xF0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].left < 0) {
+        gViewportStates[viewportIndex].left = 0;
+    }
+    if (gViewportStates[viewportIndex].top < 0) {
+        gViewportStates[viewportIndex].top = 0;
+    }
+    if (gViewportStates[viewportIndex].right >= 0x140) {
+        gViewportStates[viewportIndex].right = 0x13F;
+    }
+    if (gViewportStates[viewportIndex].bottom >= 0xF0) {
+        gViewportStates[viewportIndex].bottom = 0xEF;
+    }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/viewport_manager/configureMenuViewport.s")
+    guPerspective(
+        &gViewportStates[viewportIndex].projectionMatrix,
+        &gViewportStates[viewportIndex].perspectiveNorm,
+        70.0f,
+        aspect,
+        10.0f,
+        2800.0f,
+        0.5f
+    );
+    guPerspective(
+        &gViewportStates[viewportIndex].overlayProjectionMatrix,
+        &gViewportStates[viewportIndex].overlayPerspectiveNorm,
+        70.0f,
+        aspect,
+        10.0f,
+        gDefaultViewportOverlayFarClip[0],
+        0.5f
+    );
+}
+
+void configureViewportWithFovAndFarClip(
+    s32 viewportIndex,
+    s32 centerX,
+    s32 centerY,
+    u16 width,
+    u16 height,
+    u16 scaleX,
+    u16 scaleY,
+    f32 aspect,
+    s16 fovY,
+    s32 farClip
+) {
+    gViewportStates[viewportIndex].active = 1;
+    gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
+    gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;
+    gViewportStates[viewportIndex].viewport.vp.vscale[0] = scaleX * 2;
+    gViewportStates[viewportIndex].viewport.vp.vscale[1] = scaleY * 2;
+
+    gViewportStates[viewportIndex].left = centerX - (width / 2);
+    gViewportStates[viewportIndex].top = centerY - (height / 2);
+    gViewportStates[viewportIndex].right = (width / 2) + centerX;
+    gViewportStates[viewportIndex].bottom = (height / 2) + centerY;
+    gViewportStates[viewportIndex].screenBoundsValid = 1;
+
+    if (gViewportStates[viewportIndex].right < 0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].bottom < 0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].left >= 0x140) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].top >= 0xF0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].left < 0) {
+        gViewportStates[viewportIndex].left = 0;
+    }
+    if (gViewportStates[viewportIndex].top < 0) {
+        gViewportStates[viewportIndex].top = 0;
+    }
+    if (gViewportStates[viewportIndex].right >= 0x140) {
+        gViewportStates[viewportIndex].right = 0x13F;
+    }
+    if (gViewportStates[viewportIndex].bottom >= 0xF0) {
+        gViewportStates[viewportIndex].bottom = 0xEF;
+    }
+
+    guPerspective(
+        &gViewportStates[viewportIndex].projectionMatrix,
+        &gViewportStates[viewportIndex].perspectiveNorm,
+        (f32)fovY,
+        aspect,
+        10.0f,
+        (f32)farClip,
+        0.5f
+    );
+    guPerspective(
+        &gViewportStates[viewportIndex].overlayProjectionMatrix,
+        &gViewportStates[viewportIndex].overlayPerspectiveNorm,
+        (f32)fovY,
+        aspect,
+        10.0f,
+        gCustomViewportOverlayFarClip[0],
+        0.5f
+    );
+}
+
+void configureRaceViewport(
+    s32 viewportIndex,
+    s32 centerX,
+    s32 centerY,
+    u16 width,
+    u16 height,
+    u16 scaleX,
+    u16 scaleY,
+    f32 aspect
+) {
+    gViewportStates[viewportIndex].active = 1;
+    gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
+    gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;
+    gViewportStates[viewportIndex].viewport.vp.vscale[0] = scaleX * 2;
+    gViewportStates[viewportIndex].viewport.vp.vscale[1] = scaleY * 2;
+
+    gViewportStates[viewportIndex].left = centerX - (width / 2);
+    gViewportStates[viewportIndex].top = centerY - (height / 2);
+    gViewportStates[viewportIndex].right = (width / 2) + centerX;
+    gViewportStates[viewportIndex].bottom = (height / 2) + centerY;
+    gViewportStates[viewportIndex].screenBoundsValid = 1;
+
+    if (gViewportStates[viewportIndex].right < 0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].bottom < 0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].left >= 0x140) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].top >= 0xF0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].left < 0) {
+        gViewportStates[viewportIndex].left = 0;
+    }
+    if (gViewportStates[viewportIndex].top < 0) {
+        gViewportStates[viewportIndex].top = 0;
+    }
+    if (gViewportStates[viewportIndex].right >= 0x140) {
+        gViewportStates[viewportIndex].right = 0x13F;
+    }
+    if (gViewportStates[viewportIndex].bottom >= 0xF0) {
+        gViewportStates[viewportIndex].bottom = 0xEF;
+    }
+
+    guPerspective(
+        &gViewportStates[viewportIndex].projectionMatrix,
+        &gViewportStates[viewportIndex].perspectiveNorm,
+        70.0f,
+        aspect,
+        10.0f,
+        1000.0f,
+        0.5f
+    );
+    guPerspective(
+        &gViewportStates[viewportIndex].overlayProjectionMatrix,
+        &gViewportStates[viewportIndex].overlayPerspectiveNorm,
+        70.0f,
+        aspect,
+        10.0f,
+        gRaceViewportOverlayFarClip[0],
+        0.5f
+    );
+}
+
+void configureMenuViewport(
+    s32 viewportIndex,
+    s32 centerX,
+    s32 centerY,
+    u16 width,
+    u16 height,
+    u16 scaleX,
+    u16 scaleY,
+    f32 aspect
+) {
+    gViewportStates[viewportIndex].active = 1;
+    gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
+    gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;
+    gViewportStates[viewportIndex].viewport.vp.vscale[0] = scaleX * 2;
+    gViewportStates[viewportIndex].viewport.vp.vscale[1] = scaleY * 2;
+
+    gViewportStates[viewportIndex].left = centerX - (width / 2);
+    gViewportStates[viewportIndex].top = centerY - (height / 2);
+    gViewportStates[viewportIndex].right = (width / 2) + centerX;
+    gViewportStates[viewportIndex].bottom = (height / 2) + centerY;
+    gViewportStates[viewportIndex].screenBoundsValid = 1;
+
+    if (gViewportStates[viewportIndex].right < 0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].bottom < 0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].left >= 0x140) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].top >= 0xF0) {
+        gViewportStates[viewportIndex].screenBoundsValid = 0;
+    }
+    if (gViewportStates[viewportIndex].left < 0) {
+        gViewportStates[viewportIndex].left = 0;
+    }
+    if (gViewportStates[viewportIndex].top < 0) {
+        gViewportStates[viewportIndex].top = 0;
+    }
+    if (gViewportStates[viewportIndex].right >= 0x140) {
+        gViewportStates[viewportIndex].right = 0x13F;
+    }
+    if (gViewportStates[viewportIndex].bottom >= 0xF0) {
+        gViewportStates[viewportIndex].bottom = 0xEF;
+    }
+
+    guPerspective(
+        &gViewportStates[viewportIndex].projectionMatrix,
+        &gViewportStates[viewportIndex].perspectiveNorm,
+        70.0f,
+        aspect,
+        10.0f,
+        gMenuViewportFarClip[0],
+        0.5f
+    );
+    guPerspective(
+        &gViewportStates[viewportIndex].overlayProjectionMatrix,
+        &gViewportStates[viewportIndex].overlayPerspectiveNorm,
+        70.0f,
+        aspect,
+        10.0f,
+        gMenuViewportOverlayFarClip[0],
+        0.5f
+    );
+}
 
 void setViewportOverlayColor(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     ViewportState *viewport = &gViewportStates[arg0];
@@ -57,4 +324,6 @@ void setViewportOverlayColor(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     viewport->overlayB = arg3;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/viewport_manager/enableViewportClear.s")
+void enableViewportClear(s32 arg0) {
+    gViewportStates[arg0].clearFramebuffer = 1;
+}

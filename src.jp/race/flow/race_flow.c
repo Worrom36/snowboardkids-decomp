@@ -43,6 +43,8 @@ extern u8 gPendingEndingCreditsFlow;
 extern s32 gMenuFlowState;
 extern u8 gRumblePakConnectedMask;
 extern s16 gMenuFadeAlpha;
+extern u8 D_80120E80;
+extern u8 D_80120E77;
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80072780.s")
 
@@ -295,9 +297,22 @@ void openPassAwardCelebrationFlow(void) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/initRaceSceneFlow.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80073BB8.s")
+void fadeOutPassAwardCelebrationFlow(void) {
+    gMenuFadeAlpha -= 8;
+    if (gMenuFadeAlpha < 0) {
+        gMenuFadeAlpha = 0;
+        gCurrentGameTask->callbackData2--;
+    }
+    if (gCurrentGameTask->callbackData2 == 0) {
+        setRaceCameraMode(0, 0x1E);
+        requestMusicSequenceBank(5);
+        setCurrentGameTaskCallback(&fadeInRaceGameplayViewports, 0);
+    }
+    updateRaceFlowFrame();
+    gViewportStates[0].overlayAlpha = 0xFF;
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80073C58.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/fadeInRaceGameplayViewports.s")
 
 void startRaceGameplayFlow(void) {
     if (gMenuFadeAlpha != 0) {
@@ -365,9 +380,27 @@ void interpolateRaceViewport(
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80075F88.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80076E1C.s")
+void updateRaceResultsMusicFlow(void) {
+    if (countActiveMusicSequences() == 0) {
+        requestMusicSequenceBank(7);
+        gCurrentGameTask->callbackData1 = 0x3C;
+        gMenuFlowState |= 0x20;
+    }
+    if (D_80120E80 != 0) {
+        createCallbackTaskWithUserId((CallbackTaskCallback)&initFallingConfetti, 5, 0x64, D_80120E80 - 1);
+    }
+    updateRaceFlowFrame();
+    if (gMenuFlowState & 0x10) {
+        gCurrentGameTask->callbackData0 -= 1;
+        if (gCurrentGameTask->callbackData0 == 0) {
+            gCurrentGameTask->callbackData0 = 4;
+            setCurrentGameTaskCallback(&fadeOutRaceResultsFlow, 0);
+            requestMusicSequenceStop(0x14);
+        }
+    }
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80076EF8.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/fadeOutRaceResultsFlow.s")
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_8007704C.s")
 
@@ -383,7 +416,35 @@ void fadeOutRaceGhostReplayFlow(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/finalizeRaceExitFlow.s")
+void finalizeRaceExitFlow(void) {
+    gFramebufferSwapHold = 1;
+    if (gPendingFramebufferSwapCount == 2) {
+        gRaceRumbleEnabled = 0;
+        gRaceCameraModeChangeDisabled = 0;
+        updateRelocatableHeap();
+        releaseMenuAssetHandles();
+        gFramebufferSwapHold = 0;
+        gFramebufferRenderInterval.value = 0;
+        stopSoundEffects();
+        requestRumbleMotorInit(0);
+        requestRumbleMotorInit(1);
+        requestRumbleMotorInit(2);
+        requestRumbleMotorInit(3);
+        gMenuFlowState = 0;
+        if (D_80120E77 == 2) {
+            setCurrentGameTaskCallback(initRaceSceneFlow, 0);
+        } else if (gPlayerCount == 1) {
+            if (gRaceSplitscreenMode == 1) {
+                setCurrentGameTaskCallback(openRaceTypeSelectFlow, 0);
+            } else {
+                setCurrentGameTaskCallback(openPassAwardCelebrationFlow, 0);
+            }
+        } else {
+            setCurrentGameTaskCallback(openPostRaceControllerPakContinuePromptFlow, 0);
+        }
+        requestMusicSequenceStop(0);
+    }
+}
 
 void updateRaceFlowFrameWithCourseEffects(void) {
     updateRacePlayers();
