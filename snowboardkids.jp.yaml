@@ -316,6 +316,8 @@ segments:
       - [0xE07E0, rodatabin, data_E07E0]
       - [0xE07E4, .rodata, menu/main_menu/controller_main_menu_flow]
       - [0xE082C, rodatabin, data_E082C]
+      - [0xE0830, .rodata, menu/race_setup/race_setup_menu]
+      - [0xE08B0, rodatabin, data_E08B0]
       - [0xE08C0, .rodata, menu/splitscreen_select/race_splitscreen_select_menu]
       - [0xE08D0, .rodata, menu/character_select/character_select_course_menu]
       - [0xE08E0, rodatabin, data_E08E0]
@@ -364,9 +366,8 @@ segments:
       - [0xE1770, .rodata, race/course/race_surface_cues]
       - [0xE1790, .rodata, race/player/race_player_collision]
       - [0xE17E0, .rodata, race/player/race_player_movement]
-      - [0xE1830, rodatabin, data_E1830]
-      - [0xE1880, .rodata, race/player/race_player_update]
-      - [0xE1888, rodatabin, data_E1888]
+      - [0xE1830, .rodata, race/player/race_player_update]
+      - [0xE1950, .rodata, engine/system_runtime]
       - [0xE1980, .rodata, libmus/player]
       - [0xE1A10, .rodata, ultra/gu/perspective]
       - [0xE1A20, rodatabin, data_E1A20]
@@ -386,6 +387,8 @@ segments:
       - {type: bss, vram: 0x800E1CE0, name: main_bss}
       - {type: .bss, vram: 0x800E3F30, name: menu/main_menu/controller_subsystem}
       - {type: bss, vram: 0x800EBBD0, name: bss_800EBBD0}
+      - {type: .bss, vram: 0x8010A120, name: menu/race_setup/race_setup_menu}
+      - {type: bss, vram: 0x8010A170, name: bss_8010A170}
       - {type: .bss, vram: 0x8010A1A0, name: menu/character_select/character_select_course_menu}
       - {type: bss, vram: 0x8010A1B0, name: bss_8010A1B0}
       - {type: .bss, vram: 0x8010A4C0, name: ending/ending_credits_flow}

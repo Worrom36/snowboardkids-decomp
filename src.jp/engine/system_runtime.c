@@ -20,6 +20,7 @@
 #include "PR/ucode.h"
 #include "game/audio/audio_engine.h"
 
+#define OS_MESG_NOBLOCK 0
 #define MAIN_THREAD_ID 2
 #define PI_MANAGER_PRIORITY 150
 #define PI_MANAGER_MSG_COUNT 200
@@ -37,6 +38,14 @@ typedef struct {
     RenderCallbackQueueSlot queue2;
     RenderCallbackQueueSlot queue3;
 } RenderCallbackQueueGroup;
+
+extern OSMesgQueue gControllerInputUpdateQueue;
+
+extern OSMesgQueue gFramebufferRenderDoneQueue;
+
+extern OSMesgQueue gSchedulerClientQueue;
+
+extern u16 gRetraceCounter;
 
 extern OSMesgQueue gPiManagerQueue;
 
@@ -86,9 +95,114 @@ void bootThreadMain(void *arg) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/func_800990D0.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/initGameSystems.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/gameThreadMain.s")
+void gameThreadMain(void *arg0) {
+    OSMesg msg;
+    s32 initialized;
+    s32 finalType;
+    volatile s32 done;
+
+    msg = NULL;
+    initialized = 0;
+    done = 0;
+    initGameSystems();
+
+    while ((u64)1) {
+        if ((osRecvMesg(&gFramebufferRenderDoneQueue, &msg, OS_MESG_NOBLOCK) != 0) &&
+            (osRecvMesg(&gControllerInputUpdateQueue, &msg, OS_MESG_NOBLOCK) != 0) &&
+            (osRecvMesg(&gSchedulerClientQueue, &msg, OS_MESG_NOBLOCK) != 0)) {
+            continue;
+        }
+
+        switch (*(s16 *)msg) {
+            case 1:
+                gLastSchedulerRetraceCounter = gRetraceCounter;
+                if (initialized == 0) {
+                    initialized = 1;
+                    updateGameTaskScheduler();
+                    updateSoundManager();
+                    serviceRumbleMotorRequest(0);
+                    serviceRumbleMotorRequest(1);
+                    serviceRumbleMotorRequest(2);
+                    serviceRumbleMotorRequest(3);
+                    requestControllerRead();
+                } else {
+                    initialized = 0;
+                }
+                break;
+            case 5:
+                gPendingFramebufferSwapCount++;
+                gFrameRenderTasks[0].status = gFrameRenderTaskStatuses[0][0] & 0xFFFE;
+                break;
+            case 6:
+                gPendingFramebufferSwapCount++;
+                gFrameRenderTasks[1].status = gFrameRenderTaskStatuses[1][0] & 0xFFFE;
+                break;
+            case 3:
+                done = 1;
+                break;
+            case 9:
+                updateControllerInputState();
+                break;
+        }
+        if (done != 0) {
+            break;
+        }
+    }
+
+    fadeOutAllMusicSequences();
+    osViBlack(1);
+    requestRumbleMotorInit(0);
+    requestRumbleMotorInit(1);
+    requestRumbleMotorInit(2);
+    requestRumbleMotorInit(3);
+    serviceRumbleMotorRequest(0);
+    serviceRumbleMotorRequest(1);
+    serviceRumbleMotorRequest(2);
+    serviceRumbleMotorRequest(3);
+    requestRumbleMotorInit(0);
+    requestRumbleMotorInit(1);
+    requestRumbleMotorInit(2);
+    requestRumbleMotorInit(3);
+    serviceRumbleMotorRequest(0);
+    serviceRumbleMotorRequest(1);
+    serviceRumbleMotorRequest(2);
+    serviceRumbleMotorRequest(3);
+    requestRumbleMotorInit(0);
+    requestRumbleMotorInit(1);
+    requestRumbleMotorInit(2);
+    requestRumbleMotorInit(3);
+    serviceRumbleMotorRequest(0);
+    serviceRumbleMotorRequest(1);
+    serviceRumbleMotorRequest(2);
+    serviceRumbleMotorRequest(3);
+
+    finalType = 1;
+loop_16:
+    for (;;) {
+    loop_17:
+        if ((osRecvMesg(&gFramebufferRenderDoneQueue, &msg, OS_MESG_NOBLOCK) != 0) &&
+            (osRecvMesg(&gControllerInputUpdateQueue, &msg, OS_MESG_NOBLOCK) != 0) &&
+            (osRecvMesg(&gSchedulerClientQueue, &msg, OS_MESG_NOBLOCK) != 0)) {
+            goto loop_17;
+        }
+
+        if (!(*(s16 *)msg != finalType)) {
+            break;
+        }
+    }
+
+    requestRumbleMotorInit(0);
+    requestRumbleMotorInit(1);
+    requestRumbleMotorInit(2);
+    requestRumbleMotorInit(3);
+    serviceRumbleMotorRequest(0);
+    serviceRumbleMotorRequest(1);
+    serviceRumbleMotorRequest(2);
+    serviceRumbleMotorRequest(3);
+    goto loop_16;
+}
 
 void dmaReadRom(u32 romOffset, void *ramAddress, s32 size) {
     OSIoMesg dmaRequest;

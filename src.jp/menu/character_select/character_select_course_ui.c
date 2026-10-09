@@ -76,6 +76,12 @@ typedef struct {
     s16 y3;
 } CharacterSelectCourseListInitLoop;
 
+extern u8 gCharacterSelectCourseDifficultyRatings[12];
+
+extern const char gCharacterSelectCourseStatsScoreFormat[];
+
+extern u16 gCharacterSelectCourseStatsScoreValues[10];
+
 extern char gCharacterSelectCourseRecordHitsLabel[];
 
 extern char gCharacterSelectCourseRecordPointsLabel[];
@@ -2018,9 +2024,97 @@ void initCharacterSelectCourseTitleCursor(CharacterSelectCourseWidgetActor *arg0
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCourseTitleCursor);
 }
 
-// clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCourseStatsBadge.s")
-// clang-format on
+void drawCharacterSelectCourseStatsBadge(CharacterSelectCourseWidgetActor *arg0) {
+    s32 temp_v0;
+    s32 xOffset;
+    char buf[8];
+    s32 i;
+    s32 var_t8;
+
+    if (gRaceCourseIndex.signedValue != gCharacterSelectCourseExitOptionIndex) {
+        drawMenuPanelBackdrop(arg0->x, arg0->y, 0x3800, 0x5800);
+        drawMenuSpriteWithAlpha(
+            (s16)(arg0->x + 4),
+            (s16)(arg0->y + 4),
+            getRelocatableHeapBlockBase(CHARACTER_SELECT_FRAME_TEXTURE_HANDLE),
+            0x23,
+            0x20,
+            0x20,
+            0,
+            arg0->sprite.index,
+            0
+        );
+        sprintf(
+            buf,
+            gCharacterSelectCourseStatsScoreFormat,
+            gCharacterSelectCourseStatsScoreValues[gRaceCourseIndex.signedValue]
+        );
+        drawMenuAsciiText((s16)(arg0->x + 8), (s16)(arg0->y + 0xC), buf, 0, arg0->sprite.index);
+        drawMenuSpriteWithAlpha(
+            (s16)(arg0->x + 0x28),
+            (s16)(arg0->y + 0xC),
+            getRelocatableHeapBlockBase(CHARACTER_SELECT_FRAME_TEXTURE_HANDLE),
+            0x24,
+            0x20,
+            0x20,
+            0,
+            arg0->sprite.index,
+            0
+        );
+        drawMenuSpriteWithAlpha(
+            arg0->x,
+            (s16)(arg0->y + 0x14),
+            getRelocatableHeapBlockBase(CHARACTER_SELECT_FRAME_TEXTURE_HANDLE),
+            0x25,
+            0x20,
+            0x20,
+            0,
+            arg0->sprite.index,
+            0
+        );
+
+        temp_v0 = gCharacterSelectCourseDifficultyRatings[gRaceCourseIndex.signedValue];
+        xOffset = 0;
+        i = 0;
+        var_t8 = temp_v0 & 1;
+        if ((temp_v0 / 2) > 0) {
+            for (;;) {
+                drawMenuSpriteWithAlpha(
+                    (s16)(arg0->x + xOffset + 4),
+                    (s16)(arg0->y + 0x1C),
+                    getRelocatableHeapBlockBase(CHARACTER_SELECT_ICON_TEXTURE_HANDLE),
+                    0x25,
+                    0x20,
+                    0x20,
+                    0,
+                    arg0->sprite.index,
+                    0
+                );
+                i++;
+                temp_v0 = gCharacterSelectCourseDifficultyRatings[gRaceCourseIndex.signedValue];
+                xOffset += 0xC;
+
+                if (!(i < (temp_v0 / 2))) {
+                    break;
+                }
+            }
+        }
+        var_t8 = temp_v0 & 1;
+        if (var_t8 != 0) {
+            drawMenuSpriteWithAlpha(
+                (s16)(arg0->x + xOffset + 4),
+                (s16)(arg0->y + 0x1C),
+                getRelocatableHeapBlockBase(CHARACTER_SELECT_ICON_TEXTURE_HANDLE),
+                0x26,
+                0x20,
+                0x20,
+                0,
+                arg0->sprite.index,
+                0
+            );
+        }
+    }
+}
 
 // clang-format off
 void updateCharacterSelectCourseStatsBadge(CharacterSelectCourseWidgetActor *arg0) {

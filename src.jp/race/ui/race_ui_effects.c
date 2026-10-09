@@ -176,6 +176,12 @@ typedef struct {
     RaceTimer timeTrialRecordSplitTimes[11];
 } RaceUiTimeTrialSaveData;
 
+extern const char gRaceUiScoreAttackTimeOutLabel[0xC];
+
+extern const char gRaceUiScoreAttackAsteriskLabel[0x4];
+
+extern const char gRaceUiScoreAttackTargetFormat[0x4];
+
 extern RaceUiRankTextRenderEntry *D_800D761C[];
 
 extern const char gRaceUiPendingTrickPrizeLabel[];
@@ -1577,7 +1583,27 @@ void drawRaceUiScoreAttackCourseValues(RaceUiPopupActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiScoreAttackTargetStatus.s")
+void drawRaceUiScoreAttackTargetStatus(RaceUiAlpha18Actor *arg0) {
+    char text[0xC];
+
+    {
+        if (arg0->alpha != 0xFF) {
+            gDPPipeSync(gRegionAllocPtr++);
+            gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+            gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+            gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 255, 255, 255, arg0->alpha);
+        }
+        sprintf(text, gRaceUiScoreAttackTargetFormat, gRacePlayers[0].scoreAttackPointTarget);
+        drawMenuAsciiTextDefaultScale(-0x54, -0x14, gRaceUiScoreAttackAsteriskLabel, 6);
+        drawMenuAsciiTextDefaultScale(-0x3C, -0x14, text, 6);
+        if (gRaceChallengeFailed != 0) {
+            drawMenuAsciiTextDefaultScale(-0x68, -4, gRaceUiScoreAttackTimeOutLabel, 4);
+        }
+        if (arg0->alpha != 0xFF) {
+            gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+        }
+    }
+}
 
 void drawRaceUiHitPrizePayoutLabels(RaceUiCounterActor *arg0) {
     s32 y;
@@ -5261,7 +5287,34 @@ done:
     addRenderCallback(&gEffectRenderCallbackList, (RenderCallback)renderRaceCourseCoinMarkers, actor);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/initRaceCourseCoinMarkerMatrices.s")
+void initRaceCourseCoinMarkerMatrices(RaceUiGfxCommandActor *arg0) {
+    register RaceUiGfxCommandActor *actor1;
+    register RaceUiGfxCommandActor *actor2;
+    register RaceUiGfxCommandScriptEntry *script;
+    register s32 i;
+    register s32 offset;
+    register s32 one;
+    register Mtx *template;
+
+    script = D_800D5C6C[gRaceCourseIndex.signedValue];
+    actor1 = arg0;
+    actor2 = arg0;
+    i = 0;
+
+    template = &gIdentityMatrix;
+    offset = 0;
+    one = 1;
+    while (i < actor2->count) {
+        script->active = one;
+        actor1->particles[i] = *template;
+        setPackedMatrixTranslation(&actor1->particles[i], &script->position);
+        i++;
+        offset += sizeof(Mtx);
+        script++;
+    }
+
+    osWritebackDCache(actor1->particles, actor1->count * sizeof(Mtx));
+}
 
 void initRaceCourseCoinMarkers(RaceUiGfxCommandActor *actor) {
     RaceUiGfxCommandScriptEntry *marker;

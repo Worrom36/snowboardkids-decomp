@@ -364,3 +364,5 @@ SOUND_POINTER_BANK_ROM_END = 0x0027E320;
 _27E290_ROM_START = 0x0027E320;
 
 gControllerPakFileNos = gControllerSubsystemBssPadding;
+
+gRaceSetupSavePanelFrameState = gRaceSetupMenuSubState + 4;

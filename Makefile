@@ -413,8 +413,6 @@ $(BUILD_DIR)/src.jp/math/spatial_math.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 8
 $(BUILD_DIR)/src.jp/menu/renderer/menu_render_utils.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .text 8
-$(BUILD_DIR)/src.jp/race/player/race_player_update.o: C_OBJ_POSTPROCESS = \
-	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .rodata 8
 $(BUILD_DIR)/src.jp/menu/character_select/character_select_ui.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .rodata 8
 $(BUILD_DIR)/src.jp/menu/controller_pak/controller_pak_race_record_save_ui.o: C_OBJ_POSTPROCESS = \
@@ -429,6 +427,10 @@ $(BUILD_DIR)/src.jp/ending/ending_credits_ui.o: C_OBJ_POSTPROCESS = \
 
 $(BUILD_DIR)/src.jp/menu/character_select/character_select_course_ui.o: C_OBJ_POSTPROCESS = \
 	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .rodata 4
+
+$(BUILD_DIR)/src.jp/menu/race_setup/race_setup_menu.o: C_OBJ_POSTPROCESS = \
+	$(PYTHON) $(TOOLS_DIR)/trim_elf_section_tail.py $@ .data 16 \
+		--undefine-symbol gControllerPakRumbleCheckPromptState
 
 endif
 

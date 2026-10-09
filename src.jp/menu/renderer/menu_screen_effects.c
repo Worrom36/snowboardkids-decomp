@@ -35,6 +35,8 @@ typedef struct {
     s32 pad20;
 } TitleMenuRotatingBoardScratch;
 
+extern s16 courseRecordDigitTileOffsets[10];
+
 extern s16 congratulationsBannerSpriteTileOffsets[10];
 
 extern Vtx congratulationsBannerModelVertices[4];
@@ -453,7 +455,31 @@ void initTitleMenuSparkle(MenuScreenEffectActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)renderTitleMenuSparkle);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/drawCourseRecordBanner.s")
+void drawCourseRecordBanner(MenuScreenEffectActor *arg0) {
+
+    {
+        gDPPipeSync(gRegionAllocPtr++);
+        gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+        gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+        gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 255, 255, 255, arg0->unk18.half.lo);
+        drawAssetTableSprite(-0x54, -0x10, getRelocatableHeapBlockBase(gAssetHandles[28]), 0x5D);
+        drawAssetTableSprite(4, -0x10, getRelocatableHeapBlockBase(gAssetHandles[28]), 0x5E);
+        if (arg0) {}
+        drawAssetTableSprite(
+            -0x4C,
+            -0xC,
+            getRelocatableHeapBlockBase(gAssetHandles[29]),
+            (u16)courseRecordDigitTileOffsets[gRaceCourseIndex.signedValue]
+        );
+        drawAssetTableSprite(
+            4,
+            -0xC,
+            getRelocatableHeapBlockBase(gAssetHandles[29]),
+            courseRecordDigitTileOffsets[gRaceCourseIndex.signedValue] + 1
+        );
+        gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+    }
+}
 
 void updateCourseRecordBannerFadeOut(MenuScreenEffectActor *arg0) {
     s16 v = arg0->unk18.half.hi;
