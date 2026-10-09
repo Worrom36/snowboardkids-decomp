@@ -113,6 +113,7 @@ void renderRaceUiStunOrbitingIcon(RaceUiOrbitingSpriteActor *arg0) {
         arg0->matrix = allocFixedTransformMatrix(&sp64);
     }
 
+    // clang-format off
     do { \
         if (arg0->matrix != NULL) { \
             temp_v0 = gRegionAllocPtr++; \
@@ -171,4 +172,5 @@ void renderRaceUiStunOrbitingIcon(RaceUiOrbitingSpriteActor *arg0) {
             temp_v0_18->words.w1 = 0x00060200; \
         } \
     } while (0);
+    // clang-format on
 }

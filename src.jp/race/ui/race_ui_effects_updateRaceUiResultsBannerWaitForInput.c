@@ -38,7 +38,9 @@ void updateRaceUiResultsBannerWaitForInput(RaceUiResultsBannerActor *arg0) {
     actor = arg0;
     i = 0;
     if ((s32)gPlayerCount > 0) {
+        // clang-format off
         input = gPlayerInputPressed; do {
+        // clang-format on
             if ((*input & A_BUTTON) && !(gMenuFlowState & 0x10)) {
                 gMenuFlowState |= 0x10;
                 enqueueSoundEffect(0x18, 0x32);

@@ -46,7 +46,9 @@ void drawRaceUiCourseRecordRows(RaceUiPopupActor *arg0) {
 
     y = -0x50;
     /* IDO scheduling for this function depends on this initialization staying on one line. */
+    // clang-format off
     i = 0; offset = 0; while (1) {
+    // clang-format on
         drawAssetTableSprite(-8, (s16)y, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), i + 0x77);
         if ((i == arg0->task.userId) && (gUiBlinkTimer & 1)) {
             color = 0x10;

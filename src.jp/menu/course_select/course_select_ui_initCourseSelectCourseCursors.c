@@ -35,6 +35,7 @@ void initCourseSelectCourseCursors(CourseSelectCourseCursorsActor *arg0) {
     s32 layoutIndex;
 
     actor = arg0;
+    // clang-format off
     mask = 0xFFFFFFFFFFFFFFFFu; \
     if ((s32)gPlayerCount < 3) { \
         layoutIndex = gPlayerCount - 1; \
@@ -50,6 +51,7 @@ void initCourseSelectCourseCursors(CourseSelectCourseCursorsActor *arg0) {
             unlockState = *courseUnlocked & mask; \
             courseUnlocked++; \
             hasExtraCourse = (((0, unlockState) == 0) || (gRacePlayers[playerIndex].selectedCharacterId == 5)) ? 0 : 1;
+    // clang-format on
             actor->horizontalSpacing[playerIndex] = yLayout[hasExtraCourse];
             actor->y[playerIndex] =
                 yLayout[((playerIndex & 1) * 2) + hasExtraCourse + 2];

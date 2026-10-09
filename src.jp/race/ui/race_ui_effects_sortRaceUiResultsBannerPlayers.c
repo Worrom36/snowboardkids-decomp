@@ -42,7 +42,9 @@ void sortRaceUiResultsBannerPlayers(RaceUiResultsBannerActor *arg0) {
         i++;
     } while (i < 4);
 
+    // clang-format off
     i = 0; do { next = i + 1; j = next;
+    // clang-format on
         if (next < 4) {
             do {
                 if (gRacePlayers[actor->playerIndices[j]].rankIndex < gRacePlayers[actor->playerIndices[i]].rankIndex) {

@@ -32,7 +32,9 @@ void drawRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIconAc
          * allocation. The icon position itself is nevertheless a normal array
          * access; the compiler converts it to the pointer walk in the ROM.
          */
+        // clang-format off
         do { iconIndex = 0; yOffset = 0; do {
+        // clang-format on
             blinkAlpha = 0;
             if (((((gMenuSelectionConfirmTimer != 0) && (((s32) gMenuSelectionConfirmTimer) < 8)) &&
                  (gMenuExitSelection == 0)) &&

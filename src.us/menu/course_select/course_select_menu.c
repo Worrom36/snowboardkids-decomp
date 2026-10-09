@@ -341,7 +341,9 @@ void updateCourseSelectCourseList(void) {
             } else {
                 var_a1 = 4;
             }
+            // clang-format off
             for (var_a3 = 0; var_a3 < var_a1; var_a3++) { gRacePlayers[var_a3].menuState = 3; }
+            // clang-format on
             D_800EC9C0 = 0xF;
             gMenuFlowState = 1;
         }

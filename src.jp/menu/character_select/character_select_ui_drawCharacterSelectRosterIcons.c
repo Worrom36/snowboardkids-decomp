@@ -23,6 +23,7 @@ void drawCharacterSelectRosterIcons(CharacterSelectUiRosterIconActor *arg0) {
     s32 selectedAlpha;
     s32 tileTemp;
 
+    // clang-format off
     i = 0; \
     if (arg0->state != 0) { \
         assetHandles = gAssetHandles; \
@@ -34,6 +35,7 @@ void drawCharacterSelectRosterIcons(CharacterSelectUiRosterIconActor *arg0) {
             if (gPlayerCount > 0) { \
                 do { \
                     if ((i == gRacePlayers[j].selectedCharacterId) && (gRacePlayers[j].menuState != 0)) {
+    // clang-format on
                         tileTemp = i + 0x41;
                         alpha = 0x60;
                         tile = tileTemp;

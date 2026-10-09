@@ -25,7 +25,9 @@ void drawCoursePreviewCloseSparkles(ShopMenuWidgetActor *arg0) {
     ShopMenuWidgetActor *counterActor;
     void *texture;
 
+    // clang-format off
     actor = arg0; offset = gCoursePreviewCloseSparkleOffsets; counterActor = arg0; do {
+    // clang-format on
         if (offset < gCoursePreviewCloseSparkleMirrorStart) {
             texture = getRelocatableHeapBlockBase(gAssetHandles[0x1C]);
             drawMenuSprite((s16)(offset->x + actor->x), (s16)(offset->y + actor->sprite.index - 8),

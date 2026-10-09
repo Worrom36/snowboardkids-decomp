@@ -784,7 +784,9 @@ void drawMenuSpriteFixedScale(s16 x, s16 y, AssetTable *asset, u16 tileIndex, u1
     }
     if (drawTop < clipTop) {
         texT = ((((clipTop - drawTop) << 3) << 12) / scaleY);
+        // clang-format off
         if (tScale == -1) { texT = ((texture->height - 1) << 5) - texT; }
+        // clang-format on
         drawTop = clipTop;
     }
     if (drawRight >= clipRight) {

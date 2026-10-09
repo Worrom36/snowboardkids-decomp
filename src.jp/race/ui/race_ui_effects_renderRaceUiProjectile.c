@@ -77,6 +77,7 @@ void renderRaceUiProjectile(RaceUiProjectileActor *arg0) {
             sp74 = 0;
             do { } while (0);
         }
+        // clang-format off
         do { \
             temp_v0_2 = gRegionAllocPtr++; \
             temp_v0_2->words.w0 = 0x06000000; \
@@ -139,6 +140,7 @@ void renderRaceUiProjectile(RaceUiProjectileActor *arg0) {
             temp_v0_3->words.w0 = 0xB1060402; \
             temp_v0_3->words.w1 = 0x00060200; \
         } while (0);
+        // clang-format on
     }
 }
 

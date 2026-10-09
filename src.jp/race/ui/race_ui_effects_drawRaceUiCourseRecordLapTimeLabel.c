@@ -47,6 +47,7 @@ void drawRaceUiCourseRecordLapTimeLabel(RaceUiAlphaActor *arg0) {
     s32 w1;
 
     /* IDO scheduling for this function depends on this block staying on one line. */
+    // clang-format off
     do { \
         if (arg0->alpha != 0xFF) { \
             gfx = gRegionAllocPtr; \
@@ -80,6 +81,7 @@ void drawRaceUiCourseRecordLapTimeLabel(RaceUiAlphaActor *arg0) {
             gfx->words.w1 = w1; \
         } \
     } while (0);
+    // clang-format on
 }
 
 void drawRaceUiCourseRecordPayoutLabels(RaceUiDualCounterActor *arg0) {

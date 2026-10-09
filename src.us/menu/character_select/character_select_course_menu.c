@@ -423,6 +423,7 @@ void updateCharacterSelectCourseMenu(void) {
                         selection |= 0;
                         selection |= 0;
                         input = heldInput;
+                        // clang-format off
                         upInput = input & (STICK_UP | U_JPAD); \
                         if ((upInput == 0) && ((input & (STICK_DOWN | D_JPAD)) == 0)) { \
                             *repeatTimerPtr = 0; \
@@ -451,6 +452,7 @@ void updateCharacterSelectCourseMenu(void) {
                         } \
                         if ((*gCharacterSelectActiveCourseOptions)[selection] != (-1)) { \
                             gRaceCourseIndex.signedValue = selection + 1;
+                        // clang-format on
                             selection = gRaceCourseIndex.signedValue;
                         }
                     }

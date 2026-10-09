@@ -35,6 +35,7 @@ void initRaceSetupSaveMenu(void) {
     }
 
     gRaceSetupSavePanelCreateTimer = 0;
+    // clang-format off
     do { \
         i = 0; \
         connectedControllerCount = gConnectedControllerCount; \
@@ -54,6 +55,7 @@ void initRaceSetupSaveMenu(void) {
         gMenuScratch0.task = 0; \
         gMenuScratch1.task = 0; \
     } while (0);
+    // clang-format on
     gMenuScratch2.task = 0;
     gMenuSelectionConfirmTimer = 0;
     gMenuFlowState = 0;

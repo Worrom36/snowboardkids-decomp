@@ -1641,7 +1641,9 @@ void drawCourseSelectCourseDescription(CourseSelectCourseDescriptionActor *arg0)
                     script[digitCount + 2] = 0xFFFF;
                     if (gRacePlayers[0].menuSelection >= 9) {}
                 } else {
+                    // clang-format off
                     for (i = 2; i < 7; i++) { script[i] = 0x2B; }
+                    // clang-format on
                     script[7] = 0xFFFF;
                 }
                 drawMenuGlyphScript(arg0->x + 0x20, arg0->y + 0x20, script, 1, arg0->alpha, 0);

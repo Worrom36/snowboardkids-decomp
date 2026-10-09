@@ -27,7 +27,9 @@ void drawShopMenuModeChoiceRows(ShopMenuRowActor *actor) {
     rowIndex = 0;
     if (actor->visibleRowCount > 0) {
         /* Keeping the loop setup together preserves IDO's original scheduling. */
+        // clang-format off
         yOffset = 0; rows = actor; do {
+        // clang-format on
             blinkAlpha = 0;
             if ((gMenuSelectionConfirmTimer > 0) && (gMenuSelectionConfirmTimer < 8) &&
                 (gMenuExitSelection == 0) && (rowIndex == gCourseSelectModeSelection) &&

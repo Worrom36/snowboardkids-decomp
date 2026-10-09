@@ -22,6 +22,7 @@ void drawRaceTypeSelectOptionIcons(RaceTypeSelectOptionIconActor *arg0) {
     u16 tileIndex;
 
     savedArg = arg0;
+    // clang-format off
     do { \
         i = 0; \
         if (arg0->visibleCount > 0) { \
@@ -51,4 +52,5 @@ void drawRaceTypeSelectOptionIcons(RaceTypeSelectOptionIconActor *arg0) {
             } while (i < savedArg->visibleCount); \
         } \
     } while (0);
+    // clang-format on
 }

@@ -15,7 +15,9 @@
 void initRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIconActor *arg0) {
     s32 i;
 
+    // clang-format off
     for (i = 0; i < 5; i++) { arg0->x[i] = -0x104; }
+    // clang-format on
 
     arg0->y = -0x60;
     arg0->spawnTimer = 0;

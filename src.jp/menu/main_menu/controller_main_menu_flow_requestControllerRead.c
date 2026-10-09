@@ -45,6 +45,7 @@ void requestControllerRead(void) {
 
 void updateControllerInputState(void) {
     u16 i;
+    // clang-format off
     do { \
         i = 0; \
         do { \
@@ -57,4 +58,5 @@ void updateControllerInputState(void) {
         } while (i < 4); \
         gControllerReadPending = 0; \
     } while (0);
+    // clang-format on
 }

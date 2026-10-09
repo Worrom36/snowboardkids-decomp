@@ -46,7 +46,9 @@ void drawRaceUiPrizePayoutRankPrize(RaceUiAlpha18Actor *arg0) {
     sprintf(buffer + -8, gRaceUiRankPrizeCounterFormat, arg0->score);
     x = 0x20;
     handles = gAssetHandles;
+ // clang-format off
  ptr = (u8 *) (((s32) padding) - 0x10); if (!ptr) { } space = ' '; loop: if ((*ptr) != 0) {
+ // clang-format on
         if (space != *ptr) {
             drawAssetTableSprite(x, -0x3F, getRelocatableHeapBlockBase(handles[0x1F]),
                                  *ptr - 5);
@@ -76,6 +78,7 @@ void drawRaceUiPrizePayoutCollectedCoins(void *arg0)
         x = 0x20;
         if (gRacePlayers[0].rankIndex == 3)
         {
+            // clang-format off
             colorValue = 0xD; \
         } else { \
             colorValue = 0xC; \
@@ -96,6 +99,7 @@ void drawRaceUiPrizePayoutCollectedCoins(void *arg0)
                         color \
                     ); \
                 }
+            // clang-format on
                 x += 8;
                 i++;
                 goto loop;
@@ -121,7 +125,9 @@ void drawRaceUiPrizePayoutTotalMoney(void *arg0) {
     sprintf(buffer + -8, gRaceUiTotalMoneyCounterFormat, gRacePlayers[0].money);
     x = 0x18;
     handles = gAssetHandles;
+ // clang-format off
  ptr = (u8 *) (((s32) padding) - 0x10); if (!ptr) { } space = ' '; loop: if ((*ptr) != 0) {
+ // clang-format on
         if (space != *ptr) {
             drawAssetTableSprite(x, 0x21, getRelocatableHeapBlockBase(handles[0x1F]),
                                  *ptr - 5);

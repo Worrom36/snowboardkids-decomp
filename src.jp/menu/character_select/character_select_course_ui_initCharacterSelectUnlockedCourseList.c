@@ -65,6 +65,7 @@ void initCharacterSelectUnlockedCourseList(CharacterSelectCourseMenuFrameActor *
 
     arg0->baseY = baseY;
     arg0->itemSpacing = spacing;
+    // clang-format off
     do { \
         arg0->y[1] = baseY + spacing; \
         arg0->y[2] = baseY + (spacing * 2); \
@@ -89,6 +90,7 @@ void initCharacterSelectUnlockedCourseList(CharacterSelectCourseMenuFrameActor *
             i += 4; \
         } while (i != limit); \
     } while (0);
+    // clang-format on
 
     arg0->timer = 0;
     arg0->itemCount = 1;

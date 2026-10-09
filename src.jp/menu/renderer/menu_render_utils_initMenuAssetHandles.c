@@ -17,7 +17,9 @@ void initMenuAssetHandles(void)
     s16 *end;
     s16 *handle;
     end = &gMenuAsciiFontPaletteIndex;
+    // clang-format off
     do { handle = gAssetHandles; do { end = &gMenuAsciiFontPaletteIndex;
+    // clang-format on
         *handle++ = -1;
         *handle++ = -1;
         *handle++ = -1;
@@ -32,6 +34,7 @@ void initMenuAssetHandles(void)
 
 void releaseMenuAssetHandles(void)
 {
+    // clang-format off
     do { \
         s16 *handle = &gAssetHandles[7]; \
         do { \
@@ -41,4 +44,5 @@ void releaseMenuAssetHandles(void)
             handle++; \
         } while (handle != (&gMenuAsciiFontPaletteIndex)); \
     } while (0);
+    // clang-format on
 }

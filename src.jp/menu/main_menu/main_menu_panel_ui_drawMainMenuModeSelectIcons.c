@@ -48,7 +48,9 @@ void drawMainMenuModeSelectIcons(MenuPanelActor *arg0) {
     }
 
     x = -0x6E;
+    // clang-format off
     tile = mainMenuModeSelectTopRowIconTiles; i = 0; do {
+    // clang-format on
         next = i + 1;
         alpha = 0;
         if (next == gMainMenuModeSelection) {

@@ -17,7 +17,9 @@
 void initShopMenuModeChoiceRows(ShopMenuRowActor *arg0) {
     s32 i;
 
+    // clang-format off
     for (i = 0; i < 5; i++) { arg0->rowXPositions[i] = -0x104; }
+    // clang-format on
 
     arg0->baseY = -0x50;
     arg0->revealTimer = 0;

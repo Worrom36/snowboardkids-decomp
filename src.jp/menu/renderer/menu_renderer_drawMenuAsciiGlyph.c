@@ -82,6 +82,7 @@ void drawMenuAsciiGlyph(s16 x, s16 y, u16 tileS, s32 tileT, u16 palette, u16 pal
                     }
                     storedY = i;
                     if (1) {
+                        // clang-format off
                         scratch = allocMenuRenderScratch(sizeof(MenuPalette)); \
                         i = 0; \
                         source = &palettes[SPRITE_PALETTE_INDEX(font, paletteIndex)]; \
@@ -91,6 +92,7 @@ void drawMenuAsciiGlyph(s16 x, s16 y, u16 tileS, s32 tileT, u16 palette, u16 pal
                         i += sizeof(u16); \
                         if ((colorValue = color & 0xFFFF) & 1) { \
                             red = ((colorValue >> 11) & 0x1F) & 0xFFFF;
+                        // clang-format on
                             green = (colorValue >> 6) & 0x1F;
                             colorValue = (blue = (colorValue >> 1) & 0x1F);
                             scaleValue = paletteScale;
