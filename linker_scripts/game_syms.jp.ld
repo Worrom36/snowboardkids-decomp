@@ -354,3 +354,4 @@ _ADDR_20019C0_VRAM = 0x020019C0;
 gModelRenderCallbackQueues = gModelRenderCallbackList;
 PAN_DISPLAY_LIST_VRAM = 0x02002660;
 _ADDR_2002490_VRAM = 0x02002490;
+drawAssetTableSpriteWideIndex = drawAssetTableSprite;

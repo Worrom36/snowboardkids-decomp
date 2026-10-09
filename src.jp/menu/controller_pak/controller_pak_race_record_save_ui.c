@@ -37,6 +37,8 @@ typedef struct {
     MenuGlyphScript exitMessage[10];
 } ControllerPakRaceRecordSaveUiData;
 
+extern u16 gControllerPakRaceRecordSaveStatusTransitionNextStatus;
+
 extern const char D_800E0F30[];
 extern s16 gControllerPakRaceRecordSaveStatusTransitionAlpha;
 extern ControllerPakRaceRecordSaveUiData gControllerPakRaceRecordSaveUiData;
@@ -170,7 +172,45 @@ void drawControllerPakRaceRecordSaveScorePanel(ControllerPakRaceRecordSaveScoreP
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_race_record_save_ui/updateControllerPakRaceRecordSaveScorePanel.s")
+void updateControllerPakRaceRecordSaveScorePanel(ControllerPakRaceRecordSaveScorePanelActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->common.x -= 0x20;
+            if (arg0->common.x < -0x43) {
+                arg0->common.x = -0x44;
+                arg0->state = 1;
+                gMenuScratch0.recordSaveFrame =
+                    createCallbackTask((CallbackTaskCallback)initControllerPakRaceRecordSavePromptFrame, 0, 0x62);
+                createCallbackTask((CallbackTaskCallback)initControllerPakRaceRecordSaveExitMessage, 0, 0x63);
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gControllerPakStatusCodes[0] != 0) {
+                if (gMenuSelectionConfirmTimer == 0x14) {
+                    state = arg0->state = 2;
+                }
+            }
+            break;
+        case 2:
+            arg0->common.x -= 0x20;
+            if (arg0->common.x < -0x117) {
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            break;
+    }
+    state = arg0->state;
+    if (state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawControllerPakRaceRecordSaveScorePanel, arg0);
+}
 // clang-format on
 
 void initControllerPakRaceRecordSaveScorePanel(ControllerPakRaceRecordSaveScorePanelActor *arg0) {
@@ -238,10 +278,57 @@ void initControllerPakRaceRecordSaveStatusMessage(ControllerPakRaceRecordSaveSta
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateControllerPakRaceRecordSaveStatusMessage);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_race_record_save_ui/func_8002C2BC.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_race_record_save_ui/drawControllerPakRaceRecordSaveStatusChoicePrompt.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_race_record_save_ui/updateControllerPakRaceRecordSaveStatusChoicePrompt.s")
+void updateControllerPakRaceRecordSaveStatusChoicePrompt(ControllerPakRaceRecordSaveStatusChoicePromptActor *arg0) {
+    s32 temp_a0;
+    s32 var_v1;
+
+    if (gControllerPakRaceRecordSaveStatusTransitionNextStatus != arg0->nextStatus) {
+        arg0->nextStatus = gControllerPakRaceRecordSaveStatusTransitionNextStatus;
+    }
+    if ((gMenuChoicePromptState[0] != 0) && (gMenuChoicePromptState[0] != 3) && (gMenuChoicePromptState[0] != 4)) {
+        if (gMenuChoicePromptState[0] < 5) {
+            var_v1 = 1;
+        } else {
+            var_v1 = -1;
+        }
+        temp_a0 = var_v1 * 8;
+        arg0->slideOffset += temp_a0;
+        if (arg0->slideOffset == 0x20) {
+            gMenuChoicePromptState[0] += 2;
+            arg0->cursorAlphaTimer = 0;
+            arg0->cursorAlpha = 0x100;
+        }
+        if (temp_a0 == 8) {
+            if (arg0->slideOffset < 0x18) {
+                arg0->common.y += 8;
+            }
+            arg0->bottomChoiceY += 8;
+        } else {
+            if (arg0->slideOffset < 0x10) {
+                arg0->common.y -= 8;
+            }
+            arg0->bottomChoiceY -= 8;
+        }
+    }
+    if ((gMenuChoicePromptState[0] == 3) || (gMenuChoicePromptState[0] == 4)) {
+        if ((s32)arg0->cursorAlphaTimer < 0x10) {
+            arg0->cursorAlpha -= 9;
+        } else {
+            arg0->cursorAlpha += 9;
+        }
+        arg0->cursorAlphaTimer = (arg0->cursorAlphaTimer + 1) & 0x1F;
+    }
+    addRenderCallback(
+        &gMenuRenderCallbackList,
+        (RenderCallback)drawControllerPakRaceRecordSaveStatusChoicePrompt,
+        arg0
+    );
+}
 // clang-format on
 
 void initControllerPakRaceRecordSaveStatusChoicePrompt(ControllerPakRaceRecordSaveStatusChoicePromptActor *arg0) {
@@ -262,7 +349,37 @@ void drawControllerPakRaceRecordSaveExitMessage(ControllerPakRaceRecordSaveExitM
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_race_record_save_ui/updateControllerPakRaceRecordSaveExitMessage.s")
+void updateControllerPakRaceRecordSaveExitMessage(ControllerPakRaceRecordSaveExitMessageActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if ((gControllerPakStatusCodes[0] == 5) && (gMenuSelectionConfirmTimer == 0x14)) {
+                state = arg0->state = 2;
+            }
+            break;
+        case 2:
+            arg0->common.x -= 0x20;
+            if (arg0->common.x < -0xD7) {
+                arg0->state = 4;
+            }
+            state = arg0->state;
+            break;
+    }
+    if ((unsigned int)state == 4) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawControllerPakRaceRecordSaveExitMessage, arg0);
+}
 // clang-format on
 
 void initControllerPakRaceRecordSaveExitMessage(ControllerPakRaceRecordSaveExitMessageActor *arg0) {

@@ -32,6 +32,8 @@ typedef struct {
     s32 w8, w9, w10, w11, w12, w13, w14, w15;
 } PackedMtxWords;
 
+extern u16 D_800D3260[16];
+
 extern u8 *gRenderCallbackScratchPtr;
 extern u8 *gMenuRenderScratchPtr;
 extern u8 *gMenuRenderScratchStart;
@@ -114,17 +116,396 @@ void getAssetTableImagePaletteAndSize(u8 *arg0, u16 arg1, void **arg2, void **ar
     *arg5 = temp_v1[idx].height;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/drawAssetTableSprite.s")
+void drawAssetTableSprite(s16 x, s16 y, AssetTable *table, u16 entryIndex) {
+    AssetTableEntry *entry;
+    s32 maxX;
+    u8 *paletteBase;
+    s32 maxY;
+    s32 y0;
+    s32 x1;
+    s32 y1;
+    s32 clipS;
+    s32 clipT;
+    s32 minY;
+    s32 x0;
+    s32 minX;
+    s32 halfHeight;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/drawPulsingAssetTableSprite.s")
+    paletteBase = (table->entryCount * sizeof(AssetTableEntry)) + (u8 *)table + sizeof(AssetTableEntry);
+    entry = &table->entries[entryIndex];
+    x0 = x + gMenuViewportCenterX;
+    entry += 0;
+    y0 = y + gMenuViewportCenterY;
+    x1 = x0 + entry->width;
+    y1 = y0 + entry->height;
+    clipS = 0;
+    clipT = 0;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/drawAssetTableSpriteWithDefaultPalette.s")
+    maxX = gMenuViewportCenterX + (gMenuViewportWidth / 2);
+    if (x0 >= maxX) {
+        return;
+    }
+
+    halfHeight = gMenuViewportHeight / 2;
+    maxY = gMenuViewportCenterY + halfHeight;
+    minX = gMenuViewportCenterX - (gMenuViewportWidth / 2);
+    if (y0 >= maxY) {
+        return;
+    }
+    if (x1 < minX) {
+        return;
+    }
+
+    minY = gMenuViewportCenterY - halfHeight;
+    if (y1 < minY) {
+        return;
+    }
+
+    if (x0 < minX) {
+        clipS = minX - x0;
+        x0 = minX;
+    }
+    if (y0 < minY) {
+        clipT = minY - y0;
+        y0 = minY;
+    }
+    if (x1 >= maxX) {
+        x1 = maxX;
+    }
+    if (y1 >= maxY) {
+        y1 = maxY;
+    }
+
+    gDPLoadTextureTile_4b(
+        gRegionAllocPtr++,
+        entry->imageOffset + (u8 *)table,
+        G_IM_FMT_CI,
+        entry->width,
+        entry->height,
+        0,
+        0,
+        entry->width,
+        entry->height,
+        0,
+        G_TX_CLAMP,
+        G_TX_CLAMP,
+        G_TX_NOMASK,
+        G_TX_NOMASK,
+        G_TX_NOLOD,
+        G_TX_NOLOD
+    );
+    gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, paletteBase + (entry->paletteIndex << 5));
+    gSPTextureRectangle(
+        gRegionAllocPtr++,
+        x0 << 2,
+        y0 << 2,
+        x1 << 2,
+        y1 << 2,
+        G_TX_RENDERTILE,
+        clipS << 5,
+        clipT << 5,
+        0x400,
+        0x400
+    );
+}
+
+void drawPulsingAssetTableSprite(s16 x, s16 y, AssetTable *table, u16 entryIndex) {
+    AssetTableEntry *entry;
+    s32 maxX;
+    u8 *paletteBase;
+    s32 maxY;
+    s32 y0;
+    s32 x1;
+    s32 y1;
+    s32 clipS;
+    s32 clipT;
+    s32 minY;
+    s32 x0;
+    s32 minX;
+    s32 halfHeight;
+    s32 pulse;
+
+    paletteBase = (table->entryCount * sizeof(AssetTableEntry)) + (u8 *)table + sizeof(AssetTableEntry);
+    entry = &table->entries[entryIndex];
+    x0 = x + gMenuViewportCenterX;
+    entry += 0;
+    y0 = y + gMenuViewportCenterY;
+    x1 = x0 + entry->width;
+    y1 = y0 + entry->height;
+    clipS = 0;
+    clipT = 0;
+
+    maxX = gMenuViewportCenterX + (gMenuViewportWidth / 2);
+    if (x0 >= maxX) {
+        return;
+    }
+
+    halfHeight = gMenuViewportHeight / 2;
+    maxY = gMenuViewportCenterY + halfHeight;
+    // The constant branch preserves IDO's register allocation for the clipping bounds.
+    if (1) {
+        minX = gMenuViewportCenterX - (gMenuViewportWidth / 2);
+        if (y0 >= maxY) {
+            return;
+        }
+        if (x1 < minX) {
+            return;
+        }
+    }
+
+    minY = gMenuViewportCenterY - halfHeight;
+    if (y1 < minY) {
+        return;
+    }
+
+    if (x0 < minX) {
+        clipS = minX - x0;
+        x0 = minX;
+    }
+    if (y0 < minY) {
+        clipT = minY - y0;
+        y0 = minY;
+    }
+    if (x1 >= maxX) {
+        x1 = maxX;
+    }
+    if (y1 >= maxY) {
+        y1 = maxY;
+    }
+
+    pulse = gFrameCounter & 0x1F;
+    if (pulse >= 0x11) {
+        pulse = 0x20 - pulse;
+    }
+    pulse *= 0x10;
+    if (pulse >= 0x100) {
+        pulse = 0xFF;
+    }
+
+    gDPPipeSync(gRegionAllocPtr++);
+    gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+    gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 0xFF, 0xFF, pulse, 0xFF);
+    gDPLoadTextureTile_4b(
+        gRegionAllocPtr++,
+        entry->imageOffset + (u8 *)table,
+        G_IM_FMT_CI,
+        entry->width,
+        entry->height,
+        0,
+        0,
+        entry->width,
+        entry->height,
+        0,
+        G_TX_CLAMP,
+        G_TX_CLAMP,
+        G_TX_NOMASK,
+        G_TX_NOMASK,
+        G_TX_NOLOD,
+        G_TX_NOLOD
+    );
+    gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, paletteBase + (entry->paletteIndex << 5));
+    gSPTextureRectangle(
+        gRegionAllocPtr++,
+        x0 << 2,
+        y0 << 2,
+        x1 << 2,
+        y1 << 2,
+        G_TX_RENDERTILE,
+        clipS << 5,
+        clipT << 5,
+        0x400,
+        0x400
+    );
+    gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+}
+
+void drawAssetTableSpriteWithDefaultPalette(s16 x, s16 y, AssetTable *table, u16 entryIndex) {
+    AssetTableEntry *entry;
+    s32 maxX;
+    s32 minY;
+    s32 maxY;
+    s32 y0;
+    s32 x1;
+    s32 y1;
+    s32 clipS;
+    s32 clipT;
+    s32 x0;
+    s32 minX;
+    s32 halfHeight;
+
+    entry = &table->entries[entryIndex];
+    x0 = x + gMenuViewportCenterX;
+    entry += 0;
+    y0 = y + gMenuViewportCenterY;
+    x1 = x0 + entry->width;
+    y1 = y0 + entry->height;
+    clipS = 0;
+    clipT = 0;
+
+    maxX = gMenuViewportCenterX + (gMenuViewportWidth / 2);
+    if (x0 >= maxX) {
+        return;
+    }
+
+    halfHeight = gMenuViewportHeight / 2;
+    maxY = gMenuViewportCenterY + halfHeight;
+    minX = gMenuViewportCenterX - (gMenuViewportWidth / 2);
+    if (y0 >= maxY) {
+        return;
+    }
+    if (x1 < minX) {
+        return;
+    }
+
+    minY = gMenuViewportCenterY - halfHeight;
+    if (y1 < minY) {
+        return;
+    }
+
+    if (x0 < minX) {
+        clipS = minX - x0;
+        x0 = minX;
+    }
+    if (y0 < minY) {
+        clipT = minY - y0;
+        y0 = minY;
+    }
+    if (x1 >= maxX) {
+        x1 = maxX;
+    }
+    if (y1 >= maxY) {
+        y1 = maxY;
+    }
+
+    gDPLoadTextureTile_4b(
+        gRegionAllocPtr++,
+        entry->imageOffset + (u8 *)table,
+        G_IM_FMT_CI,
+        entry->width,
+        entry->height,
+        0,
+        0,
+        entry->width,
+        entry->height,
+        0,
+        G_TX_CLAMP,
+        G_TX_CLAMP,
+        G_TX_NOMASK,
+        G_TX_NOMASK,
+        G_TX_NOLOD,
+        G_TX_NOLOD
+    );
+    gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, D_800D3260);
+    gSPTextureRectangle(
+        gRegionAllocPtr++,
+        x0 << 2,
+        y0 << 2,
+        x1 << 2,
+        y1 << 2,
+        G_TX_RENDERTILE,
+        clipS << 5,
+        clipT << 5,
+        0x400,
+        0x400
+    );
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/drawMenuFillRectangle.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/func_80046690.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/drawAssetTableSprite8bpp.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/drawAssetTableSpriteWithExplicitPalette.s")
+void drawAssetTableSpriteWithExplicitPalette(s16 x, s16 y, AssetTable *table, u16 entryIndex, u16 paletteIndex) {
+    AssetTableEntry *entry;
+    s32 maxX;
+    u8 *paletteBase;
+    s32 maxY;
+    s32 y0;
+    s32 x1;
+    s32 y1;
+    s32 clipS;
+    s32 clipT;
+    s32 minY;
+    s32 x0;
+    s32 minX;
+    s32 halfHeight;
+
+    paletteBase = (table->entryCount * sizeof(AssetTableEntry)) + (u8 *)table + sizeof(AssetTableEntry);
+    entry = &table->entries[entryIndex];
+    x0 = x + gMenuViewportCenterX;
+    entry += 0;
+    y0 = y + gMenuViewportCenterY;
+    x1 = x0 + entry->width;
+    y1 = y0 + entry->height;
+    clipS = 0;
+    clipT = 0;
+
+    maxX = gMenuViewportCenterX + (gMenuViewportWidth / 2);
+    if (x0 >= maxX) {
+        return;
+    }
+
+    halfHeight = gMenuViewportHeight / 2;
+    maxY = gMenuViewportCenterY + halfHeight;
+    minX = gMenuViewportCenterX - (gMenuViewportWidth / 2);
+    if (y0 >= maxY) {
+        return;
+    }
+    if (x1 < minX) {
+        return;
+    }
+
+    minY = gMenuViewportCenterY - halfHeight;
+    if (y1 < minY) {
+        return;
+    }
+
+    if (x0 < minX) {
+        clipS = minX - x0;
+        x0 = minX;
+    }
+    if (y0 < minY) {
+        clipT = minY - y0;
+        y0 = minY;
+    }
+    if (x1 >= maxX) {
+        x1 = maxX;
+    }
+    if (y1 >= maxY) {
+        y1 = maxY;
+    }
+
+    gDPLoadTextureTile_4b(
+        gRegionAllocPtr++,
+        entry->imageOffset + (u8 *)table,
+        G_IM_FMT_CI,
+        entry->width,
+        entry->height,
+        0,
+        0,
+        entry->width,
+        entry->height,
+        0,
+        G_TX_CLAMP,
+        G_TX_CLAMP,
+        G_TX_NOMASK,
+        G_TX_NOMASK,
+        G_TX_NOLOD,
+        G_TX_NOLOD
+    );
+    gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, paletteBase + (SPRITE_PALETTE_INDEX(table, paletteIndex) << 5));
+    gSPTextureRectangle(
+        gRegionAllocPtr++,
+        x0 << 2,
+        y0 << 2,
+        x1 << 2,
+        y1 << 2,
+        G_TX_RENDERTILE,
+        clipS << 5,
+        clipT << 5,
+        0x400,
+        0x400
+    );
+}
 
 void drawScaledAssetTableSprite(s16 x, s16 y, AssetTable *asset, u16 entryIndex, u16 scale) {
     s32 x0;
@@ -589,4 +970,25 @@ void noopThreeArgs(void *arg0, void *arg1, void *arg2) {
 void noopFourArgs(void *arg0, void *arg1, void *arg2, void *arg3) {
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/isPositionNearAnyRaceViewportFocus.s")
+s32 isPositionNearAnyRaceViewportFocus(Vec3i *position) {
+    s32 i;
+    s32 diffX;
+    s32 diffZ;
+
+    if (gRaceSplitscreenMode == 2) {
+        return 1;
+    }
+
+    for (i = 0; i < 4; i++) {
+        if (gViewportStates[i].active != 0) {
+            diffX = gRaceCameras[i].pos.x - position->x;
+            diffZ = gRaceCameras[i].pos.z - position->z;
+            if ((diffX < 0x6000000) && (diffX >= (s32)0xFA000001) && (diffZ < 0x6000000) &&
+                (diffZ >= (s32)0xFA000001)) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}

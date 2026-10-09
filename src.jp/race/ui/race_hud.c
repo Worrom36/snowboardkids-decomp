@@ -18,6 +18,16 @@
 #define RACE_HUD_POPUP_FONT_HANDLE (gAssetHandles[0x1F])
 #define ASSET_HANDLE(index) (gAssetHandles[index])
 
+extern u8 gTrainingCourseLesson;
+
+extern u8 gMainMenuModeSelection;
+
+extern RaceTimer D_800DBC58[10];
+
+extern RaceTimer D_800DBC80;
+
+extern u8 gRaceTimeTrialFinishRecorded;
+
 extern const char gRaceHudTrickAttackPointLabel[];
 extern const char gRaceHudTrickAttackTimeLimitLabel[];
 extern const char gRaceHudScoreAttackTimeLimitLabel[];
@@ -36,7 +46,45 @@ extern const char gRaceHudTimeTrialBestLapFormat[];
 extern const char gRaceHudTimeTrialBestLapLabel[];
 extern u8 gRaceUpdatePaused;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/initRaceHud.s")
+void initRaceHud(void) {
+    LOAD_ASSET(SHARED_UI_SPRITES, 0x1F);
+    gRaceHudMode = RACE_HUD_MODE_NONE;
+    gRaceHudCoinSpinnerFrame = 0;
+
+    if (gPlayerCount == 1) {
+        if (gRaceSplitscreenMode == 0) {
+            gRaceHudMode = RACE_HUD_MODE_ONE_PLAYER;
+        }
+        if (gRaceSplitscreenMode == 2) {
+            gRaceHudMode = RACE_HUD_MODE_TIME_TRIAL;
+        }
+        if (gRaceSplitscreenMode == 1) {
+            if (gRaceTypeSelection == 0) {
+                gRaceHudMode = RACE_HUD_MODE_TARGET_TIME_CHALLENGE;
+            }
+            if (gRaceTypeSelection == 1) {
+                gRaceHudMode = RACE_HUD_MODE_SCORE_ATTACK;
+                gRaceChallengeTimeLimit = D_800DBC58[gRaceCourseIndex.signedValue];
+            }
+            if (gRaceTypeSelection == 2) {
+                gRaceHudMode = RACE_HUD_MODE_TRICK_ATTACK;
+                gRaceChallengeTimeLimit = D_800DBC80;
+            }
+        }
+    } else {
+        gRaceHudMode = gPlayerCount - 1;
+    }
+
+    if ((gTrainingCourseLesson != 0) || (gMainMenuModeSelection != 0)) {
+        gRaceHudMode = RACE_HUD_MODE_TRAINING_OR_DEMO;
+    }
+
+    gRaceElapsedTimer.minutes = 0;
+    gRaceElapsedTimer.seconds = 0;
+    gRaceElapsedTimer.fraction = 0;
+    gRaceTimeTrialFinishRecorded = 0;
+    gRaceChallengeFailed = 0;
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_80078068.s")
 

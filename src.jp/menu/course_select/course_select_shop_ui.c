@@ -30,6 +30,10 @@ enum {
     COURSE_DETAILS_ROW_SPACING = 0x13
 };
 
+extern u8 gShopMenuShowNewCoursesMessage;
+
+extern u8 gShopMenuDescriptionSeen;
+
 extern s32 gMenuFlowState;
 extern u8 gMenuExitSelection;
 extern ShopMenuFrameTileMap gShopMenuPanelFrameTilemaps[2];
@@ -77,7 +81,68 @@ void drawShopMenuModeChoiceRows(ShopMenuRowActor *actor) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuModeChoiceRows.s")
+void updateShopMenuModeChoiceRows(ShopMenuRowActor *arg0) {
+    s32 i;
+    s32 moved;
+    ShopMenuRowActor *spawnRow;
+    s32 state;
+    int stateByte;
+    ShopMenuRowActor *row;
+    ShopMenuRowActor *actor;
+
+    stateByte = arg0->state;
+    actor = arg0;
+    state = stateByte;
+    row = arg0;
+    switch (state) {
+        case 0:
+            moved = 0;
+            for (i = 0; i < row->visibleRowCount; i++) {
+                if (row->rowXPositions[i] < -0x7C) {
+                    row->rowXPositions[i] += 0x10;
+                    moved++;
+                    if (row->rowXPositions[i] >= -0x7C) {
+                        row->rowXPositions[i] = -0x7C;
+                    }
+                }
+            }
+            row->revealTimer++;
+            spawnRow = row;
+            if (!(spawnRow->revealTimer & 1)) {
+                if (spawnRow->visibleRowCount < 3) {
+                    spawnRow->visibleRowCount++;
+                }
+            }
+            if (moved == 0) {
+                spawnRow->state = 1;
+                createCallbackTask((CallbackTaskCallback)initShopMenuSelectedModePanel, 0, 0x5F);
+                createCallbackTask((CallbackTaskCallback)initShopMenuCourseListPanel, 0, 0x61);
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = (u8)(arg0->state = 2);
+            }
+            break;
+        case 2:
+            for (i = 0; i < 5; i++) {
+                arg0->rowXPositions[i] -= 0x20;
+            }
+            if (arg0->rowXPositions[0] < -0x103) {
+                arg0->state = 3;
+            }
+            break;
+        case 3:
+            break;
+    }
+
+    if (arg0->state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuModeChoiceRows, actor);
+}
 
 void initShopMenuModeChoiceRows(ShopMenuRowActor *arg0) {
     s32 i;
@@ -364,9 +429,47 @@ void initShopMenuModeCursor(ShopMenuWidgetActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateShopMenuModeCursor);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002E364.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/drawShopMenuDescriptionText.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuDescriptionText.s")
+void updateShopMenuDescriptionText(ShopMenuWidgetActor *arg0) {
+    u8 state = arg0->transition.bytes.state;
+
+    switch (state) {
+        case 0:
+            arg0->sprite.index += 0x26;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->transition.bytes.state = 1;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->transition.bytes.state = 2;
+            }
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x < -0xFF) {
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        if (gShopMenuDescriptionSeen == 0) {
+            gShopMenuDescriptionSeen = 1;
+        }
+        if (gShopMenuShowNewCoursesMessage == 1) {
+            gShopMenuShowNewCoursesMessage = 0;
+        }
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuDescriptionText, arg0);
+}
 
 void initShopMenuDescriptionText(ShopMenuWidgetActor *arg0) {
     arg0->x = -0x84;
@@ -390,7 +493,39 @@ void drawShopMenuPromptPanel(ShopMenuWidgetActor *arg0) {
     );
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuPromptPanel.s")
+void updateShopMenuPromptPanel(ShopMenuWidgetActor *arg0) {
+    u8 state = arg0->transition.bytes.state;
+
+    switch (state) {
+        case 0:
+            arg0->sprite.index += 0x26;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->transition.bytes.state = 1;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->transition.bytes.state = 2;
+            }
+            break;
+        case 2:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuPromptPanel, arg0);
+}
 
 void initShopMenuPromptPanel(ShopMenuWidgetActor *arg0) {
     arg0->x = -8;
@@ -648,9 +783,43 @@ void initCourseDetailsMenu(ShopMenuWidgetActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseDetailsMenu);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002FD94.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/drawCourseDetailsPreviewTile.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateCourseDetailsPreviewTile.s")
+void updateCourseDetailsPreviewTile(ShopMenuWidgetActor *arg0) {
+    u8 state;
+
+    if ((gCurrentGameTask->callbackData2 == 3) || (gCurrentGameTask->callbackData2 == 9)) {
+        arg0->sprite.bytes.state = 2;
+    }
+    state = arg0->sprite.bytes.state;
+    switch (state) {
+        case 0:
+            arg0->x -= 0x20;
+            if (arg0->x < 5) {
+                arg0->x = 4;
+                arg0->sprite.bytes.state = 1;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 1:
+            break;
+        case 2:
+            arg0->x += 0x20;
+            if (arg0->x >= 0x90) {
+                arg0->sprite.bytes.state = 3;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 3:
+            state = arg0->sprite.bytes.state = 4;
+            break;
+    }
+    if ((u32)state == 4) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseDetailsPreviewTile, arg0);
+}
 
 void initCourseDetailsPreviewTile(ShopMenuWidgetActor *arg0) {
     arg0->x = 0x90;

@@ -16,6 +16,12 @@
 #define CHARACTER_SELECT_UI_BANNER_TEXTURE_HANDLE (gAssetHandles[0x29])
 #define CHARACTER_SELECT_UI_UNUSED_HANDLE (gAssetHandles[0x1F])
 
+extern const char gCharacterSelectCharacterStatFormat[];
+
+extern CharacterSelectUiCharacterStats gCharacterSelectCharacterStats[];
+
+extern u16 gCharacterSelectCharacterStatLabels[];
+
 extern CharacterSelectUiConfirmationBannerText gCharacterSelectConfirmationBannerText;
 extern const char gCharacterSelectPlayerNumberFormat[];
 
@@ -430,7 +436,148 @@ void drawCharacterSelectRosterIcons(CharacterSelectUiRosterIconActor *arg0) {
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/func_8001784C.s")
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/drawCharacterSelectPlayerStatsPanels.s")
+void drawCharacterSelectPlayerStatsPanels(CharacterSelectUiPlayerStatsPanelActor *arg0) {
+    CharacterSelectUiPlayerCursorActor *controller = gMenuScratch2.playerCursors;
+    CharacterSelectUiPlayerStatsPanelActor *actor = arg0;
+    s32 i;
+    s32 j;
+    s32 k;
+    u8 text[4];
+    u16 tile;
+    u8 textureIndex;
+
+    if (controller->mode != 0) {
+        for (i = 0; i < gPlayerCount; i++) {
+            if (gRacePlayers[i].menuState == 0) {
+                textureIndex = 0x21;
+                if (actor->blinkTimer[i] > 10) {
+                    actor->blinkVisible[i] = 1;
+                } else {
+                    actor->blinkVisible[i] = 0;
+                }
+
+                if (actor->blinkVisible[i] != 0) {
+                    tile = gRacePlayers[i].selectedCharacterId + 0x3D;
+                } else {
+                    tile = gRacePlayers[i].selectedCharacterId + 0x37;
+                }
+            } else {
+                textureIndex = 0x1F;
+                tile = gRacePlayers[i].selectedCharacterId + 0x41;
+            }
+
+            drawMenuSpriteTile(
+                (s16)(actor->x[i] + 6),
+                (s16)(actor->y[i] + 0xD),
+                getRelocatableHeapBlockBase(gAssetHandles[textureIndex]),
+                tile,
+                0,
+                0x100
+            );
+            drawMenuSprite(
+                (s16)(actor->x[i] + 2),
+                (s16)(actor->y[i] + 0x28),
+                getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                gRacePlayers[i].selectedCharacterId + 0x91,
+                0x20,
+                0x20,
+                0,
+                0
+            );
+
+            if (gRacePlayers[i].selectedCharacterId == 5) {
+                text[0] = '?';
+                text[1] = '?';
+                text[2] = '\0';
+            } else {
+                sprintf(
+                    text,
+                    gCharacterSelectCharacterStatFormat,
+                    gCharacterSelectCharacterStatLabels[gRacePlayers[i].selectedCharacterId]
+                );
+            }
+            drawMenuAsciiText((s16)(actor->x[i] + 0x70), (s16)(actor->y[i] + 0xD), text, 0, 0x100);
+
+            for (k = 0, j = 0; j < (gCharacterSelectCharacterStats[gRacePlayers[i].selectedCharacterId].speed / 2);
+                 j++, k += 0xC) {
+                drawMenuSprite(
+                    (s16)(actor->x[i] + k + 0x5D),
+                    (s16)(actor->y[i] + 0x16),
+                    getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                    0x25,
+                    0x20,
+                    0x20,
+                    0,
+                    0
+                );
+            }
+            if (gCharacterSelectCharacterStats[gRacePlayers[i].selectedCharacterId].speed & 1) {
+                drawMenuSprite(
+                    (s16)(actor->x[i] + k + 0x5D),
+                    (s16)(actor->y[i] + 0x16),
+                    getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                    0x26,
+                    0x20,
+                    0x20,
+                    0,
+                    0
+                );
+            }
+
+            for (k = 0, j = 0; j < (gCharacterSelectCharacterStats[gRacePlayers[i].selectedCharacterId].turn / 2);
+                 j++, k += 0xC) {
+                drawMenuSprite(
+                    (s16)(actor->x[i] + k + 0x5D),
+                    (s16)(actor->y[i] + 0x22),
+                    getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                    0x25,
+                    0x20,
+                    0x20,
+                    0,
+                    0
+                );
+            }
+            if (gCharacterSelectCharacterStats[gRacePlayers[i].selectedCharacterId].turn & 1) {
+                drawMenuSprite(
+                    (s16)(actor->x[i] + k + 0x5D),
+                    (s16)(actor->y[i] + 0x22),
+                    getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                    0x26,
+                    0x20,
+                    0x20,
+                    0,
+                    0
+                );
+            }
+
+            for (k = 0, j = 0; j < (gCharacterSelectCharacterStats[gRacePlayers[i].selectedCharacterId].trick / 2);
+                 j++, k += 0xC) {
+                drawMenuSprite(
+                    (s16)(actor->x[i] + k + 0x5D),
+                    (s16)(actor->y[i] + 0x2E),
+                    getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                    0x25,
+                    0x20,
+                    0x20,
+                    0,
+                    0
+                );
+            }
+            if (gCharacterSelectCharacterStats[gRacePlayers[i].selectedCharacterId].trick & 1) {
+                drawMenuSprite(
+                    (s16)(actor->x[i] + k + 0x5D),
+                    (s16)(actor->y[i] + 0x2E),
+                    getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                    0x26,
+                    0x20,
+                    0x20,
+                    0,
+                    0
+                );
+            }
+        }
+    }
+}
 // clang-format on
 
 void updateCharacterSelectPlayerStatsPanels(CharacterSelectUiPlayerStatsPanelActor *arg0) {

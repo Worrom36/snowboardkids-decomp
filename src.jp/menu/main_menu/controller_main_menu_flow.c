@@ -106,7 +106,34 @@ void requestControllerPakProbe(u16 controllerIndex) {
     osRecvMesg(&gControllerSubsystemReplyQueue, &msg, OS_MESG_BLOCK);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/probeControllerPak.s")
+void probeControllerPak(u16 controllerIndex) {
+    u32 ret;
+
+    ret = osPfsInitPak(&gControllerEventQueue, &gControllerPakHandles[controllerIndex], controllerIndex);
+    if (ret == 2) {
+        ret = osPfsInitPak(&gControllerEventQueue, &gControllerPakHandles[controllerIndex], controllerIndex);
+    }
+
+    if (ret == 0) {
+        gControllerPakStatusCodes[controllerIndex] = 1;
+    }
+
+    if ((ret == 1) || (ret == 11)) {
+        gControllerPakStatusCodes[controllerIndex] = CONTROLLER_PAK_STATUS_ABSENT_OR_WRONG_DEVICE;
+    }
+
+    if (ret == 10) {
+        if (gRumblePakConnectedByController[controllerIndex] == 1) {
+            gControllerPakStatusCodes[controllerIndex] = CONTROLLER_PAK_STATUS_RUMBLE_DEVICE;
+        } else {
+            gControllerPakStatusCodes[controllerIndex] = 7;
+        }
+    }
+
+    if (ret != 0) {
+        gControllerPakOperationCounts[controllerIndex]++;
+    }
+}
 
 void requestControllerPakSaveStatus(u16 controllerIndex) {
     OSMesg msg;

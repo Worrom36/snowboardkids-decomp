@@ -25,13 +25,24 @@
     }
 
 typedef struct {
+    OverlayActorWord x;
+    OverlayActorWord y;
+    OverlayActorWord z;
+} OverlayActorTransform;
+
+typedef struct {
     Transform3D source;
     s32 pad20;
 } TitleMenuRotatingBoardScratch;
 
+extern Vtx congratulationsBannerModelVertices[4];
+
+extern s16 passAwardLabelFlashTileOffsets[538];
+
 extern u8 titleMenuSparkleTileFrames[16];
 
 extern s16 gMenuFadeAlpha;
+
 extern s16 raceSetupCharacterFocusSoundIds[6];
 extern u8 raceSetupCharacterFocusAnimationIds[8];
 extern u8 passAwardOpponentAnimationIds[4];
@@ -45,6 +56,7 @@ extern Vtx raceStartPlayerEffectVertices[4];
 extern s16 titleMenuSparklePositions[2];
 extern u32 D_2000E48[];
 extern u32 D_2000E70[];
+extern void updateCongratulationsBannerSprite(MenuScreenEffectActor *);
 
 void drawPassAwardLabel(MenuScreenEffectActor *);
 void drawCourseRecordBanner(MenuScreenEffectActor *);
@@ -463,7 +475,42 @@ void updateRaceSetupNamePlateSlideIn(MenuScreenEffectActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_800546D0.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/drawCongratulationsBannerModel.s")
+void drawCongratulationsBannerModel(MenuScreenEffectActor *arg0) {
+    void *image;
+    void *palette;
+    Transform3D transform;
+    Mtx *matrix;
+
+    if (gCurrentViewportIndex == 2) {
+        getAssetTableImageAndPalette(getRelocatableHeapBlockBase(gAssetHandles[34]), 0, &image, &palette);
+        makeFixedRotationZ(transform.rotation, arg0->spriteIndex);
+        transform.translation.x = arg0->unk18.word;
+        transform.translation.y = arg0->unk1C.word;
+        transform.translation.z = arg0->unk20.word;
+        matrix = allocFixedTransformMatrix(&transform);
+        if (matrix != NULL) {
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0x06000000, (u32)gTranslucentSpriteRenderModeDl);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xFA000000, (arg0->alpha & 0xFF) | ~0xFF);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xFD48006B, (u32)image);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xF5481C00, 0x07080200);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xE6000000, 0);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xF4000000, 0x071B0040);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xE7000000, 0);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xF5401C00, 0x00080200);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xF2000000, 0x00360040);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xFD100000, (u32)palette);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xE8000000, 0);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xF5000100, 0x07000000);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xE6000000, 0);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xF0000000, 0x0703C000);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xE7000000, 0);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0x01020040, (u32)matrix);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0x01000040, (u32)gViewportMatrix);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0x0400103F, (u32)congratulationsBannerModelVertices);
+            MAIN_MENU_GFX_CMD(gRegionAllocPtr++, 0xB1060402, 0x00060200);
+        }
+    }
+}
 
 void updateCongratulationsBannerAfterimage(MenuScreenEffectActor *arg0) {
     arg0->alpha -= 0x20;
@@ -474,7 +521,25 @@ void updateCongratulationsBannerAfterimage(MenuScreenEffectActor *arg0) {
     addRenderCallback(&gEffectRenderCallbackList, (RenderCallback)drawCongratulationsBannerModel, (void *)arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/updateCongratulationsBannerModel.s")
+void updateCongratulationsBannerModel(MenuScreenEffectActor *arg0) {
+    MenuScreenEffectActor *actor;
+
+    arg0->unk1C.word = ((-0x400000LL * fixedSine((s16)(arg0->unk30.word + 0x400))) / 0x1000) + 0x700000;
+    arg0->unk20.word = ((-0x9F0000LL * arg0->unk30.word) / 0x400) + 0xEC0000;
+    arg0->spriteIndex = (0x5000LL * fixedSine(arg0->unk30.half.lo)) / 0x1000;
+    if (arg0->unk30.word < 0x3F0) {
+        actor = createCallbackTask((CallbackTaskCallback)updateCongratulationsBannerAfterimage, 0, 0x65);
+        *(OverlayActorTransform *)&actor->unk18 = *(OverlayActorTransform *)&arg0->unk18;
+        actor->spriteIndex = arg0->spriteIndex;
+        actor->alpha = 0xC0;
+        arg0->unk30.word += 0x10;
+    } else {
+        createCallbackTask((CallbackTaskCallback)updateCongratulationsBannerSprite, 0, 0x63);
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gEffectRenderCallbackList, (RenderCallback)drawCongratulationsBannerModel, (void *)arg0);
+}
 
 void initCongratulationsBannerModel(MenuScreenEffectActor *arg0) {
     arg0->alpha = 0xFF;
@@ -488,9 +553,49 @@ void initCongratulationsBannerModel(MenuScreenEffectActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_80054C18.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/func_80054C84.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/updateCongratulationsBannerSprite.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/drawPassAwardLabel.s")
+void drawPassAwardLabel(MenuScreenEffectActor *arg0) {
+    gDPPipeSync(gRegionAllocPtr++);
+    gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+    gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+    gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 0xFF, 0xFF, 0xFF, arg0->unk18.half.lo);
+
+    switch (arg0->index) {
+        case 0:
+            drawAssetTableSprite(-0x8C, 0x38, getRelocatableHeapBlockBase(gAssetHandles[34]), 1);
+            drawAssetTableSpriteWithExplicitPalette(
+                -0x10,
+                0x38,
+                getRelocatableHeapBlockBase(gAssetHandles[34]),
+                2,
+                passAwardLabelFlashTileOffsets[gFrameCounter & 3]
+            );
+            break;
+        case 1:
+            drawAssetTableSprite(-0x89, 0x38, getRelocatableHeapBlockBase(gAssetHandles[34]), 1);
+            drawAssetTableSpriteWithExplicitPalette(
+                -0xD,
+                0x38,
+                getRelocatableHeapBlockBase(gAssetHandles[34]),
+                3,
+                passAwardLabelFlashTileOffsets[gFrameCounter & 3]
+            );
+            break;
+        case 2:
+            drawAssetTableSprite(-0x7E, 0x38, getRelocatableHeapBlockBase(gAssetHandles[34]), 1);
+            drawAssetTableSpriteWithExplicitPalette(
+                -2,
+                0x38,
+                getRelocatableHeapBlockBase(gAssetHandles[34]),
+                4,
+                passAwardLabelFlashTileOffsets[gFrameCounter & 3]
+            );
+            break;
+    }
+
+    gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+}
 
 void updatePassAwardLabelFadeIn(MenuScreenEffectActor *arg0) {
     s16 v = arg0->unk18.half.hi;

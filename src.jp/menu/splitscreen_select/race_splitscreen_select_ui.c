@@ -64,7 +64,75 @@ void drawRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIconAc
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectPlayerCountIcons.s")
+void updateRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIconActor *arg0) {
+    s32 i;
+    s32 moved;
+    void (*callback)(RaceSplitscreenSelectOptionFrameActor *);
+    s32 state;
+    int stateByte;
+    RaceSplitscreenSelectOptionIconActor *row;
+    RaceSplitscreenSelectOptionIconActor *actor;
+
+    stateByte = arg0->state;
+    actor = arg0;
+    state = stateByte;
+    row = arg0;
+    switch (state) {
+        case 0:
+            moved = 0;
+            for (i = 0; i < row->visibleCount; i++) {
+                if (row->x[i] < -0x7C) {
+                    row->x[i] += 0x10;
+                    moved++;
+                    if (row->x[i] >= -0x7C) {
+                        row->x[i] = -0x7C;
+                    }
+                }
+            }
+
+            row->spawnTimer++;
+            if (!(row->spawnTimer & 1)) {
+                if (row->visibleCount < 5) {
+                    row->visibleCount++;
+                }
+            }
+
+            if (moved == 0) {
+                row->state = 1;
+                createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectOption0Frame, 0, 0x5F);
+                callback = initRaceSplitscreenSelectOption1Frame;
+                createCallbackTask((CallbackTaskCallback)callback, 0, 0x60);
+                createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectOption2Frame, 0, 0x61);
+                createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectOption3Frame, 0, 0x62);
+                createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectOption4Frame, 0, 0x63);
+                state++;
+                state--;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = (u8)(arg0->state = 2);
+            }
+            break;
+        case 2:
+            for (i = 0; i < 5; i++) {
+                arg0->x[i] -= 0x20;
+            }
+            if (arg0->x[0] < -0x103) {
+                arg0->state = 3;
+            }
+            break;
+        case 3:
+            break;
+    }
+
+    if (arg0->state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectPlayerCountIcons, actor);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIconActor *arg0) {
@@ -408,7 +476,38 @@ void drawRaceSplitscreenSelectPortrait(RaceSplitscreenSelectAnimatedWidgetActor 
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectPortrait.s")
+void updateRaceSplitscreenSelectPortrait(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->state = 2;
+            }
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x < -0xFF) {
+                arg0->state = 3;
+            }
+            break;
+        case 3:
+            break;
+    }
+    gRaceSplitscreenSelectCursorTarget.portraitAlpha = arg0->alpha;
+    if (arg0->state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectPortrait, arg0);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectPortrait(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {

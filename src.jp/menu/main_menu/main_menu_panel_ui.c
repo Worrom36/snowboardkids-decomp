@@ -171,7 +171,50 @@ void initMainMenuModeDescriptionPanel(MenuPanelActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateMainMenuModeDescriptionPanel);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_panel_ui/drawMainMenuModeSelectMenuOptions.s")
+void drawMainMenuModeSelectMenuOptions(void *arg0) {
+    if (gMenuFlowState == 0) {
+        if ((gMainMenuSelectionResult == 0) || (gFrameCounter & 1)) {
+            drawAssetTableSprite(-0x30, -0x20, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 0);
+            drawPulsingAssetTableSprite(-0x30, -0x20, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 3);
+        } else {
+            drawAssetTableSpriteWithExplicitPalette(
+                -0x30,
+                -0x20,
+                getRelocatableHeapBlockBase(gAssetHandles[0x28]),
+                0,
+                1
+            );
+            drawPulsingAssetTableSprite(-0x30, -0x20, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 3);
+        }
+    } else {
+        drawAssetTableSpriteWithExplicitPalette(-0x30, -0x20, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 0, 1);
+    }
+
+    if (gMenuFlowState == 1) {
+        if ((gMainMenuSelectionResult == 0) || (gFrameCounter & 1)) {
+            drawAssetTableSprite(-0x30, -8, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 1);
+            drawPulsingAssetTableSprite(-0x30, -8, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 3);
+        } else {
+            drawAssetTableSpriteWithExplicitPalette(-0x30, -8, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 1, 1);
+            drawPulsingAssetTableSprite(-0x30, -8, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 3);
+        }
+    } else {
+        drawAssetTableSpriteWithExplicitPalette(-0x30, -8, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 1, 1);
+    }
+
+    if (gMenuFlowState == 2) {
+        if ((gMainMenuSelectionResult == 0) || (gFrameCounter & 1)) {
+            drawAssetTableSprite(-0x30, 0x10, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 2);
+            drawPulsingAssetTableSprite(-0x30, 0x10, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 3);
+            return;
+        }
+        drawAssetTableSpriteWithExplicitPalette(-0x30, 0x10, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 2, 1);
+        drawPulsingAssetTableSprite(-0x30, 0x10, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 3);
+        return;
+    }
+
+    drawAssetTableSpriteWithExplicitPalette(-0x30, 0x10, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 2, 1);
+}
 
 void updateMainMenuModeSelectMenuOptions(MenuPanelActor *arg0) {
     addRenderCallback(&gMenuRenderCallbackList, drawMainMenuModeSelectMenuOptions, arg0);

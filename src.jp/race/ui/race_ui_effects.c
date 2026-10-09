@@ -28,6 +28,26 @@
 #include "game/race/ui/race_hud.h"
 #include <PR/os_cache.h>
 
+#define RACE_UI_GSP_VERTEX_F3DEX(pkt, v, n, v0) \
+    gDma1p((pkt), G_VTX, (v), ((n) << 10) | (sizeof(Vtx) * (n) - 1), (v0) * 2)
+#define RACE_UI_GSP1QUADRANGLE_F3DEX(pkt, v0, v1, v2, v3, flag)                                  \
+    {                                                                                            \
+        Gfx *_g = (Gfx *)(pkt);                                                                  \
+        _g->words.w0 = _SHIFTL(0xB1, 24, 8) | RACE_UI_SP_QUADRANGLE_WORD0(v0, v1, v2, v3, flag); \
+        _g->words.w1 = RACE_UI_SP_QUADRANGLE_WORD1(v0, v1, v2, v3, flag);                        \
+    }
+#define RACE_UI_SP_QUADRANGLE_WORD0(v0, v1, v2, v3, flag)   \
+    (((flag) == 0)   ? RACE_UI_SP_TRIANGLE_WORD(v0, v1, v2) \
+     : ((flag) == 1) ? RACE_UI_SP_TRIANGLE_WORD(v1, v2, v3) \
+     : ((flag) == 2) ? RACE_UI_SP_TRIANGLE_WORD(v2, v3, v0) \
+                     : RACE_UI_SP_TRIANGLE_WORD(v3, v0, v1))
+#define RACE_UI_SP_QUADRANGLE_WORD1(v0, v1, v2, v3, flag)   \
+    (((flag) == 0)   ? RACE_UI_SP_TRIANGLE_WORD(v0, v2, v3) \
+     : ((flag) == 1) ? RACE_UI_SP_TRIANGLE_WORD(v1, v3, v0) \
+     : ((flag) == 2) ? RACE_UI_SP_TRIANGLE_WORD(v2, v0, v1) \
+                     : RACE_UI_SP_TRIANGLE_WORD(v3, v1, v2))
+#define RACE_UI_SP_TRIANGLE_WORD(v0, v1, v2) \
+    (_SHIFTL((v0) * 2, 16, 8) | _SHIFTL((v1) * 2, 8, 8) | _SHIFTL((v2) * 2, 0, 8))
 #define ASSET_HANDLE(index) (gAssetHandles[(index)])
 #define RACE_UI_PRIZE_PAYOUT_REVEAL_TIMER 0x14
 #define RACE_UI_HIT_PRIZE_SHOW_TOTAL_MONEY 3
@@ -107,6 +127,74 @@ typedef struct {
     u8 pad0[0x12A];
     RaceTimer timeTrialRecordSplitTimes[11];
 } RaceUiTimeTrialSaveData;
+
+extern const char D_800E05B8[4];
+
+extern const char D_800E05D8[4];
+
+extern const char D_800E05BC[4];
+
+extern const char D_800E05D0[4];
+
+extern const char D_800E05C0[4];
+
+extern const char D_800E05AC[4];
+
+extern const char D_800E05C4[4];
+
+extern const char D_800E05C8[4];
+
+extern const char D_800E05CC[4];
+
+extern const char D_800E05B4[4];
+
+extern const char D_800E05B0[4];
+
+extern const char D_800E05D4[4];
+
+extern const char gRaceUiTargetTimeChallengePerfectGetCounterFormat[];
+
+extern const char gRaceUiTargetTimeChallengePrizeCounterFormat[];
+
+extern const char gRaceUiTargetTimeChallengeMoneyCounterFormat[];
+
+extern const char gRaceUiTargetTimeChallengeSpeedFanGetCounterFormat[];
+
+extern const char gRaceUiTargetTimeChallengeCompleteBonusCounterFormat[];
+
+extern const char gRaceUiCounterPerfectHitBonusFormat[0x4];
+
+extern const char gRaceUiCounterMoneyFormat[0x4];
+
+extern const char gRaceUiCounterHitPrizeFormat[0x4];
+
+extern const char gRaceUiCounterCompleteBonusFormat[0x4];
+
+extern const char gRaceUiPendingCompleteBonusFormat[0x4];
+
+extern const char gRaceUiPendingMoneyFormat[0x4];
+
+extern const char gRaceUiPendingTrickPrizeFormat[0x4];
+
+extern const char gRaceUiPendingMakeBonusFormat[0x4];
+
+extern Gfx D_800D54C0[];
+
+extern Vtx D_800D5450[];
+
+extern Gfx D_800D5490[];
+
+extern const char gRaceUiTrickAttackSecondaryCounterFormat[4];
+
+extern const char gRaceUiTrickAttackPointTotalFormat[4];
+
+extern const char gRaceUiScoreAttackPointTotalFormat[4];
+
+extern s16 gRaceLapCount;
+
+extern Vec3i D_800D55D0;
+
+extern u32 *gRaceCourseRankModelDisplayLists[];
 
 extern RaceCourseScrollingTextureInit gRaceCourseScrollingTextureInit[RACE_COURSE_SCROLLING_TEXTURE_COUNT];
 
@@ -524,7 +612,80 @@ void updateRaceUiPrizePayoutWaitForConfirm(void *arg0) {
     addRenderCallback(&gMenuForegroundRenderCallbackList, (RenderCallback)drawRaceUiPrizePayoutLabels, (void *)arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRaceUiPrizePayoutCountMoney.s")
+void updateRaceUiPrizePayoutCountMoney(RaceUiAlpha18Actor *arg0) {
+    s32 unused;
+    s32 shouldPlaySound;
+    s32 value;
+    RacePlayer *player;
+
+    shouldPlaySound = 0;
+    value = arg0->score;
+    if (value != 0) {
+        shouldPlaySound = 1;
+    }
+    player = (RacePlayer *)(s32)&gRacePlayers[0];
+    if (value >= 9) {
+        player->money += 8;
+        arg0->score -= 8;
+    } else {
+        gRacePlayers[0].money = player->money + value;
+        arg0->score = 0;
+    }
+
+    if (player->rankIndex != 3) {
+        value = player->score;
+        if (value != 0) {
+            shouldPlaySound = 1;
+        }
+        if (value >= 9) {
+            player->money += 8;
+            player->score = value - 8;
+        } else {
+            player->score = 0;
+            player->money += value;
+        }
+    }
+
+    if (gPlayerInputPressed[0] & A_BUTTON) {
+        gRacePlayers[0].money = player->money + arg0->score;
+        if (player->rankIndex != 3) {
+            player->money += player->score;
+            player->score = 0;
+        }
+        arg0->score = 0;
+    }
+
+    if (player->money >= 1000000) {
+        player->money = 999999;
+    }
+
+    if (player->rankIndex != 3) {
+        if ((arg0->score == 0) && (player->score == 0)) {
+            enqueueSoundEffect(2, 0x32);
+            setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiPrizePayoutWaitForConfirm);
+        }
+    } else if (arg0->score == 0) {
+        shouldPlaySound = 0;
+        enqueueSoundEffect(2, 0x32);
+        setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiPrizePayoutWaitForConfirm);
+    }
+
+    if (shouldPlaySound != 0) {
+        s16 timer = arg0->timer;
+        if (timer == 0) {
+            arg0->timer = 2;
+            enqueueSoundEffect(0x1A, 0x32);
+        } else {
+            arg0->timer = timer - 1;
+        }
+    }
+
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceUiPrizePayoutRankPanel, (void *)arg0);
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceUiPrizePayoutRankPrize, (void *)arg0);
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceUiPrizePayoutCollectedCoins, (void *)arg0);
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceUiPrizePayoutTotalMoney, (void *)arg0);
+    addRenderCallback(&gMenuForegroundRenderCallbackList, (RenderCallback)drawRaceUiPrizePayoutLabels, (void *)arg0);
+}
 
 void updateRaceUiPrizePayoutWaitBeforeMoneyCount(RaceUiPrizePayoutActor *actor) {
     actor->timer = actor->timer - 1;
@@ -588,9 +749,133 @@ void updateRaceUiPrizePayoutFadeIn(RaceUiPrizePayoutActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005874C.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiResultsBannerPlacements.s")
+void drawRaceUiResultsBannerPlacements(RaceUiResultsBannerActor *arg0) {
+    u16 characterSpriteIndex;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiResultsBannerPlayerLabels.s")
+    if (arg0->alpha != 0xFF) {
+        gDPPipeSync(gRegionAllocPtr++);
+        gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+        gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+        gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 0xFF, 0xFF, 0xFF, arg0->alpha);
+    }
+
+    if (arg0->player0 != -1) {
+        drawAssetTableSprite(-0x88, -0x50, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0);
+        drawAssetTableSprite(-0x68, -0x40, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x48);
+        drawAssetTableSprite8bpp(
+            -0x54,
+            -0x50,
+            getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+            (characterSpriteIndex = gRacePlayers[arg0->player0].characterId + 0x41)
+        );
+        drawAssetTableSprite(-0x30, -0x40, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x4C);
+    }
+
+    if (arg0->player1 != -1) {
+        drawAssetTableSprite(8, -0x30, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 1);
+        drawAssetTableSprite(0x28, -0x20, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x49);
+        drawAssetTableSprite8bpp(
+            0x3C,
+            -0x30,
+            getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+            (characterSpriteIndex = gRacePlayers[arg0->player1].characterId + 0x41)
+        );
+        drawAssetTableSprite(0x60, -0x20, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x4C);
+    }
+
+    if (arg0->player2 != -1) {
+        drawAssetTableSprite(-0x88, -0x10, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 2);
+        drawAssetTableSprite(-0x68, 0, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x4A);
+        drawAssetTableSprite8bpp(
+            -0x54,
+            -0x10,
+            getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+            (characterSpriteIndex = gRacePlayers[arg0->player2].characterId + 0x41)
+        );
+        drawAssetTableSprite(-0x30, 0, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x4C);
+    }
+
+    if (arg0->player3 != -1) {
+        drawAssetTableSprite(8, 0x10, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 3);
+        drawAssetTableSprite(0x28, 0x20, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x4B);
+        drawAssetTableSprite8bpp(
+            0x3C,
+            0x10,
+            getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+            (characterSpriteIndex = gRacePlayers[arg0->player3].characterId + 0x41)
+        );
+        drawAssetTableSprite(0x60, 0x20, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x4C);
+    }
+
+    if (arg0->alpha != 0xFF) {
+        gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+    }
+}
+
+void drawRaceUiResultsBannerPlayerLabels(RaceUiResultsBannerActor *arg0) {
+    RaceUiResultsBannerActor *actor;
+    char text[0x64];
+
+    actor = arg0;
+    if (actor->alpha != 0xFF) {
+        gDPPipeSync(gRegionAllocPtr++);
+        gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+        gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+        gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 0xFF, 0xFF, 0xFF, actor->alpha);
+    }
+
+    if (actor->player0 != -1) {
+        sprintf(text, D_800E05AC, gRacePlayers[actor->player0].unk18);
+        if (gUiBlinkTimer & 1) {
+            drawMenuAsciiTextDefaultScale(-0x20, -0x38, text, 6);
+        } else {
+            drawMenuAsciiTextDefaultScale(-0x20, -0x38, text, 0);
+        }
+        if (gRacePlayers[actor->player0].isCpu == 0) {
+            sprintf(text, D_800E05B0, gRacePlayers[actor->player0].playerIndex + 1);
+            drawMenuAsciiTextDefaultScale(-0x30, -0x48, text, 5);
+        } else {
+            drawMenuAsciiTextDefaultScale(-0x30, -0x48, D_800E05B4, 4);
+        }
+    }
+
+    if (actor->player1 != -1) {
+        sprintf(text, D_800E05B8, gRacePlayers[actor->player1].unk18);
+        drawMenuAsciiTextDefaultScale(0x70, -0x18, text, 6);
+        if (gRacePlayers[actor->player1].isCpu == 0) {
+            sprintf(text, D_800E05BC, gRacePlayers[actor->player1].playerIndex + 1);
+            drawMenuAsciiTextDefaultScale(0x60, -0x28, text, 5);
+        } else {
+            drawMenuAsciiTextDefaultScale(0x60, -0x28, D_800E05C0, 4);
+        }
+    }
+
+    if (actor->player2 != -1) {
+        sprintf(text, D_800E05C4, gRacePlayers[actor->player2].unk18);
+        drawMenuAsciiTextDefaultScale(-0x20, 8, text, 6);
+        if (gRacePlayers[actor->player2].isCpu == 0) {
+            sprintf(text, D_800E05C8, gRacePlayers[actor->player2].playerIndex + 1);
+            drawMenuAsciiTextDefaultScale(-0x30, -8, text, 5);
+        } else {
+            drawMenuAsciiTextDefaultScale(-0x30, -8, D_800E05CC, 4);
+        }
+    }
+
+    if (actor->player3 != -1) {
+        sprintf(text, D_800E05D0, gRacePlayers[actor->player3].unk18);
+        drawMenuAsciiTextDefaultScale(0x70, 0x28, text, 6);
+        if (gRacePlayers[actor->player3].isCpu == 0) {
+            sprintf(text, D_800E05D4, gRacePlayers[actor->player3].playerIndex + 1);
+            drawMenuAsciiTextDefaultScale(0x60, 0x18, text, 5);
+        } else {
+            drawMenuAsciiTextDefaultScale(0x60, 0x18, D_800E05D8, 4);
+        }
+    }
+
+    if (actor->alpha != 0xFF) {
+        gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+    }
+}
 
 void sortRaceUiResultsBannerPlayers(RaceUiResultsBannerActor *arg0) {
     RaceUiResultsBannerActor *actor;
@@ -912,9 +1197,153 @@ void initRaceUiCourseStats(RaceUiCourseStatsActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiCourseStatsFadeInTitle);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiScoreAttackPointTotal.s")
+void drawRaceUiScoreAttackPointTotal(RaceUiAlpha18Actor *arg0) {
+    volatile s32 x;
+    char buffer[0x20];
+    RaceUiAlpha18Actor *actor;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiHitPrizePayoutCounters.s")
+    actor = arg0;
+    if (actor->alpha != 0xFF) {
+        gDPPipeSync(gRegionAllocPtr++);
+        gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+        gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+        gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 0xFF, 0xFF, 0xFF, actor->alpha);
+    }
+
+    drawAssetTableSprite(-0x6C, -0x24, getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)), 0x20);
+    sprintf(buffer + -8, gRaceUiScoreAttackPointTotalFormat, gRacePlayers[0].scoreAttackPointTotal);
+
+    if (buffer[-8] != ' ') {
+        drawAssetTableSprite(-0x4C, -0x1C, getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)), buffer[-8] - 5);
+    }
+
+    x = -0x44;
+    drawAssetTableSprite(
+        ((SplitWord *)&x)->half.lo,
+        -0x1C,
+        getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)),
+        buffer[-7] - 5
+    );
+
+    if (actor->alpha != 0xFF) {
+        gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+    }
+}
+
+void drawRaceUiHitPrizePayoutCounters(RaceUiCounterActor *arg0) {
+    volatile u8 pad[4];
+    SplitWord y;
+    s32 i;
+    s32 x;
+    char buffer[0x20];
+    s16 rowY;
+    s16 visibleRows;
+
+    y.word = -0x47;
+    if (arg0->flag == 0) {
+        y.word = -0x33;
+    }
+    visibleRows = arg0->state;
+    if (visibleRows >= 0) {
+        x = 0x20;
+        sprintf(buffer, gRaceUiCounterHitPrizeFormat, arg0->value, arg0);
+        i = 0;
+        rowY = y.half.lo;
+    loop1:
+        if (buffer[i] != 0) {
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    x,
+                    rowY,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    ((u8)buffer[i] - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+            goto loop1;
+        }
+        drawAssetTableSpriteWideIndex(x, rowY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+        y.word += 0x28;
+        visibleRows = arg0->state;
+    }
+
+    if (visibleRows > 0) {
+        if (arg0->flag != 0) {
+            x = 0x20;
+            sprintf(buffer, gRaceUiCounterPerfectHitBonusFormat, arg0->bonus, arg0);
+            i = 0;
+            rowY = y.half.lo;
+            i = 0;
+        loop2:
+            if (buffer[i] != 0) {
+                if (buffer[i] != ' ') {
+                    drawAssetTableSpriteWideIndex(
+                        x,
+                        rowY,
+                        getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                        ((u8)buffer[i] - 5) & 0xFFFF
+                    );
+                }
+                x += 8;
+                i++;
+                goto loop2;
+            }
+            drawAssetTableSpriteWideIndex(x, rowY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+            y.word += 0x28;
+            visibleRows = arg0->state;
+        }
+    }
+
+    if (visibleRows >= 2) {
+        x = 0x20;
+        sprintf(buffer, gRaceUiCounterCompleteBonusFormat, arg0->target, arg0);
+        i = 0;
+        rowY = y.half.lo;
+        i = 0;
+    loop3:
+        if (buffer[i] != 0) {
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    x,
+                    rowY,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    ((u8)buffer[i] - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+            goto loop3;
+        }
+        drawAssetTableSpriteWideIndex(x, rowY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+        y.word += 0x28;
+        visibleRows = arg0->state;
+    }
+
+    if (arg0) {}
+    if (visibleRows >= 3) {
+        x = 0x18;
+        sprintf(buffer, gRaceUiCounterMoneyFormat, gRacePlayers[0].money);
+        i = 0;
+        rowY = y.half.lo;
+        i = 0;
+    loop4:
+        if (buffer[i] != 0) {
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    x,
+                    rowY,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    ((u8)buffer[i] - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+            goto loop4;
+        }
+        drawAssetTableSpriteWideIndex(x, rowY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiScoreAttackCourseValues.s")
 
@@ -1157,7 +1586,139 @@ void updateRaceUiHitPrizeFadeIn(RaceUiCounterActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiCourseRecordElapsedTime.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiCourseRecordPayoutCounters.s")
+void drawRaceUiCourseRecordPayoutCounters(RaceUiDualCounterActor *arg0) {
+    volatile u8 pad[4];
+    SplitWord y;
+    s32 i;
+    s32 x;
+    char buffer[0x20];
+    s16 tempY;
+
+    y.word = -0x47;
+    if (arg0->state >= 0) {
+        x = 0x20;
+        sprintf(buffer, gRaceUiTargetTimeChallengePrizeCounterFormat, arg0->leftValue);
+        i = 0;
+        while (1) {
+            if (buffer[i] == 0) {
+                break;
+            }
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    (s16)x,
+                    -0x47,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    (((u8)buffer[i]) - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+        }
+        drawAssetTableSpriteWideIndex((s16)x, -0x47, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+        y.word = -0x27;
+    }
+
+    if (arg0->state > 0) {
+        x = 0x20;
+        sprintf(buffer, gRaceUiTargetTimeChallengeSpeedFanGetCounterFormat, arg0->rightValue);
+        i = 0;
+        tempY = y.half.lo;
+        i = 0;
+        while (1) {
+            if (buffer[i] == 0) {
+                break;
+            }
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    (s16)x,
+                    tempY,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    (((u8)buffer[i]) - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+        }
+        drawAssetTableSpriteWideIndex((s16)x, tempY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+        y.word += 0x20;
+    }
+
+    if (arg0->state >= 2) {
+        x = 0x20;
+        if (arg0->flag != 0) {
+            sprintf(buffer, gRaceUiTargetTimeChallengePerfectGetCounterFormat, arg0->bonus);
+            i = 0;
+            tempY = y.half.lo;
+            i = 0;
+            while (1) {
+                if (buffer[i] == 0) {
+                    break;
+                }
+                if (buffer[i] != ' ') {
+                    drawAssetTableSpriteWideIndex(
+                        (s16)x,
+                        tempY,
+                        getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                        (((u8)buffer[i]) - 5) & 0xFFFF
+                    );
+                }
+                x += 8;
+                i++;
+            }
+            drawAssetTableSpriteWideIndex((s16)x, tempY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+            y.word += 0x20;
+        }
+    }
+
+    if (arg0->state >= 3) {
+        x = 0x20;
+        sprintf(buffer, gRaceUiTargetTimeChallengeCompleteBonusCounterFormat, arg0->leftTarget);
+        i = 0;
+        tempY = y.half.lo;
+        i = 0;
+        while (1) {
+            if (buffer[i] == 0) {
+                break;
+            }
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    (s16)x,
+                    tempY,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    (((u8)buffer[i]) - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+        }
+        drawAssetTableSpriteWideIndex((s16)x, tempY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+        y.word += 0x20;
+    }
+
+    if (arg0->state >= 4) {
+        x = 0x18;
+        sprintf(buffer, gRaceUiTargetTimeChallengeMoneyCounterFormat, gRacePlayers[0].money);
+        i = 0;
+        tempY = y.half.lo;
+        i = 0;
+        while (1) {
+            if (buffer[i] == 0) {
+                break;
+            }
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    (s16)x,
+                    tempY,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    (((u8)buffer[i]) - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+        }
+        drawAssetTableSpriteWideIndex((s16)x, tempY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+    }
+}
 
 void drawRaceUiCourseRecordRows(RaceUiPopupActor *arg0) {
     s32 y;
@@ -1515,9 +2076,179 @@ void updateRaceUiCourseRecordFadeIn(RaceUiDualCounterActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005C9EC.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiTrickAttackTotals.s")
+void drawRaceUiTrickAttackTotals(RaceUiDualCounterActor *arg0) {
+    s32 i;
+    char buffer[0x28];
+    s32 x;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiTrickPrizePayoutCounters.s")
+    if (arg0->alpha18 != 0xFF) {
+        gDPPipeSync(gRegionAllocPtr++);
+        gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+        gDPSetRenderMode(gRegionAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+        gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 0xFF, 0xFF, 0xFF, arg0->alpha18);
+    }
+
+    sprintf(buffer, gRaceUiTrickAttackPointTotalFormat, gRacePlayers[0].trickAttackPointTotal);
+
+    x = -0x50;
+    if (gRacePlayers[0].trickAttackPointTotal >= 10) {
+        x = -0x54;
+    }
+    if (gRacePlayers[0].trickAttackPointTotal >= 100) {
+        x = -0x58;
+    }
+    if (gRacePlayers[0].trickAttackPointTotal >= 1000) {
+        x = -0x5C;
+    }
+
+    i = 0;
+    while (1) {
+        if (buffer[i] == '\0') {
+            break;
+        }
+        if (buffer[i] != ' ') {
+            drawAssetTableSprite(x, -0x37, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), buffer[i] - 5);
+        }
+        i++;
+        x += 8;
+    }
+
+    x = -0x50;
+    sprintf(buffer, gRaceUiTrickAttackSecondaryCounterFormat, gRacePlayers[0].trickAttackMakeCount);
+    if (gRacePlayers[0].trickAttackMakeCount >= 10) {
+        x = -0x54;
+    }
+
+    i = 0;
+    while (1) {
+        if (buffer[i] == '\0') {
+            break;
+        }
+        if (buffer[i] != ' ') {
+            drawAssetTableSpriteWithExplicitPalette(
+                x,
+                -0x13,
+                getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                buffer[i] - 5,
+                0xE
+            );
+        }
+        i++;
+        x += 8;
+    }
+
+    if (arg0->alpha18 != 0xFF) {
+        gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
+    }
+}
+
+void drawRaceUiTrickPrizePayoutCounters(RaceUiCourseStatsActor *arg0) {
+    volatile u8 pad[4];
+    SplitWord y;
+    s32 i;
+    s32 x;
+    char buffer[0x20];
+    s16 rowY;
+    s16 visibleRows;
+
+    y.word = -0x47;
+    visibleRows = arg0->visibleRows;
+    x = 0x20;
+    if (visibleRows >= 0) {
+        sprintf(buffer, gRaceUiPendingTrickPrizeFormat, arg0->pendingTrickPrize);
+        i = 0;
+    loop1:
+        if (buffer[i] != 0) {
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    x,
+                    -0x47,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    ((u8)buffer[i] - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+            goto loop1;
+        }
+        drawAssetTableSpriteWideIndex(x, -0x47, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+        y.word = -0x1F;
+        visibleRows = arg0->visibleRows;
+    }
+
+    if (visibleRows > 0) {
+        x = 0x20;
+        sprintf(buffer, gRaceUiPendingMakeBonusFormat, arg0->pendingMakeBonus);
+        i = 0;
+        rowY = y.half.lo;
+        i = 0;
+    loop2:
+        if (buffer[i] != 0) {
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    x,
+                    rowY,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    ((u8)buffer[i] - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+            goto loop2;
+        }
+        drawAssetTableSpriteWideIndex(x, rowY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+        y.word += 0x28;
+        visibleRows = arg0->visibleRows;
+    }
+
+    if (visibleRows >= 2) {
+        x = 0x20;
+        sprintf(buffer, gRaceUiPendingCompleteBonusFormat, arg0->pendingCompleteBonus);
+        i = 0;
+        rowY = y.half.lo;
+        i = 0;
+    loop3:
+        if (buffer[i] != 0) {
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    x,
+                    rowY,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    ((u8)buffer[i] - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+            goto loop3;
+        }
+        drawAssetTableSpriteWideIndex(x, rowY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+        y.word += 0x28;
+        visibleRows = arg0->visibleRows;
+    }
+
+    if (visibleRows >= 3) {
+        x = 0x18;
+        sprintf(buffer, gRaceUiPendingMoneyFormat, gRacePlayers[0].money);
+        i = 0;
+        rowY = y.half.lo;
+        i = 0;
+    loop4:
+        if (buffer[i] != 0) {
+            if (buffer[i] != ' ') {
+                drawAssetTableSpriteWideIndex(
+                    x,
+                    rowY,
+                    getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+                    ((u8)buffer[i] - 5) & 0xFFFF
+                );
+            }
+            x += 8;
+            i++;
+            goto loop4;
+        }
+        drawAssetTableSpriteWideIndex(x, rowY, getRelocatableHeapBlockBase(gAssetHandles[0x1F]), 0x37);
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/drawRaceUiTrickAttackCourseValues.s")
 
@@ -1733,13 +2464,46 @@ void drawRaceUiResultAwardBadge(CallbackTask *task) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005E22C.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005E270.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/renderRacePlayerSparkleEffect.s")
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005E5EC.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_8005E848.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRacePlayerSparkleRetarget.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRacePlayerSparkleRise.s")
+void updateRacePlayerSparkleRise(RaceUiSparkleActor *arg0) {
+    s16 sp38[0x10];
+    Vec3i sp2C;
+    volatile u8 pad[8];
+    RacePlayer *player;
+
+    if (gRaceUpdatePaused == 0) {
+        if (gFrameCounter & 1) {
+            arg0->frame = (arg0->frame + 1) & 3;
+        }
+
+        sp2C.x = 0;
+        sp2C.y = arg0->zOffset;
+        sp2C.z = 0;
+        player = &gRacePlayers[arg0->playerIndex];
+        makeFixedRotationXY(sp38, player->pitchAngle, player->facingAngle);
+        transformVec3iByFixedMatrix(sp38, &sp2C, &arg0->pos);
+
+        player = &gRacePlayers[arg0->playerIndex];
+        arg0->pos.x += player->unk28.x;
+        arg0->pos.y += player->unk28.y;
+        arg0->pos.z += player->unk28.z;
+        arg0->alpha += arg0->alphaStep;
+        if (arg0->alpha >= 0x100) {
+            arg0->alpha = 0xFF;
+            arg0->alphaStep = -0x20;
+            arg0->timer = 0x14;
+            setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRacePlayerSparkleRetarget);
+        }
+        arg0->zOffset += 0x20000;
+    }
+
+    addRenderCallback(&D_801248EC, (RenderCallback)renderRacePlayerSparkleEffect, arg0);
+}
 
 void initRacePlayerSparkleEffect(RaceUiSparkleActor *arg0) {
     arg0->zOffset = 0x20000;
@@ -1810,7 +2574,38 @@ void renderRaceUiExpiredSpeedFanEffect(RaceUiExpiredSpeedFanActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRaceUiExpiredSpeedFanEffect.s")
+void updateRaceUiExpiredSpeedFanEffect(RaceUiExpiredSpeedFanActor *arg0) {
+    Transform3D sp30;
+    volatile u8 pad[0x10];
+    RaceUiExpiredSpeedFanActor *actor;
+
+    actor = arg0;
+    actor->spinYaw += 0x240;
+    if (gRaceUpdatePaused == 0) {
+        actor->worldPos.y += actor->velocityY;
+        actor->velocityY -= 0x8000;
+    }
+
+    actor->frontTransform.translation.x = actor->worldPos.x;
+    actor->frontTransform.translation.y = actor->worldPos.y;
+    actor->frontTransform.translation.z = actor->worldPos.z;
+
+    makeFixedRotationX(sp30.rotation, actor->spinYaw);
+    sp30.translation.x = actor->scale.x;
+    sp30.translation.y = actor->scale.y;
+    sp30.translation.z = actor->scale.z;
+    composeFixedTransforms(&sp30, &actor->frontTransform, &actor->backTransform);
+
+    actor->timer--;
+    if (actor->timer == 0) {
+        removeCallbackTask(actor);
+        return;
+    }
+
+    if (gRacePlayers[actor->playerIndex].soundDisabled == 0) {
+        addRenderCallback(&gSceneModelRenderCallbackList, (RenderCallback)renderRaceUiExpiredSpeedFanEffect, arg0);
+    }
+}
 
 void initRaceUiExpiredSpeedFanEffect(RaceUiExpiredSpeedFanActor *actor) {
     actor->scaleStep = 1;
@@ -1861,7 +2656,50 @@ void renderRaceUiItemStealTrailEffect(RaceUiRankTrailActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRaceUiItemStealTrailEffect.s")
+void updateRaceUiItemStealTrailEffect(RaceUiRankTrailActor *arg0) {
+    RacePlayer *player;
+    s16 scale;
+    s32 i;
+
+    arg0->copyBlock = gIdentityFixedTransform;
+    player = &gRacePlayers[arg0->task.userId];
+    arg0->pos.x = player->unk28.x;
+    arg0->pos.y = player->unk28.y;
+    arg0->pos.z = player->unk28.z;
+
+    for (i = 0; i < 4; i++) {
+        if (i != arg0->task.userId) {
+            pushRacePlayerOutOfCylinderAndApplyItemHit(&arg0->pos, 0xE0000, 0xB0000, 2, i);
+        }
+    }
+
+    scale = arg0->scale;
+    arg0->copyBlock.rotation[0] = (arg0->copyBlock.rotation[0] * scale) / 64;
+    arg0->copyBlock.rotation[1] = (arg0->copyBlock.rotation[1] * scale) / 64;
+    arg0->copyBlock.rotation[2] = (arg0->copyBlock.rotation[2] * scale) / 64;
+    arg0->copyBlock.rotation[3] = (arg0->copyBlock.rotation[3] * scale) / 64;
+    arg0->copyBlock.rotation[4] = (arg0->copyBlock.rotation[4] * scale) / 64;
+    arg0->copyBlock.rotation[5] = (arg0->copyBlock.rotation[5] * scale) / 64;
+    arg0->copyBlock.rotation[6] = (arg0->copyBlock.rotation[6] * scale) / 64;
+    arg0->copyBlock.rotation[7] = (arg0->copyBlock.rotation[7] * scale) / 64;
+    arg0->copyBlock.rotation[8] = (arg0->copyBlock.rotation[8] * scale) / 64;
+
+    if (scale != 0x10) {
+        arg0->scale = scale + 2;
+    }
+
+    if (gRacePlayers[arg0->task.userId].stateFlags & 0x100000) {
+        addRenderCallback(&D_801248EC, (RenderCallback)renderRaceUiItemStealTrailEffect, (void *)arg0);
+        return;
+    }
+
+    for (i = 0; i < 8; i++) {
+        spawnRaceUiBurstTextParticle((void *)arg0->pos.x, (void *)arg0->pos.y, (void *)arg0->pos.z, i);
+    }
+
+    enqueuePositionalSoundEffect(0x15, &gRacePlayers[arg0->task.userId].pos, 0x7F, 0x32);
+    removeCallbackTask(arg0);
+}
 
 void initRaceUiItemStealTrailEffect(RaceUiRankTrailActor *arg0) {
     arg0->scale = 2;
@@ -1869,9 +2707,87 @@ void initRaceUiItemStealTrailEffect(RaceUiRankTrailActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiItemStealTrailEffect);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/renderRaceUiBurstTextParticle.s")
+void renderRaceUiBurstTextParticle(RaceUiTextParticleActor *arg0) {
+    volatile u8 padding[4];
+    Transform3D sp64;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/renderRaceUiAltBurstTextParticle.s")
+    if (gRenderMatricesDirty != 0) {
+        arg0->matrixDirty = 1;
+    }
+
+    if (arg0->matrixDirty != 0) {
+        arg0->matrixDirty = 0;
+        sp64 = gIdentityFixedTransform;
+        sp64.translation.x = arg0->pos.x;
+        sp64.translation.y = arg0->pos.y;
+        sp64.translation.z = arg0->pos.z;
+        arg0->matrix = allocFixedTransformMatrix(&sp64);
+    }
+
+    if (arg0->matrix != NULL) {
+        gSPDisplayList(gRegionAllocPtr++, D_800D5490);
+        gDPLoadTextureBlock_4b(
+            gRegionAllocPtr++,
+            arg0->images[arg0->timer >> 2],
+            G_IM_FMT_CI,
+            0x20,
+            0x20,
+            0,
+            G_TX_CLAMP,
+            G_TX_CLAMP,
+            0,
+            0,
+            G_TX_NOLOD,
+            G_TX_NOLOD
+        );
+        gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, arg0->palettes[arg0->timer >> 2]);
+        gSPMatrix(gRegionAllocPtr++, arg0->matrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+        gSPMatrix(gRegionAllocPtr++, gViewportMatrix, G_MTX_NOPUSH | G_MTX_MUL | G_MTX_MODELVIEW);
+        RACE_UI_GSP_VERTEX_F3DEX(gRegionAllocPtr++, D_800D5450, 4, 0);
+        RACE_UI_GSP1QUADRANGLE_F3DEX(gRegionAllocPtr++, 2, 1, 0, 3, 3);
+    }
+}
+
+void renderRaceUiAltBurstTextParticle(RaceUiTextParticleActor *arg0) {
+    volatile u8 padding[4];
+    Transform3D sp64;
+
+    if (gRenderMatricesDirty != 0) {
+        arg0->matrixDirty = 1;
+    }
+
+    if (arg0->matrixDirty != 0) {
+        arg0->matrixDirty = 0;
+        sp64 = gIdentityFixedTransform;
+        sp64.translation.x = arg0->pos.x;
+        sp64.translation.y = arg0->pos.y;
+        sp64.translation.z = arg0->pos.z;
+        arg0->matrix = allocFixedTransformMatrix(&sp64);
+    }
+
+    if (arg0->matrix != NULL) {
+        gSPDisplayList(gRegionAllocPtr++, D_800D54C0);
+        gDPLoadTextureBlock_4b(
+            gRegionAllocPtr++,
+            arg0->images[arg0->timer >> 2],
+            G_IM_FMT_CI,
+            0x20,
+            0x20,
+            0,
+            G_TX_CLAMP,
+            G_TX_CLAMP,
+            0,
+            0,
+            G_TX_NOLOD,
+            G_TX_NOLOD
+        );
+        gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, arg0->palettes[arg0->timer >> 2]);
+        gSPMatrix(gRegionAllocPtr++, arg0->matrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+        gSPMatrix(gRegionAllocPtr++, gViewportMatrix, G_MTX_NOPUSH | G_MTX_MUL | G_MTX_MODELVIEW);
+        RACE_UI_GSP_VERTEX_F3DEX(gRegionAllocPtr++, D_800D5450, 4, 0);
+        RACE_UI_GSP1QUADRANGLE_F3DEX(gRegionAllocPtr++, 2, 1, 0, 3, 3);
+    }
+}
 
 void updateRaceUiBurstTextParticle(RaceUiTextParticleActor *arg0) {
     s32 velocityY;
@@ -2018,9 +2934,48 @@ void updateGhostSlowdownDriftAway(RaceUiPodiumTrailActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/func_800602D8.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateGhostSlowdownImpact.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateGhostSlowdownRise.s")
+void updateGhostSlowdownRise(RaceUiPodiumTrailActor *arg0) {
+    RacePlayer *player;
+    s16 scale;
+
+    if (arg0->timer == 0) {
+        if (gRaceUpdatePaused == 0) {
+            arg0->velocity += 0x10000;
+            arg0->height += arg0->velocity;
+            arg0->copyBlock = gIdentityFixedTransform;
+            player = &gRacePlayers[arg0->playerIndex];
+            arg0->pos.x = player->unk28.x;
+            arg0->pos.y = player->unk28.y + arg0->height;
+            arg0->pos.z = player->unk28.z;
+
+            scale = arg0->state;
+            arg0->copyBlock.rotation[0] = (arg0->copyBlock.rotation[0] * scale) / 64;
+            arg0->copyBlock.rotation[1] = (arg0->copyBlock.rotation[1] * scale) / 64;
+            arg0->copyBlock.rotation[2] = (arg0->copyBlock.rotation[2] * scale) / 64;
+            arg0->copyBlock.rotation[3] = (arg0->copyBlock.rotation[3] * scale) / 64;
+            arg0->copyBlock.rotation[4] = (arg0->copyBlock.rotation[4] * scale) / 64;
+            arg0->copyBlock.rotation[5] = (arg0->copyBlock.rotation[5] * scale) / 64;
+            arg0->copyBlock.rotation[6] = (arg0->copyBlock.rotation[6] * scale) / 64;
+            arg0->copyBlock.rotation[7] = (arg0->copyBlock.rotation[7] * scale) / 64;
+            arg0->copyBlock.rotation[8] = (arg0->copyBlock.rotation[8] * scale) / 64;
+
+            if (scale != 0x10) {
+                arg0->state = scale + 1;
+            }
+
+            if (arg0->height >= 0xA00001) {
+                arg0->velocity = -0x10000;
+                setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateGhostSlowdownImpact);
+            }
+        }
+        gRacePlayers[arg0->targetPlayerIndex].itemTargetFlag = 1;
+        addRenderCallback(&gRaceModelEffectRenderCallbackList, (RenderCallback)renderGhostSlowdownActor, (void *)arg0);
+    } else if (gRaceUpdatePaused == 0) {
+        arg0->timer--;
+    }
+}
 
 void initGhostSlowdownActor(RaceUiPodiumTrailActor *arg0) {
     arg0->state = 1;
@@ -2642,7 +3597,25 @@ void renderRaceUiStunOrbitingIcon(RaceUiOrbitingSpriteActor *arg0) {
     // clang-format on
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRaceUiStunOrbitingIcon.s")
+void updateRaceUiStunOrbitingIcon(RaceUiOrbitingSpriteActor *arg0) {
+    RacePlayer *player;
+
+    player = &gRacePlayers[arg0->playerIndex];
+    if (!(player->stateFlags & 0x10000)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+
+    transformVec3iByFixedMatrix(player->modelPartTransforms[7].rotation, &D_800D55D0, &arg0->pos);
+    player = &gRacePlayers[arg0->playerIndex];
+    arg0->pos.x += player->modelPartTransforms[7].translation.x;
+    arg0->pos.y += player->modelPartTransforms[7].translation.y + 0x80000;
+    arg0->pos.z += player->modelPartTransforms[7].translation.z;
+    arg0->angle += 0xC0;
+    arg0->pos.x -= fixedSine(arg0->angle) << 7;
+    arg0->pos.z += fixedCosine(arg0->angle) << 7;
+    addRenderCallback(&D_801248EC, (RenderCallback)renderRaceUiStunOrbitingIcon, (void *)arg0);
+}
 
 void initRaceUiStunOrbitingIcon(RaceUiOrbitingSpriteActor *arg0) {
     getAssetTableImageAndPalette(getRelocatableHeapBlockBase(ASSET_HANDLE(0x1C)), 0x35, &arg0->image, &arg0->palette);
@@ -2882,7 +3855,47 @@ void updateCourseStartFinishSprite(RaceUiCourseSpriteActor *actor) {
     addRenderCallback(&D_801248C8, (RenderCallback)renderCourseStartFinishSprite, actor);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/initCourseStartFinishSprite.s")
+void initCourseStartFinishSprite(RaceUiCourseSpriteActor *actor) {
+    s32 unused;
+    s16 angle;
+
+    switch (actor->task.userId) {
+        case 0:
+            getRaceCourseSurfaceSpawnTransform(0, &actor->x, &actor->y, &actor->z, &angle);
+            getAssetTableImageAndPalette(
+                getRelocatableHeapBlockBase(ASSET_HANDLE(0x1D)),
+                0,
+                &actor->images[0],
+                &actor->palettes[0]
+            );
+            actor->images[1] = actor->images[0];
+            actor->palettes[1] = actor->palettes[0];
+            break;
+        case 1:
+            getRaceCourseSurfaceSpawnTransform(
+                gRaceCourseStartEntries[gRaceCourseIndex.signedValue].pathIndex,
+                &actor->x,
+                &actor->y,
+                &actor->z,
+                &angle
+            );
+            getAssetTableImageAndPalette(
+                getRelocatableHeapBlockBase(ASSET_HANDLE(0x1D)),
+                1,
+                &actor->images[0],
+                &actor->palettes[0]
+            );
+            getAssetTableImageAndPalette(
+                getRelocatableHeapBlockBase(ASSET_HANDLE(0x1D)),
+                2,
+                &actor->images[1],
+                &actor->palettes[1]
+            );
+            break;
+    }
+    unused = 0;
+    setCallbackTaskCallback(actor, (CallbackTaskCallback)updateCourseStartFinishSprite);
+}
 
 void renderSilverMountainSnowParticles(RaceUiEffectParticleActor *arg0) {
     RaceUiEffectParticleActor *actor;
@@ -2981,13 +3994,71 @@ void initSilverMountainSnowParticles(RaceUiEffectParticleActor *actor) {
     setCallbackTaskCallback(actor, (CallbackTaskCallback)updateSilverMountainSnowParticles);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/renderRaceCourseRankModel.s")
+void renderRaceCourseRankModel(RaceUiRankParticleActor *arg0) {
+    RaceUiDisplayCommand *unused;
+    s32 displayListIndex;
+
+    if (gRenderMatricesDirty != 0) {
+        arg0->matrixDirty = 1;
+    }
+
+    if (isPositionNearCurrentRaceViewportCamera(&arg0->pos) != 0) {
+        if (arg0->matrixDirty != 0) {
+            arg0->matrixDirty = 0;
+            arg0->matrix = allocFixedTransformMatrix(&arg0->copyBlock);
+        }
+
+        if (arg0->matrix != NULL) {
+            displayListIndex = 0;
+            if (gRaceLapCount <= gRacePlayers[gCurrentViewportIndex].lapDigit + 1) {
+                displayListIndex = 1;
+            }
+
+            gDPPipeSync(RACE_UI_TRAIL_GFX_ALLOC_PTR++);
+            gSPSegment(RACE_UI_TRAIL_GFX_ALLOC_PTR++, 0x02, getRelocatableHeapBlockBase(ASSET_HANDLE(0x8)));
+            gSPSegment(RACE_UI_TRAIL_GFX_ALLOC_PTR++, 0x03, getRelocatableHeapBlockBase(ASSET_HANDLE(0x9)));
+            gSPMatrix(RACE_UI_TRAIL_GFX_ALLOC_PTR++, arg0->matrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+            gSPDisplayList(RACE_UI_TRAIL_GFX_ALLOC_PTR++, arg0->displayLists[displayListIndex]);
+        }
+    }
+}
 
 void updateRaceCourseRankModel(RaceUiRankParticleActor *arg0) {
     addRenderCallback(&D_801248C8, (RenderCallback)renderRaceCourseRankModel, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/initRaceCourseRankModel.s")
+void initRaceCourseRankModel(RaceUiRankParticleActor *actor) {
+    struct {
+        s16 pad;
+        s16 angle;
+        s32 unused;
+    } local;
+
+    switch (actor->task.userId) {
+        case 0:
+            getRaceCourseSurfaceSpawnTransform(1, &actor->pos.x, &actor->pos.y, &actor->pos.z, &local.angle);
+            break;
+        case 1:
+            getRaceCourseSurfaceSpawnTransform(
+                gRaceCourseStartEntries[gRaceCourseIndex.signedValue].pathIndex,
+                &actor->pos.x,
+                &actor->pos.y,
+                &actor->pos.z,
+                &local.angle
+            );
+            break;
+    }
+
+    makeFixedRotationY(actor->copyBlock.rotation, local.angle);
+    actor->copyBlock.translation.x = actor->pos.x;
+    actor->copyBlock.translation.y = actor->pos.y;
+    actor->copyBlock.translation.z = actor->pos.z;
+    actor->displayLists[0] =
+        gRaceCourseRankModelDisplayLists[(actor->task.userId * 2) + (gRaceCourseIndex.signedValue * 4)];
+    actor->displayLists[1] =
+        gRaceCourseRankModelDisplayLists[(actor->task.userId * 2) + (gRaceCourseIndex.signedValue * 4) + 1];
+    setCallbackTaskCallback(actor, (CallbackTaskCallback)updateRaceCourseRankModel);
+}
 
 void setRaceUiProjectileAnimation(RaceUiProjectileActor *arg0, u16 *arg1) {
     arg0->animationScript = arg1;
@@ -3244,7 +4315,33 @@ void updateRaceUiProjectileBounceDown(RaceUiProjectileActor *arg0) {
     addRenderCallback(&D_801248C8, (RenderCallback)renderRaceUiProjectile, actor);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_ui_effects/updateRaceUiProjectileGrounded.s")
+void updateRaceUiProjectileGrounded(RaceUiProjectileActor *arg0) {
+    s16 sp2C[0x12];
+    RacePlayer *player;
+    RaceUiProjectileActor *actor;
+
+    actor = arg0;
+    if (gRaceUpdatePaused == 0) {
+        makeFixedRotationXY(
+            sp2C,
+            gRacePlayers[actor->task.userId].pitchAngle,
+            gRacePlayers[actor->task.userId].facingAngle
+        );
+        transformVec3iByFixedMatrix(sp2C, &actor->velocity, &actor->pos);
+
+        player = &gRacePlayers[actor->task.userId];
+        actor->pos.x += player->unk28.x;
+        actor->pos.y += player->unk28.y;
+        actor->pos.z += player->unk28.z;
+        advanceRaceUiProjectileAnimation(actor);
+        if (actor->flags != 0) {
+            setCallbackTaskCallback(actor, (CallbackTaskCallback)updateRaceUiProjectileBounceDown);
+            actor->verticalAcceleration = 0x50000;
+            actor->verticalVelocity += 0x50000;
+        }
+    }
+    addRenderCallback(&D_801248C8, (RenderCallback)renderRaceUiProjectile, actor);
+}
 
 void updateRaceUiProjectileInitialFall(RaceUiProjectileActor *arg0) {
     s16 sp2C[0x12];

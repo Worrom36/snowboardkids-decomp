@@ -389,7 +389,50 @@ void drawCharacterSelectCourseTitleCursor(CharacterSelectCourseWidgetActor *arg0
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseTitleCursor.s")
+void updateCharacterSelectCourseTitleCursor(CharacterSelectCourseWidgetActor *arg0) {
+    u8 state = arg0->transition.bytes.state;
+
+    switch (state) {
+        case 0:
+            arg0->sprite.index += 0x26;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->transition.bytes.state = 1;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 2;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 1;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            arg0->x += 0x20;
+            if (arg0->x >= 0x94) {
+                arg0->transition.bytes.state = 4;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+    }
+    if ((unsigned int)state == 4) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseTitleCursor, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCourseTitleCursor(CharacterSelectCourseWidgetActor *arg0) {
@@ -400,10 +443,55 @@ void initCharacterSelectCourseTitleCursor(CharacterSelectCourseWidgetActor *arg0
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCourseTitleCursor);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_80020F18.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCourseStatsBadge.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseStatsBadge.s")
+void updateCharacterSelectCourseStatsBadge(CharacterSelectCourseWidgetActor *arg0) {
+    u8 state = arg0->transition.bytes.state;
+
+    switch (state) {
+        case 0:
+            arg0->sprite.index += 0x26;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->transition.bytes.state = 1;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 2;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 1;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            arg0->x += 0x20;
+            if (arg0->x >= 0x94) {
+                arg0->transition.bytes.state = 4;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+    }
+    if ((unsigned int)state == 4) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseStatsBadge, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCourseStatsBadge(CharacterSelectCourseWidgetActor *arg0) {
@@ -414,10 +502,53 @@ void initCharacterSelectCourseStatsBadge(CharacterSelectCourseWidgetActor *arg0)
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCourseStatsBadge);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_800213A8.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePlayerStatsPanel.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePlayerStatsPanel.s")
+void updateCharacterSelectCoursePlayerStatsPanel(CharacterSelectCourseWidgetActor *arg0) {
+    u8 state = arg0->sprite.bytes.state;
+    s16 target;
+
+    switch (state) {
+        case 0:
+            if (gPlayerCount == 1) {
+                target = -0x78;
+            } else {
+                target = -0x80;
+            }
+            arg0->x += 0x20;
+            if (arg0->x >= target) {
+                arg0->x = target;
+                arg0->sprite.bytes.state = 1;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 1:
+            if ((gRacePlayers[0].menuState == 3) || (gRacePlayers[0].menuState == 7)) {
+                state = arg0->sprite.bytes.state = 2;
+            }
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x < -0x107) {
+                arg0->sprite.bytes.state = 3;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        if (gRacePlayers[0].menuState == 3) {
+            gRacePlayers[0].menuState = 4;
+        }
+    } else {
+        addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePlayerStatsPanel, arg0);
+    }
+}
 // clang-format on
 
 void initCharacterSelectCoursePlayerStatsPanel(CharacterSelectCourseWidgetActor *arg0) {
@@ -462,7 +593,42 @@ void drawCharacterSelectCourseSubmenuFrame(CharacterSelectCourseWidgetActor *arg
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseSubmenuFrame.s")
+void updateCharacterSelectCourseSubmenuFrame(CharacterSelectCourseWidgetActor *arg0) {
+    u8 state = arg0->sprite.bytes.state;
+
+    switch (state) {
+        case 0:
+            arg0->x += 0x20;
+            if (arg0->x >= -0x88) {
+                arg0->x = -0x88;
+                arg0->sprite.bytes.state = 1;
+                gMenuScratch0.task = createCallbackTask((CallbackTaskCallback)initCharacterSelectCourseNamePopup, 0, 0x63);
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 1:
+            if ((gRacePlayers[0].menuState == 3) || (gRacePlayers[0].menuState == 7)) {
+                state = arg0->sprite.bytes.state = 2;
+            }
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x < -0x107) {
+                arg0->sprite.bytes.state = 3;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 3:
+            state = arg0->sprite.bytes.state = 4;
+            break;
+    }
+    state = arg0->sprite.bytes.state;
+    if (state == 4) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseSubmenuFrame, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCourseSubmenuFrame(CharacterSelectCourseWidgetActor *arg0) {
@@ -545,10 +711,48 @@ void initCharacterSelectCourseDescriptionPopup(CharacterSelectCourseWidgetActor 
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCourseDescriptionPopup);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_80022430.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCourseConfirmCursor.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseConfirmCursor.s")
+void updateCharacterSelectCourseConfirmCursor(CharacterSelectCourseWidgetActor *arg0) {
+    s32 step;
+
+    if ((gMenuChoicePromptState[0] != 0) && (gMenuChoicePromptState[0] != 3) && (gMenuChoicePromptState[0] != 4)) {
+        step = ((gMenuChoicePromptState[0] < 5) ? 1 : -1) * 8;
+        arg0->transition.signedAlpha += step;
+
+        if (arg0->transition.signedAlpha == 0x20) {
+            gMenuChoicePromptState[0] += 2;
+            arg0->row.value = 0;
+            arg0->selection.counter = 0x100;
+        }
+
+        if (step == 8) {
+            if (arg0->transition.signedAlpha < 0x18) {
+                arg0->y += 8;
+            }
+            arg0->sprite.index += 8;
+        } else {
+            if (arg0->transition.signedAlpha < 0x10) {
+                arg0->y -= 8;
+            }
+            arg0->sprite.index -= 8;
+        }
+    }
+
+    if ((gMenuChoicePromptState[0] == 3) || (gMenuChoicePromptState[0] == 4)) {
+        if ((u16)arg0->row.value < 0x10) {
+            arg0->selection.counter = (u16)arg0->selection.counter - 9;
+        } else {
+            arg0->selection.counter = (u16)arg0->selection.counter + 9;
+        }
+        arg0->row.value = ((u16)arg0->row.value + 1) & 0x1F;
+    }
+
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseConfirmCursor, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCourseConfirmCursor(CharacterSelectCourseWidgetActor *arg0) {

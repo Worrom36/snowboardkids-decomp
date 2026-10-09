@@ -14,6 +14,10 @@
 #include "game/menu/race_setup/race_setup_ui.h"
 #include "game/race/player/race_player_input.h"
 
+extern u8 gControllerPakMenuConfirmChoice;
+
+extern u8 gControllerPakDeletePromptState;
+
 extern u8 gControllerPakMenuCursorState;
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/drawControllerPakContinuePrompt.s")
@@ -79,7 +83,58 @@ void initControllerPakRumbleCheckPrompt(ControllerPakRumbleCheckPromptActor *arg
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateControllerPakRumbleCheckPrompt);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/drawControllerPakFileDeleteMainOptions.s")
+void drawControllerPakFileDeleteMainOptions(ControllerPakOptionsActor *arg0) {
+    u32 drawAlpha;
+    u16 alpha;
+
+    if (gControllerPakMenuState.mainChoice == 0) {
+        alpha = 0x100;
+    } else {
+        alpha = 0x80;
+    }
+
+    drawAlpha = alpha;
+    drawMenuSpriteWithAlpha(
+        arg0->common.x,
+        arg0->common.y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        1,
+        0x20,
+        0x20,
+        0,
+        drawAlpha,
+        0
+    );
+
+    if (drawAlpha == 0x100) {
+        alpha = 0x80;
+    } else {
+        alpha = 0x100;
+    }
+
+    drawMenuSpriteWithAlpha(
+        (s16)(arg0->common.x + 0x70),
+        arg0->common.y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        2,
+        0x20,
+        0x20,
+        0,
+        alpha,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(arg0->common.x + (gControllerPakMenuState.mainChoice * 0x70)),
+        arg0->common.y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        5,
+        0x20,
+        0x20,
+        0,
+        arg0->scale,
+        0
+    );
+}
 
 void updateControllerPakFileDeleteMainOptionsUi(ControllerPakOptionsActor *arg0) {
     switch (gControllerPakMenuCursorState) {
@@ -109,7 +164,64 @@ void initControllerPakFileDeleteMainOptions(ControllerPakOptionsActor *arg0) {
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/drawControllerPakFileDeleteConfirmOptions.s")
+void drawControllerPakFileDeleteConfirmOptions(ControllerPakOptionsActor *arg0) {
+    ControllerPakOptionsActor *actor;
+    u16 alpha;
+    u16 otherAlpha;
+
+    actor = arg0;
+
+    if (gControllerPakMenuState.state == 2) {
+        otherAlpha = 0x80;
+        alpha = 0x80;
+        if (gControllerPakMenuState.confirmChoice == 0) {
+            alpha = 0x100;
+        } else {
+            otherAlpha = 0x100;
+        }
+    } else {
+        alpha = 0x80;
+        otherAlpha = 0x80;
+        if (!gControllerPakMenuConfirmChoice) {}
+    }
+
+    drawMenuSpriteWithAlpha(
+        arg0->common.x,
+        arg0->common.y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        3,
+        0x20,
+        0x20,
+        0,
+        alpha,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(actor->common.x + 0x70),
+        actor->common.y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        4,
+        0x20,
+        0x20,
+        0,
+        otherAlpha,
+        0
+    );
+
+    if (gControllerPakMenuCursorState == 2) {
+        drawMenuSpriteWithAlpha(
+            (s16)(actor->common.x + (gControllerPakMenuConfirmChoice * 0x70)),
+            actor->common.y,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            5,
+            0x20,
+            0x20,
+            0,
+            actor->scale,
+            0
+        );
+    }
+}
 // clang-format on
 
 void updateControllerPakFileDeleteConfirmOptionsUi(ControllerPakOptionsActor *arg0) {
@@ -229,10 +341,56 @@ void initControllerPakMessageIcon(ControllerPakSpriteActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateControllerPakMessageIcon);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/func_80032038.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/drawControllerPakFileDeleteErrorPrompt.s")
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/updateControllerPakFileDeleteErrorPromptUi.s")
+void updateControllerPakFileDeleteErrorPromptUi(ControllerPakDeletePromptActor *arg0) {
+    u8 globalState;
+    u8 state;
+    u8 *statePtr;
+
+    globalState = gControllerPakDeletePromptState;
+    state = arg0->timer;
+    if (globalState != state) {
+        state = globalState;
+        arg0->timer = globalState;
+    }
+
+    statePtr = &arg0->timer;
+    // IDO register allocation nudge for matching codegen.
+    switch (state ^ 0) {
+        case 0:
+            arg0->scale = (s16)arg0->scale + 0x28;
+            if ((s16)arg0->scale >= 0x100) {
+                arg0->scale = 0x100;
+                arg0->timer = 1;
+            }
+            state = arg0->timer;
+            break;
+        case 1:
+            arg0->selectedOption = (arg0->selectedOption + 1) & 0xF;
+            state = arg0->timer;
+            break;
+        case 2:
+            arg0->scale = (s16)arg0->scale - 0x28;
+            if ((s16)arg0->scale <= 0) {
+                arg0->scale = 0;
+                arg0->timer = 3;
+            }
+            state = arg0->timer;
+            break;
+        case 3:
+            break;
+    }
+
+    gControllerPakMenuState.unk6 = state;
+    if (*statePtr == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawControllerPakFileDeleteErrorPrompt, (void *)arg0);
+}
 // clang-format on
 
 void initControllerPakFileDeleteErrorPrompt(ControllerPakDeletePromptActor *arg0) {

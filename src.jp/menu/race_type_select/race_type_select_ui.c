@@ -58,7 +58,70 @@ void drawRaceTypeSelectOptionIcons(RaceTypeSelectOptionIconActor *arg0) {
     // clang-format on
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/updateRaceTypeSelectOptionIcons.s")
+void updateRaceTypeSelectOptionIcons(RaceTypeSelectOptionIconActor *arg0) {
+    s32 i;
+    s32 moved;
+    s32 state;
+    int stateByte;
+    RaceTypeSelectOptionIconActor *row;
+    RaceTypeSelectOptionIconActor *actor;
+
+    stateByte = arg0->state;
+    actor = arg0;
+    state = stateByte;
+    row = arg0;
+    switch (state) {
+        case 0:
+            moved = 0;
+            for (i = 0; i < row->visibleCount; i++) {
+                if (row->x[i] < -0x7C) {
+                    row->x[i] += 0x10;
+                    moved++;
+                    if (row->x[i] >= -0x7C) {
+                        row->x[i] = -0x7C;
+                    }
+                }
+            }
+
+            row->spawnTimer++;
+            if (!(row->spawnTimer & 1)) {
+                if (row->visibleCount < 4) {
+                    row->visibleCount++;
+                }
+            }
+
+            if (moved == 0) {
+                row->state = 1;
+                createCallbackTask((CallbackTaskCallback)initRaceTypeSelectOption0Frame, 0, 0x5F);
+                createCallbackTask((CallbackTaskCallback)initRaceTypeSelectOption1Frame, 0, 0x60);
+                createCallbackTask((CallbackTaskCallback)initRaceTypeSelectOption2Frame, 0, 0x61);
+                createCallbackTask((CallbackTaskCallback)initRaceTypeSelectOption3Frame, 0, 0x63);
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = (u8)(arg0->state = 2);
+            }
+            break;
+        case 2:
+            for (i = 0; i < 5; i++) {
+                arg0->x[i] -= 0x20;
+            }
+            if (arg0->x[0] < -0x103) {
+                arg0->state = 3;
+            }
+            break;
+        case 3:
+            break;
+    }
+
+    if (arg0->state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceTypeSelectOptionIcons, actor);
+}
 
 void initRaceTypeSelectOptionIcons(RaceTypeSelectOptionIconActor *arg0) {
     s32 temp_v1 = -0x104;
@@ -94,7 +157,39 @@ void drawRaceTypeSelectCornerSprites(RaceTypeSelectCornerSpriteActor *arg0) {
     );
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/updateRaceTypeSelectCornerSprites.s")
+void updateRaceTypeSelectCornerSprites(RaceTypeSelectCornerSpriteActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->x += 0x20;
+            if (arg0->x >= -0x88) {
+                arg0->x = -0x88;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->state = 2;
+            }
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x < -0x10D) {
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceTypeSelectCornerSprites, arg0);
+}
 
 void initRaceTypeSelectCornerSprites(RaceTypeSelectCornerSpriteActor *arg0) {
     arg0->x = -0x108;
@@ -329,7 +424,39 @@ void drawRaceTypeSelectPortrait(RaceTypeSelectAnimatedWidgetActor *arg0) {
     drawMenuGlyphScript(arg0->x, arg0->y, *description, 1, arg0->alpha, 0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/updateRaceTypeSelectPortrait.s")
+void updateRaceTypeSelectPortrait(RaceTypeSelectAnimatedWidgetActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->state = 2;
+            }
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x < -0xFF) {
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceTypeSelectPortrait, arg0);
+}
 
 void initRaceTypeSelectPortrait(RaceTypeSelectAnimatedWidgetActor *arg0) {
     arg0->x = -0x84;
@@ -353,7 +480,39 @@ void drawRaceTypeSelectArrowPrompt(RaceTypeSelectAnimatedWidgetActor *arg0) {
     );
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/updateRaceTypeSelectArrowPrompt.s")
+void updateRaceTypeSelectArrowPrompt(RaceTypeSelectAnimatedWidgetActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->state = 2;
+            }
+            break;
+        case 2:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceTypeSelectArrowPrompt, arg0);
+}
 
 void initRaceTypeSelectArrowPrompt(RaceTypeSelectAnimatedWidgetActor *arg0) {
     arg0->x = -8;
@@ -384,7 +543,39 @@ void drawRaceTypeSelectEntryFee(RaceTypeSelectAnimatedWidgetActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/updateRaceTypeSelectEntryFee.s")
+void updateRaceTypeSelectEntryFee(RaceTypeSelectAnimatedWidgetActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->state = 2;
+            }
+            break;
+        case 2:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            break;
+    }
+    if ((unsigned int)state == 3) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceTypeSelectEntryFee, arg0);
+}
 
 void initRaceTypeSelectEntryFee(RaceTypeSelectAnimatedWidgetActor *arg0) {
     arg0->x = 0x30;

@@ -20,6 +20,8 @@
 #include "game/race/player/race_player_model_renderer.h"
 #include "game/race/player/race_player_input.h"
 
+extern u8 D_800EC9C0;
+
 extern s16 gCourseSelectIconListXLayout[][4];
 extern s16 gCourseSelectIconListYLayout[][6];
 extern s16 gCourseSelectStatsPanelLayout[][4];
@@ -234,9 +236,50 @@ void initCourseSelectCourseListBackdrop(CourseSelectCourseListBackdropActor *arg
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectCourseListBackdrop);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80026404.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/drawCourseSelectCourseStats.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectCourseStats.s")
+void updateCourseSelectCourseStats(CourseSelectCourseStatsActor *arg0) {
+    s32 state = arg0->state;
+
+    switch (state ^ 0) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 3) {
+                arg0->state = 2;
+            }
+            if (gCurrentGameTask->callbackData2 == 9) {
+                arg0->state = 4;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->alpha -= 0x40;
+            if (arg0->alpha <= 0) {
+                arg0->alpha = 0;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            state = (arg0->state = 4);
+            break;
+    }
+
+    if (state == 4) {
+        removeCallbackTask(arg0);
+        finishCourseSelectUiTask(5);
+        return;
+    }
+
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseSelectCourseStats, arg0);
+}
 
 void initCourseSelectCourseStats(CourseSelectCourseStatsActor *arg0) {
     s32 row;
@@ -280,9 +323,37 @@ void initCourseSelectCourseDescription(CourseSelectCourseDescriptionActor *arg0)
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectCourseDescription);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80027424.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/drawCourseSelectExtraCourseBadge.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectExtraCourseBadge.s")
+void updateCourseSelectExtraCourseBadge(CourseSelectExtraCourseBadgeActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if ((gRacePlayers[0].menuState == 3) || (gCurrentGameTask->callbackData2 == 9)) {
+                state = (arg0->state = 2);
+            }
+            break;
+        case 2:
+            arg0->x += 0x20;
+            break;
+    }
+    state = arg0->state;
+    if ((state == 2) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        finishCourseSelectUiTask(7);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseSelectExtraCourseBadge, arg0);
+}
 
 void initCourseSelectExtraCourseBadge(CourseSelectExtraCourseBadgeActor *arg0) {
     arg0->x = -0x8;
@@ -624,9 +695,48 @@ void initCourseSelectPlayerPanels(CourseSelectPlayerPanelListActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectPlayerPanels);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80028D18.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/drawCourseSelectCompletePanels.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectCompletePanels.s")
+void updateCourseSelectCompletePanels(CourseSelectCompletePanelsActor *actor) {
+    CourseSelectAnimatedActor *source0;
+    CourseSelectAnimatedActor *source1;
+    CourseSelectCompletePanelsActor *task;
+    CourseSelectCompletePanelsActor *panel;
+    u16 alpha;
+    s32 i;
+
+    source0 = gMenuScratch0.coursePreview;
+    source1 = gMenuScratch1.coursePreview;
+    panel = actor;
+    task = panel;
+    for (i = 0; i < gPlayerCount; i++) {
+        alpha = panel->playerPanelFadeAlpha[i];
+        if (alpha == 0) {
+            if ((source0 != NULL) && ((source0->transitionState[i] == 4) || (source1->transitionState[i] == 4))) {
+                panel->playerPanelFadeAlpha[i] = 1;
+            }
+        } else {
+            if (alpha != 0x100) {
+                panel->playerPanelFadeAlpha[i] = alpha + 0x30;
+                if (panel->playerPanelFadeAlpha[i] >= 0x100) {
+                    panel->playerPanelFadeAlpha[i] = 0x100;
+                }
+            }
+            if (gRacePlayers[i].menuState == 1) {
+                panel->playerPanelFadeAlpha[i] = 0;
+            }
+        }
+    }
+
+    if (D_800EC9C0 == 0x10) {
+        removeCallbackTask(task);
+        for (i = 0; i < gPlayerCount; i++) {
+            gRacePlayers[i].menuState = 3;
+        }
+    } else {
+        addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseSelectCompletePanels, task);
+    }
+}
 
 void initCourseSelectCompletePanels(CourseSelectCompletePanelsActor *arg0) {
     s32 var_v0;

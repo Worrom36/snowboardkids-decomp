@@ -36,6 +36,14 @@
 #define interpolateRaceMotionJointAnimationFrame(player, animIndex, frameTimer, frameTimerReset) \
     interpolateRaceMotionJointAnimationFrame(RACE_MOTION_STATE(player), (animIndex), (frameTimer), (frameTimerReset))
 
+extern u16 gRacePlayerVoiceBaseSoundIds[];
+
+extern u16 gRacePlayerVoiceSplitSoundOffsets[];
+
+extern u16 gRacePlayerVoiceLeadSoundOffsets[];
+
+extern s16 gRacePlayerAttackStartTimer;
+
 extern s8 gRacePlayerCount;
 extern u8 gRaceUpdatePaused;
 extern void (*gRacePlayerTrickSubstateHandlers[])(RacePlayer *);
@@ -3099,7 +3107,43 @@ void updateRacePlayerMode07LaunchRampDrift(RacePlayer *player) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80095530.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/tryStartRacePlayerCourseObjectMode.s")
+s32 tryStartRacePlayerCourseObjectMode(s16 arg0) {
+    s32 delta;
+    s32 i;
+
+    if (gRacePlayers[arg0].stateFlags & 0x40) {
+        return 0;
+    }
+    for (i = 0; i < 4; i++) {
+        if ((gRacePlayers[i].isActive != 0) && (arg0 != (u16)gRacePlayers[i].playerIndex) &&
+            (gRacePlayers[i].stateFlags & 0x20)) {
+            return 0;
+        }
+    }
+
+    delta = gRacePlayers[arg0].pos.x - gRaceCourseStartEntries[gRaceCourseIndex.signedValue].launchRampTargetX;
+    if (delta < 0) {
+        delta = -delta;
+    }
+    if (delta > 0x180000) {
+        return 0;
+    }
+
+    delta = gRacePlayers[arg0].pos.z - gRaceCourseStartEntries[gRaceCourseIndex.signedValue].launchRampTargetZ;
+    if (delta < 0) {
+        delta = -delta;
+    }
+    if (delta > 0x180000) {
+        return 0;
+    }
+
+    gRacePlayers[arg0].stateFlags |= 0x04001020;
+    gRacePlayers[arg0].unk57C = gRacePlayerAttackStartTimer;
+    if (gRacePlayerAttackStartTimer != 0) {
+        gRacePlayerAttackStartTimer--;
+    }
+    return 1;
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80095AC8.s")
 
@@ -3477,7 +3521,116 @@ void updateRacePlayerPostUpdateMode00(RacePlayer *player) {
     interpolateRaceMotionJointAnimationFrame(player, 0, (0x60000 - player->groundOffset) / 0x600, 0x100);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/updateRacePlayerVoiceSounds.s")
+void updateRacePlayerVoiceSounds(RacePlayer *player) {
+    s32 soundType;
+    RacePlayer *player2;
+    s32 soundId;
+    s32 score;
+    s16 voiceType;
+    s16 splitType;
+    s32 bitIndex;
+    u16 playerIndex;
+
+    voiceType = player->unk2A6;
+    player2 = player;
+    soundId = 0;
+    score = 0;
+    if (voiceType >= 9) {
+        player->unk57B = 1;
+        voiceType = player2->unk2A6;
+    }
+    if ((voiceType != 0) && (player->unk2A2 != 0)) {
+        player->unk57B = 1;
+        voiceType = player2->unk2A6;
+    }
+    if (voiceType != 0) {
+        soundId = gRacePlayerVoiceBaseSoundIds[voiceType];
+        score = voiceType < 9 ? 0xA : 0x28;
+        bitIndex = voiceType;
+        if ((s32)(u32)bitIndex >= 0xA) {
+            bitIndex = 9;
+        }
+        player->trickAttackCompletedTrickMask |= 1 << bitIndex;
+    }
+    splitType = player2->unk2A2;
+    if (splitType != 0) {
+        if (player->unk2A6 != 0) {
+            soundId += gRacePlayerVoiceSplitSoundOffsets[splitType];
+            if (splitType & 1) {
+                score += 5;
+            } else {
+                score += 0xA;
+            }
+        } else {
+            score += 1;
+            soundId += gRacePlayerVoiceLeadSoundOffsets[splitType];
+        }
+        soundId += player2->unk2A4;
+    }
+    if ((soundId != 0) && (gRaceSplitscreenMode == 0) && (gRaceDemoPlaybackEnabled == 0)) {
+        addRacePlayerScore(player, soundId);
+        playerIndex = player2->playerIndex;
+        if (gRacePlayerHudStatuses[playerIndex].active != 0) {
+            spawnRaceUiScorePopup((void *)soundId, (s16)playerIndex);
+            soundType = 0x4D;
+            if (soundId >= 0x64) {
+                soundType = 0x4E;
+            }
+            if (soundId >= 0x78) {
+                soundType = 0x4F;
+            }
+            if (soundId >= 0xC8) {
+                soundType = 0x51;
+            }
+            if (soundId >= 0x12C) {
+                soundType = 0x50;
+            }
+            enqueueSoundEffect((s16)soundType, 0x5A);
+        }
+    }
+    if (gRaceSplitscreenMode == 1) {
+        if (gRaceTypeSelection == 2) {
+            if (score != 0) {
+                soundType = 0x4D;
+                if (score >= 0x2710) {
+                    score = 0x270F;
+                }
+                player->trickAttackPointTotal += score;
+                player->trickAttackMakeCount++;
+                if (player->trickAttackMakeCount >= 0x64) {
+                    player->trickAttackMakeCount = 0x63;
+                }
+                if (player->trickAttackBestMakeCount < player->trickAttackMakeCount) {
+                    player->trickAttackBestMakeCount = player2->trickAttackMakeCount;
+                }
+                if (score >= 0xA) {
+                    soundType = 0x4E;
+                }
+                if (score >= 0xF) {
+                    soundType = 0x4F;
+                }
+                if (score >= 0x14) {
+                    soundType = 0x51;
+                }
+                if (score >= 0x28) {
+                    soundType = 0x50;
+                }
+                if (player2->trickAttackCompletedTrickMask == 0x3FE) {
+                    player2->trickAttackPointTotal += 0x12C;
+                    player2->trickAttackCompletedTrickMask = 0x3FF;
+                    soundType = 0x51;
+                    spawnRaceUiTrickScorePopup((void *)score, 1);
+                } else {
+                    spawnRaceUiTrickScorePopup((void *)score, 0);
+                }
+                enqueueSoundEffect((s16)soundType, 0x5A);
+                if (player2->trickAttackPointTotal >= 0x2710) {
+                    player2->trickAttackPointTotal = 0x270F;
+                }
+            }
+        }
+    }
+}
 
 void updateRacePlayerLoopingSound(RacePlayer *player) {
     s32 v0 = -player->velocity.y >> 13;

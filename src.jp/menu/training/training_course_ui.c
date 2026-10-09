@@ -90,7 +90,183 @@ void initTrainingCourseLessonEndMenu(TrainingCourseUiActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateTrainingCourseLessonEndMenu);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/training/training_course_ui/drawTrainingCourseDialog.s")
+void drawTrainingCourseDialog(TrainingCourseUiActor *arg0) {
+    s32 i;
+    u16 lineX;
+    TrainingCourseUiScript token;
+    s32 visibleIndex;
+    TrainingCourseUiActor *dialog;
+    TrainingCourseUiScript glyphText[2];
+    u16 lineY;
+    u16 reachedEnd;
+
+    dialog = arg0;
+
+    drawMenuSprite(
+        dialog->x - 4,
+        dialog->y + 0x14,
+        getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+        2,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    drawMenuSprite(
+        dialog->x + 0xF8,
+        dialog->y + 0x14,
+        getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+        4,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+
+    for (i = 0; i < 0xF0; i += 0x10) {
+        drawMenuSprite(
+            dialog->x + i + 0xC,
+            dialog->y + 0x14,
+            getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+            3,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+        drawMenuSprite(
+            dialog->x + i + 0xC,
+            dialog->y + 0x4C,
+            getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+            8,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+    }
+
+    drawMenuSprite(
+        dialog->x - 4,
+        dialog->y + 0x4C,
+        getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+        7,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    drawMenuSprite(
+        dialog->x + 0xF8,
+        dialog->y + 0x4C,
+        getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+        9,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+
+    for (i = 0; i < 0x30; i += 0x10) {
+        drawMenuSprite(
+            dialog->x - 4,
+            dialog->y + i + 0x24,
+            getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+            5,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+        drawMenuSprite(
+            dialog->x + 0xF8,
+            dialog->y + i + 0x24,
+            getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+            6,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+    }
+
+    dialog->glyphPalette = 7;
+    glyphText[1] = 0xFFFF;
+    reachedEnd = 0;
+    lineX = 0;
+    lineY = 0;
+    i = 0;
+    for (visibleIndex = 0; visibleIndex < dialog->state.script.visibleGlyphCount; visibleIndex++) {
+        while (dialog->layout.script[i] > 0xFF00 && dialog->layout.script[i] != 0xFFFE) {
+            token = dialog->layout.script[i];
+            if (token == 0xFFFF) {
+                dialog->scriptState = 1;
+                reachedEnd = 1;
+                break;
+            }
+            if (token == 0xFFFD) {
+                lineY += 0x10;
+                lineX = 0;
+                i++;
+                continue;
+            }
+            if (token == 0xFFFC) {
+                if (((!i) && (!i)) && (!i)) {}
+                i++;
+                dialog->glyphPalette = dialog->layout.script[i];
+                i++;
+                continue;
+            }
+            if (token == 0xFFFB) {
+                dialog->scriptState = 2;
+                reachedEnd = 1;
+                break;
+            }
+        }
+
+        if (1 == reachedEnd) {
+            glyphText[0] = 0xFFFE;
+        } else {
+            glyphText[0] = dialog->layout.script[i];
+        }
+
+        drawMenuColoredGlyphScript(
+            dialog->x + lineX,
+            dialog->y + lineY + 0x18,
+            glyphText,
+            0,
+            0x100,
+            dialog->glyphPalette,
+            0x29
+        );
+
+        if (1 != reachedEnd) {
+            i++;
+            lineX += 0x10;
+        }
+    }
+
+    dialog->glyphTimer++;
+    if (dialog->glyphTimer == 4) {
+        dialog->glyphTimer = 0;
+        if (1 != reachedEnd) {
+            dialog->state.script.visibleGlyphCount++;
+        }
+    }
+
+    if (((dialog->scriptState == 1) || (dialog->scriptState == 2)) && (gMainMenuSelectionResult == 0)) {
+        drawMenuSprite(
+            dialog->x + 0xF4,
+            dialog->y + 0x48,
+            getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+            dialog->confirmBlinkTimer >= 8,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+    }
+}
 
 void updateTrainingCourseDialogScrollOut(TrainingCourseUiActor *arg0) {
     arg0->y += 0x10;

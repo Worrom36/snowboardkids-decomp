@@ -16,6 +16,8 @@
 #include "game/menu/race_setup/race_setup_ui.h"
 #include "game/race/player/race_player_input.h"
 
+#define gRaceSetupSaveChoicePromptBottomSprites (gRaceSetupSavePromptData.saveChoicePromptBottomSprites)
+#define gRaceSetupSaveChoicePromptTopSprites (gRaceSetupSavePromptData.saveChoicePromptTopSprites)
 #define TITLE_MENU_FRAME_TEXTURE_HANDLE (gAssetHandles[33])
 #define TITLE_MENU_BANNER_TEXTURE_HANDLE (gAssetHandles[41])
 #define SAVE_STATUS_FADE_STEP 0x26
@@ -23,6 +25,14 @@
 #define SAVE_STATUS_TRANSITION_FADE_IN 1
 #define SAVE_STATUS_TRANSITION_FADE_OUT 2
 #define SAVE_STATUS_TRANSITION_DONE 3
+
+typedef struct {
+    u8 noControllerPakMessage[0x1A];
+    u8 saveChoicePromptBottomSprites[1];
+    u8 saveChoicePromptTopSprites[0x41];
+} RaceSetupSavePromptData;
+
+extern RaceSetupSavePromptData gRaceSetupSavePromptData;
 
 extern MenuGlyphScript gRaceSetupPlayerCountPromptText[5][0x34];
 extern s32 gMenuFlowState;
@@ -190,9 +200,49 @@ void initRaceSetupPlayerCountPrompt(void *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupPlayerCountPrompt);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/func_80014168.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupOnePlayerOption.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupOnePlayerOption.s")
+void updateRaceSetupOnePlayerOption(MenuItemActor *arg0) {
+    MenuItemActor *child;
+
+    switch (arg0->state) {
+        case 0:
+            arg0->x -= 0x20;
+            if (arg0->x == 0x70) {
+                arg0->child = createCallbackTask((CallbackTaskCallback)initRaceSetupTwoPlayerOption, 0, 0x63);
+                enqueueSoundEffect(1, 0x32);
+            }
+            if (arg0->x == -0x50) {
+                arg0->state = 1;
+            }
+            break;
+        case 1:
+            if (gMenuSelectionConfirmTimer == 0x13) {
+                arg0->state = 2;
+                if (gPlayerCount == 1) {
+                    gMenuFlowState = 1;
+                }
+            }
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x == -0x70) {
+                child = arg0->child;
+                child->state = 2;
+                if (gPlayerCount == 2) {
+                    gMenuFlowState = 1;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    if (arg0->x < -0x108) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSetupOnePlayerOption, (void *)arg0);
+}
 
 void initRaceSetupOnePlayerOption(MenuItemActor *arg0) {
     MenuItemActor *actor = arg0;
@@ -203,9 +253,43 @@ void initRaceSetupOnePlayerOption(MenuItemActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupOnePlayerOption);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/func_8001453C.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupTwoPlayerOption.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupTwoPlayerOption.s")
+void updateRaceSetupTwoPlayerOption(MenuItemActor *arg0) {
+    MenuItemActor *child;
+
+    switch (arg0->state) {
+        case 0:
+            arg0->x -= 0x20;
+            if (arg0->x == 0x70) {
+                arg0->child = createCallbackTask((CallbackTaskCallback)initRaceSetupThreePlayerOption, 0, 0x63);
+                enqueueSoundEffect(1, 0x32);
+            }
+            if (arg0->x == -0x50) {
+                arg0->state = 1;
+            }
+            break;
+        case 1:
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x == -0x70) {
+                child = arg0->child;
+                child->state = 2;
+                if (gPlayerCount == 3) {
+                    gMenuFlowState = 1;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    if (arg0->x < -0x108) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSetupTwoPlayerOption, (void *)arg0);
+}
 
 void initRaceSetupTwoPlayerOption(MenuItemActor *arg0) {
     MenuItemActor *actor = arg0;
@@ -216,9 +300,43 @@ void initRaceSetupTwoPlayerOption(MenuItemActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSetupTwoPlayerOption);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/func_800148EC.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupThreePlayerOption.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupThreePlayerOption.s")
+void updateRaceSetupThreePlayerOption(MenuItemActor *arg0) {
+    MenuItemActor *child;
+
+    switch (arg0->state) {
+        case 0:
+            arg0->x -= 0x20;
+            if (arg0->x == 0x70) {
+                arg0->child = createCallbackTask((CallbackTaskCallback)initRaceSetupFourPlayerOption, 0, 0x63);
+                enqueueSoundEffect(1, 0x32);
+            }
+            if (arg0->x == -0x50) {
+                arg0->state = 1;
+            }
+            break;
+        case 1:
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x == -0x70) {
+                child = arg0->child;
+                child->state = 2;
+                if (gPlayerCount == 4) {
+                    gMenuFlowState = 1;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    if (arg0->x < -0x108) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSetupThreePlayerOption, (void *)arg0);
+}
 
 void initRaceSetupThreePlayerOption(MenuItemActor *arg0) {
     MenuItemActor *actor = arg0;
@@ -456,7 +574,98 @@ void initRaceSetupSaveStatusWidgets(TitleMenuWidgetActor *arg0) {
     setCallbackTaskCallback(new_var, (CallbackTaskCallback)updateRaceSetupSaveStatusWidgets);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/drawRaceSetupSaveChoicePrompts.s")
+void drawRaceSetupSaveChoicePrompts(TitleMenuTransitionActor *arg0) {
+    MenuIntroActor *intro;
+    TitleMenuTransitionActor *new_var;
+    TitleMenuTransitionActor *new_var2;
+    s32 new_var3;
+    s32 i;
+    s32 alpha;
+    TitleMenuTransitionActor *new_var4;
+    s16 state;
+    u16 selection;
+
+    intro = gActiveMenuTask;
+    new_var2 = arg0;
+    if (intro->state == 8) {
+        for (i = 0; i < gPlayerCount; i++) {
+            selection = gRaceSetupMenuSubState.pendingStatusCodes[i];
+            if (1) {
+                state = gMenuChoicePromptState[i];
+                if (selection != arg0->selection[i]) {
+                    arg0->selection[i] = gRaceSetupMenuSubState.pendingStatusCodes[i];
+                }
+
+                state = gMenuChoicePromptState[i];
+                if (state != 0) {
+                    new_var4 = arg0;
+                    if (!(state & 1)) {
+                        alpha = 0x100;
+                    } else {
+                        alpha = 0x60;
+                    }
+
+                    drawMenuSpriteWithAlpha(
+                        new_var4->x[i],
+                        arg0->topY[i],
+                        getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+                        gRaceSetupSaveChoicePromptTopSprites[gControllerPakStatusCodes[i] * 2],
+                        0x20,
+                        0x20,
+                        0,
+                        alpha,
+                        0
+                    );
+
+                    if (alpha == 0x100) {
+                        alpha = 0x60;
+                    } else {
+                        alpha = 0x100;
+                    }
+
+                    new_var = arg0;
+                    drawMenuSpriteWithAlpha(
+                        arg0->x[i],
+                        new_var->y[i],
+                        getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+                        gRaceSetupSaveChoicePromptBottomSprites[gControllerPakStatusCodes[i] * 2],
+                        0x20,
+                        0x20,
+                        0,
+                        alpha,
+                        0
+                    );
+
+                    if (new_var->alpha == 0) {}
+
+                    if (!arg0) {}
+
+                    state = gMenuChoicePromptState[i];
+                    if ((state == 3) || (state == 4)) {
+                        drawMenuSpriteWithAlpha(
+                            new_var2->x[i],
+                            (s16)(((gMenuChoicePromptState[i] * 0x10) + new_var->y[i]) - (new_var3 = 0x30)),
+                            getRelocatableHeapBlockBase(TITLE_MENU_FRAME_TEXTURE_HANDLE),
+                            0x12,
+                            0x20,
+                            0x20,
+                            0,
+                            new_var->alpha[i],
+                            i + 7
+                        );
+                        state = gMenuChoicePromptState[i];
+                    }
+                }
+            }
+
+            if ((state >= 5) && (new_var2->slideOffset[i] == 0)) {
+                gRaceSetupMenuSubState.nextStatusCodes[i] = arg0->selection[i];
+                gRaceSetupMenuSubState.statusTransitionStates[i] = 2;
+                gMenuChoicePromptState[i] = 0;
+            }
+        }
+    }
+}
 
 void updateRaceSetupSaveChoicePrompts(TitleMenuTransitionActor *arg0) {
     TitleMenuTransitionActor *actor;
