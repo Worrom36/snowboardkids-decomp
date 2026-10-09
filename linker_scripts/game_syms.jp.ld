@@ -359,3 +359,6 @@ _2427D0_ROM_START = 0x00242530;
 _2427D0_ROM_END = 0x00243040;
 gRaceSplitscreenSelectCursorAnimState = gRaceSplitscreenSelectCursorTarget;
 gControllerPakRaceRecordSaveStatusTransitionStep = gControllerPakRaceRecordSaveStatusTransition;
+SOUND_POINTER_BANK_ROM_START = 0x00275940;
+SOUND_POINTER_BANK_ROM_END = 0x0027E320;
+_27E290_ROM_START = 0x0027E320;

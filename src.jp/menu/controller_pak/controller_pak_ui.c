@@ -14,6 +14,8 @@
 #include "game/menu/race_setup/race_setup_ui.h"
 #include "game/race/player/race_player_input.h"
 
+extern MenuGlyphScript gControllerPakCouldNotEraseNoteText[56];
+
 extern MenuGlyphScript gControllerPakRumblePakText[20];
 
 extern MenuGlyphScript gControllerPakRumbleCheckNoEntryText[12];
@@ -655,7 +657,75 @@ void initControllerPakMessageIcon(ControllerPakSpriteActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateControllerPakMessageIcon);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_ui/drawControllerPakFileDeleteErrorPrompt.s")
+void drawControllerPakFileDeleteErrorPrompt(ControllerPakWindowActor *arg0) {
+    void *texture;
+
+    drawMenuSpriteWithAlpha(
+        arg0->common.x,
+        arg0->common.y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x24]),
+        0,
+        0x20,
+        0x20,
+        0,
+        arg0->scale,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(arg0->common.x + 0x40),
+        arg0->common.y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x24]),
+        1,
+        0x20,
+        0x20,
+        0,
+        arg0->scale,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(arg0->common.x + 0x78),
+        arg0->common.y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x24]),
+        1,
+        0x20,
+        0x20,
+        0,
+        arg0->scale,
+        0
+    );
+    drawMenuSpriteWithAlpha(
+        (s16)(arg0->common.x + 0xB0),
+        arg0->common.y,
+        getRelocatableHeapBlockBase(gAssetHandles[0x24]),
+        2,
+        0x20,
+        0x20,
+        0,
+        arg0->scale,
+        0
+    );
+    drawMenuGlyphScript(
+        (s16)(arg0->common.x + 4),
+        (s16)(arg0->common.y + 4),
+        gControllerPakCouldNotEraseNoteText,
+        0,
+        arg0->scale,
+        0
+    );
+    if (arg0->selectedOption == 1) {
+        texture = getRelocatableHeapBlockBase(gAssetHandles[0x24]);
+        drawMenuSprite(
+            (s16)(arg0->common.x + 0xD4),
+            (s16)(arg0->common.y + 0x24),
+            texture,
+            (arg0->timer >= 8) + 5,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+    }
+}
 
 // clang-format off
 void updateControllerPakFileDeleteErrorPromptUi(ControllerPakDeletePromptActor *arg0) {

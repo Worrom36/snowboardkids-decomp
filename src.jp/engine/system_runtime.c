@@ -20,6 +20,8 @@
 #include "PR/ucode.h"
 #include "game/audio/audio_engine.h"
 
+#define BOOT_THREAD_ID 1
+#define THREAD_PRIORITY 10
 #define DMA_CHUNK_SIZE 0x2000
 #define OS_MESG_BLOCK 1
 #define OS_READ 0
@@ -33,15 +35,30 @@ typedef struct {
     RenderCallbackQueueSlot queue3;
 } RenderCallbackQueueGroup;
 
+extern u8 gBootThreadStack[BOOT_THREAD_STACK_SIZE];
+
+extern OSThread gBootThread;
+
 extern OSMesgQueue gRomDmaQueue;
 extern u8 gFadeColorBlue;
 extern s16 gFadeTimer;
 extern u8 gFadeColorRed;
 extern u8 gFadeColorGreen;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/main.s")
+void main(void *arg) {
+    osInitialize();
+    osCreateThread(
+        &gBootThread,
+        BOOT_THREAD_ID,
+        bootThreadMain,
+        arg,
+        gBootThreadStack + sizeof(gBootThreadStack),
+        THREAD_PRIORITY
+    );
+    osStartThread(&gBootThread);
+}
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/func_8009903C.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/bootThreadMain.s")
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/engine/system_runtime/func_800990D0.s")
 

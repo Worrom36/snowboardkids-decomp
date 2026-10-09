@@ -412,7 +412,99 @@ void drawAssetTableSpriteWithDefaultPalette(s16 x, s16 y, AssetTable *table, u16
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/drawMenuFillRectangle.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_render_utils/drawAssetTableSprite8bpp.s")
+void drawAssetTableSprite8bpp(s16 x, s16 y, AssetTable *table, u16 entryIndex) {
+    AssetTableEntry *entry;
+    s32 maxX;
+    u8 *paletteBase;
+    s32 maxY;
+    s32 y0;
+    s32 x1;
+    s32 y1;
+    s32 clipS;
+    s32 clipT;
+    s32 minY;
+    s32 x0;
+    s32 minX;
+    s32 halfHeight;
+
+    paletteBase = (table->entryCount * sizeof(AssetTableEntry)) + (u8 *)table + sizeof(AssetTableEntry);
+    entry = &table->entries[entryIndex];
+    x0 = x + gMenuViewportCenterX;
+    entry += 0;
+    y0 = y + gMenuViewportCenterY;
+    x1 = x0 + entry->width;
+    y1 = y0 + entry->height;
+    clipS = 0;
+    clipT = 0;
+
+    maxX = gMenuViewportCenterX + (gMenuViewportWidth / 2);
+    if (x0 >= maxX) {
+        return;
+    }
+
+    halfHeight = gMenuViewportHeight / 2;
+    maxY = gMenuViewportCenterY + halfHeight;
+    minX = gMenuViewportCenterX - (gMenuViewportWidth / 2);
+    if (y0 >= maxY) {
+        return;
+    }
+    if (x1 < minX) {
+        return;
+    }
+
+    minY = gMenuViewportCenterY - halfHeight;
+    if (y1 < minY) {
+        return;
+    }
+
+    if (x0 < minX) {
+        clipS = minX - x0;
+        x0 = minX;
+    }
+    if (y0 < minY) {
+        clipT = minY - y0;
+        y0 = minY;
+    }
+    if (x1 >= maxX) {
+        x1 = maxX;
+    }
+    if (y1 >= maxY) {
+        y1 = maxY;
+    }
+
+    gDPLoadTextureTile(
+        gRegionAllocPtr++,
+        entry->imageOffset + (u8 *)table,
+        G_IM_FMT_CI,
+        G_IM_SIZ_8b,
+        entry->width,
+        entry->height,
+        0,
+        0,
+        entry->width,
+        entry->height,
+        0,
+        G_TX_CLAMP,
+        G_TX_CLAMP,
+        G_TX_NOMASK,
+        G_TX_NOMASK,
+        G_TX_NOLOD,
+        G_TX_NOLOD
+    );
+    gDPLoadTLUT_pal256(gRegionAllocPtr++, paletteBase + (entry->paletteIndex << 5));
+    gSPTextureRectangle(
+        gRegionAllocPtr++,
+        x0 << 2,
+        y0 << 2,
+        x1 << 2,
+        y1 << 2,
+        G_TX_RENDERTILE,
+        clipS << 5,
+        clipT << 5,
+        0x400,
+        0x400
+    );
+}
 
 void drawAssetTableSpriteWithExplicitPalette(s16 x, s16 y, AssetTable *table, u16 entryIndex, u16 paletteIndex) {
     AssetTableEntry *entry;

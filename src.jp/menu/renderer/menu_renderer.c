@@ -344,7 +344,7 @@ void drawMenuSpriteWithPaletteScale(s16 x, s16 y, AssetTable *asset, u16 index, 
     gDPPipeSync(gRegionAllocPtr++);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_renderer/func_800101B4.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_renderer/drawMenuSpriteSubrect.s")
 
 void drawMenuSpriteFixedScale(
     s16 x,
@@ -583,7 +583,12 @@ void updateMenuSpriteActorDebugControls(MenuRenderSpriteActor *actor) {
     addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawMenuTilemapSpriteCallback, &actor->sprite);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_renderer/drawMenuTilemapSpriteCallback.s")
+void drawMenuTilemapSpriteCallback(MenuRenderSprite *arg0) {
+    drawMenuTilemapSprite(arg0, MENU_TILEMAP_TEXEL_4B, 0, 0);
+}
+
+void noOpMenuTilemapCallback(void) {
+}
 
 void drawMenuTilemapSprite(
     MenuRenderSprite *sprite,

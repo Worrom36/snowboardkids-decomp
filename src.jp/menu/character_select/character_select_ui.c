@@ -562,13 +562,157 @@ void updateCharacterSelectRosterIcons(CharacterSelectUiRosterIconActor *arg0) {
     addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectRosterIcons, arg0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/func_800174D0.s")
+void initCharacterSelectRosterIcons(CharacterSelectUiRosterIconActor *arg0) {
+    s32 i;
+    GameSaveData *player;
+    CharacterSelectUiRosterIconActor *actor;
+    s32 targetX;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/func_800175A4.s")
+    targetX = -0x50;
+    arg0->targetX = targetX;
+    arg0->x = 0xB8;
+    arg0->y = -0x10;
+    arg0->targetY = -0x48;
+    arg0->speedX = 0x12;
+    arg0->unused26 = 0;
+    arg0->state = 0;
+    arg0->timer = 0;
+    arg0->leftSecretSlotUnlocked = 0;
+    actor = arg0;
+    arg0->rightSecretSlotUnlocked = 0;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/func_80017714.s")
+    i = 0;
+    if (gPlayerCount > 0) {
+        player = &gGameSaveDataBuffer[0];
+        for (;;) {
+            actor->leftSecretSlotUnlocked = actor->leftSecretSlotUnlocked | (player->characterFlags & 1);
+            gCharacterSelectHudState.leftSecretSlotUnlocked = actor->leftSecretSlotUnlocked;
+            gCharacterSelectHudState.rightSecretSlotUnlocked = actor->rightSecretSlotUnlocked;
+            i++;
+            player++;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/func_8001784C.s")
+            if (!(i < gPlayerCount)) {
+                break;
+            }
+        }
+    }
+
+    if (actor->leftSecretSlotUnlocked == 1) {
+        actor->targetX = -0x40;
+    } else {
+        actor->targetX = targetX;
+    }
+    setCallbackTaskCallback(actor, (CallbackTaskCallback)updateCharacterSelectRosterIcons);
+}
+
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/drawCharacterSelectPlayerCursorMarkers.s")
+// clang-format on
+
+void updateCharacterSelectPlayerCursorMarkers(CharacterSelectUiPlayerCursorActor *arg0) {
+    s32 i;
+    u8 mode;
+    u8 globalMode;
+    RacePlayer *player;
+    s8 *layout;
+
+    globalMode = gCharacterSelectHudState.rosterReady;
+    mode = arg0->mode;
+
+    if (globalMode != mode) {
+        mode = (arg0->mode = globalMode);
+    }
+
+    if (mode != 0) {
+        // clang-format off
+ i = 0; if ((s32)gPlayerCount > 0) { layout = gCharacterSelectHighlightedRosterIndices; player = gRacePlayers; for (;;) {
+                // clang-format on
+                if (player->selectedCharacterId < 5) {
+                    arg0->x[i] = (layout[i] * 0x20) + arg0->baseX;
+                } else if (player->selectedCharacterId == 5) {
+                    arg0->x[i] = arg0->baseX;
+                }
+                i++;
+                player++;
+
+                if (!(i < (s32)gPlayerCount)) {
+                    break;
+                }
+            }
+        }
+
+        if ((s32)arg0->timer < 0x10) {
+            arg0->scale -= 9;
+        } else {
+            arg0->scale += 9;
+        }
+        arg0->timer = (arg0->timer + 1) & 0x1F;
+        mode = (((((((((arg0->mode & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) &
+                0xFFFF) &
+               0xFFFF;
+    }
+
+    (mode ? &gCharacterSelectHudState : &gCharacterSelectHudState)->rosterReady = mode;
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectPlayerCursorMarkers, arg0);
+}
+
+void initCharacterSelectPlayerCursorMarkers(CharacterSelectUiPlayerCursorActor *arg0) {
+    /* Paired views preserve IDO's register reuse without pointer casts or byte offsets. */
+    union {
+        GameSaveData *playersEnd;
+        s32 playerIndex;
+    } loop;
+    union {
+        CharacterSelectUiPlayerCursorActor *actor;
+        s16 *next;
+    } marker;
+    GameSaveData *player;
+    s8 *highlightedRosterIndices;
+    s32 combinedPlayerFlags;
+
+    combinedPlayerFlags = 0;
+    loop.playerIndex = 0;
+    /* Splitting this loop header across lines changes IDO's instruction scheduling. */
+    // clang-format off
+    if ((s32)gPlayerCount > 0) { player = &gGameSaveDataBuffer[0]; for (;;) {
+            // clang-format on
+            combinedPlayerFlags |= player->characterFlags;
+            loop.playersEnd = &gGameSaveDataBuffer[0] + gPlayerCount;
+            player++;
+
+            if (!(player < loop.playersEnd)) {
+                break;
+            }
+        }
+        loop.playerIndex = 0;
+    }
+
+    if (combinedPlayerFlags == 1) {
+        arg0->baseX = -0x60;
+    } else {
+        arg0->baseX = -0x70;
+    }
+
+    if ((s32)gPlayerCount > 0) {
+        highlightedRosterIndices = gCharacterSelectHighlightedRosterIndices;
+        marker.actor = arg0;
+        for (;;) {
+            marker.actor->x[0] = (*highlightedRosterIndices * 0x20) + arg0->baseX;
+            loop.playerIndex++;
+            highlightedRosterIndices++;
+            marker.next++;
+
+            if (!(loop.playerIndex < (s32)gPlayerCount)) {
+                break;
+            }
+        }
+    }
+
+    arg0->y = -0x18;
+    arg0->mode = 0;
+    arg0->scale = 0x100;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectPlayerCursorMarkers);
+}
 
 // clang-format off
 void drawCharacterSelectPlayerStatsPanels(CharacterSelectUiPlayerStatsPanelActor *arg0) {

@@ -14,6 +14,10 @@
 #include "game/menu/renderer/menu_renderer.h"
 #include "game/race/player/race_player_input.h"
 
+#define gControllerPakRaceRecordSaveChoicePromptTopSprites \
+    (gControllerPakRaceRecordSaveUiData.content.storage.choicePromptSprites)
+#define gControllerPakRaceRecordSaveChoicePromptBottomSprites \
+    (&gControllerPakRaceRecordSaveUiData.content.storage.choicePromptSprites[1])
 #define gControllerPakRaceRecordSaveStatusMessages (gControllerPakRaceRecordSaveUiData.content.typed.statusMessages)
 #define CONTROLLER_PAK_RACE_RECORD_SAVE_SCORE_TEXTURE_HANDLE (gAssetHandles[0x21])
 #define gControllerPakRaceRecordSaveExitMessage (gControllerPakRaceRecordSaveUiData.exitMessage)
@@ -37,6 +41,8 @@ typedef struct {
     ControllerPakRaceRecordSaveUiDataContent content;
     MenuGlyphScript exitMessage[10];
 } ControllerPakRaceRecordSaveUiData;
+
+extern u16 gControllerPakRaceRecordSaveStatusTransitionTargetStatus;
 
 extern u8 gControllerPakRaceRecordSaveStatusTransitionStep;
 
@@ -400,7 +406,79 @@ void initControllerPakRaceRecordSaveStatusMessage(ControllerPakRaceRecordSaveSta
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_race_record_save_ui/drawControllerPakRaceRecordSaveStatusChoicePrompt.s")
+void drawControllerPakRaceRecordSaveStatusChoicePrompt(ControllerPakRaceRecordSaveStatusChoicePromptActor *arg0) {
+    u32 drawAlpha;
+    int isEvenState;
+    u16 alpha;
+    s16 state;
+
+    state = gMenuChoicePromptState[0];
+    if (state != 0) {
+        isEvenState = !(state & 1);
+        if (isEvenState) {
+            alpha = 0x100;
+        } else {
+            alpha = 0x60;
+        }
+
+        drawAlpha = alpha;
+        drawMenuSpriteWithAlpha(
+            arg0->common.x,
+            arg0->bottomChoiceY,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gControllerPakRaceRecordSaveChoicePromptBottomSprites[gControllerPakStatusCodes[0] * 2],
+            0x20,
+            0x20,
+            0,
+            drawAlpha,
+            0
+        );
+
+        if (drawAlpha == 0x100) {
+            alpha = 0x60;
+        } else {
+            alpha = 0x100;
+        }
+
+        drawMenuSpriteWithAlpha(
+            arg0->common.x,
+            arg0->common.y,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gControllerPakRaceRecordSaveChoicePromptTopSprites[gControllerPakStatusCodes[0] * 2],
+            0x20,
+            0x20,
+            0,
+            alpha,
+            0
+        );
+
+        state = gMenuChoicePromptState[0];
+        if ((state == 3) || (state == 4)) {
+            drawMenuSpriteWithAlpha(
+                arg0->common.x,
+                (s16)(((gMenuChoicePromptState[0] * 0x10) + arg0->common.y) - 0x30),
+                getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+                0x12,
+                0x20,
+                0x20,
+                0,
+                (u16)arg0->cursorAlpha,
+                7
+            );
+            state = gMenuChoicePromptState[0];
+        }
+    }
+    if ((state >= 5) && (arg0->slideOffset == 0)) {
+        gControllerPakRaceRecordSaveStatusTransitionTargetStatus = arg0->nextStatus;
+        gControllerPakRaceRecordSaveStatusTransition.step = 3;
+        gMenuChoicePromptState[0] = 0;
+        if (arg0->nextStatus == 0) {
+            gControllerPakRaceRecordSaveStatusTransition.alpha = 0x100;
+            gControllerPakRaceRecordSaveStatusTransition.step = 1;
+            gControllerPakStatusCodes[0] = arg0->nextStatus;
+        }
+    }
+}
 // clang-format on
 
 // clang-format off

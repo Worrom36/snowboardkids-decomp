@@ -425,7 +425,34 @@ void initCourseSelectCourseDescription(CourseSelectCourseDescriptionActor *arg0)
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectCourseDescription);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/drawCourseSelectExtraCourseBadge.s")
+void drawCourseSelectExtraCourseBadge(CourseSelectExtraCourseBadgeActor *arg0) {
+    u16 renderTileIndex;
+    s32 handleIndex;
+    s16 assetHandle;
+    u16 tileIndex;
+
+    if (gCourseSelectModeSelection == 1) {
+        tileIndex = 1;
+        handleIndex = 0x27;
+    } else {
+        tileIndex = 0;
+        handleIndex = 0x21;
+    }
+
+    renderTileIndex = tileIndex;
+    assetHandle = gAssetHandles[handleIndex];
+    drawMenuSpriteWithAlpha(
+        arg0->x,
+        arg0->y,
+        getRelocatableHeapBlockBase(assetHandle),
+        renderTileIndex,
+        0x20,
+        0x20,
+        0,
+        arg0->alpha,
+        0
+    );
+}
 
 void updateCourseSelectExtraCourseBadge(CourseSelectExtraCourseBadgeActor *arg0) {
     u8 state = arg0->state;
@@ -525,9 +552,47 @@ void drawCourseSelectExtraCourseIconList(CourseSelectExtraCourseIconListActor *a
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/func_80027868.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectExtraCourseIconListIn.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_ui/updateCourseSelectExtraCourseIconListOut.s")
+void updateCourseSelectExtraCourseIconListOut(CourseSelectExtraCourseIconListActor *arg0) {
+    s16 var_v0;
+    s32 var_v1;
+    CourseSelectExtraCourseIconListActor *var_v0_2;
+    s32 var_v0_3;
+
+    var_v0 = arg0->iconX[0][0];
+    if (var_v0 >= -0xE7) {
+        var_v1 = 0;
+        if ((s32)arg0->itemCounts[0] > 0) {
+            var_v0_2 = arg0;
+            for (;;) {
+                var_v0_2->iconX[0][0] -= 0x20;
+                var_v1++;
+                var_v0_2 = (CourseSelectExtraCourseIconListActor *)((u8 *)var_v0_2 + sizeof(s16));
+
+                if (!(var_v1 < (s32)arg0->itemCounts[0])) {
+                    break;
+                }
+            }
+            var_v0 = arg0->iconX[0][0];
+        }
+        if (var_v0 < -0xE7) {
+            arg0->iconX[0][0] = -0xE8;
+        }
+        var_v0_3 = gCurrentGameTask->callbackData2;
+    } else {
+        var_v0_3 = gCurrentGameTask->callbackData2;
+        if (var_v0_3 == 3) {
+            setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseSelectExtraCourseIconListIn);
+            var_v0_3 = gCurrentGameTask->callbackData2;
+        }
+    }
+    if (var_v0_3 == 9) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseSelectExtraCourseIconList, arg0);
+}
 
 void updateCourseSelectExtraCourseIconListClose(CourseSelectExtraCourseIconListActor *arg0) {
     s32 i;

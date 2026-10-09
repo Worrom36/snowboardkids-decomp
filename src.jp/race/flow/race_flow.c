@@ -39,6 +39,8 @@
 #include "game/engine/viewport_manager.h"
 #include "game/race/player/race_player_input.h"
 
+#define COURSE_TIME_MINUTE 0x177000
+#define COURSE_TIME_SECOND 0x6400
 #define RACE_PLAYER_READY_FLAG 0x40
 #define COURSE_GRID_ENTRY_FREE -1
 #define COURSE_GRID_ENTRY_END -2
@@ -64,6 +66,8 @@ typedef struct {
     u8 pad4[4];
     s8 unk8;
 } Unk80043040;
+
+extern u8 gRaceChallengeFailed;
 
 extern u8 gTrainingCourseLesson;
 
@@ -1463,9 +1467,162 @@ void zoomRaceWinnerViewport(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/prepareRaceResultsFlow.s")
+void prepareRaceResultsFlow(void) {
+    RacePlayer *player;
+    s32 i;
+    s32 recordTime;
+    s32 currentTime;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/func_80075F88.s")
+    gPendingEndingCreditsFlow = 0;
+    gFramebufferRenderInterval.value = 0;
+    D_80120E80 = 0;
+    D_80120E81 = 0;
+
+    switch (gRaceSplitscreenMode) {
+        case 0:
+            gRaceResultState = 1;
+            i = 0;
+            if (gPlayerCount > 0) {
+                player = gRacePlayers;
+                for (;;) {
+                    if (player->rankIndex == 0) {
+                        D_80120E80 = i + 1;
+                    }
+                    i++;
+                    player++;
+
+                    if (!(i < gPlayerCount)) {
+                        break;
+                    }
+                }
+            }
+            break;
+
+        case 2:
+            currentTime = gRaceElapsedTimer.fraction + (gRaceElapsedTimer.seconds * COURSE_TIME_SECOND) +
+                          (gRaceElapsedTimer.minutes * COURSE_TIME_MINUTE);
+            i = 0;
+            for (;;) {
+                recordTime = gGameSaveDataBuffer[0].timeTrialRecords[gRaceCourseIndex.signedValue][i].fraction +
+                             (gGameSaveDataBuffer[0].timeTrialRecords[gRaceCourseIndex.signedValue][i].seconds *
+                              COURSE_TIME_SECOND) +
+                             (gGameSaveDataBuffer[0].timeTrialRecords[gRaceCourseIndex.signedValue][i].minutes *
+                              COURSE_TIME_MINUTE);
+                if (currentTime < recordTime) {
+                    break;
+                }
+                i++;
+
+                if (!(i < 5)) {
+                    break;
+                }
+            }
+            if (i < 5) {
+                gRaceResultState = 1;
+                D_80120E80 = 1;
+                if (i == 0) {
+                    D_80120E81 = 1;
+                }
+            } else {
+                gRaceResultState = 2;
+            }
+            break;
+
+        case 1:
+            if (gRaceTypeSelection != 0) {
+                i = gRaceTypeSelection;
+                if (i != 1) {
+                    if (gRaceTypeSelection == 2) {
+                        i = 0;
+                        for (;;) {
+                            if (gGameSaveDataBuffer[0].trickAttackScores[gRaceCourseIndex.signedValue][i] <
+                                gRacePlayers[0].trickAttackPointTotal) {
+                                break;
+                            }
+                            i++;
+
+                            if (!(i < 5)) {
+                                break;
+                            }
+                        }
+                        if (gRaceChallengeFailed != 0) {
+                            i = 5;
+                        }
+                        if (i < 5) {
+                            gRaceResultState = 1;
+                            D_80120E80 = 1;
+                        } else {
+                            gRaceResultState = 2;
+                        }
+                    }
+                } else {
+                    i = 0;
+                    for (;;) {
+                        if (gGameSaveDataBuffer[0].scoreAttackScores[gRaceCourseIndex.signedValue][i] <
+                            gRacePlayers[0].scoreAttackPointTotal) {
+                            break;
+                        }
+                        i++;
+
+                        if (!(i < 5)) {
+                            break;
+                        }
+                    }
+                    if (gRaceChallengeFailed != 0) {
+                        i = 5;
+                    }
+                    if (i < 5) {
+                        gRaceResultState = 1;
+                        D_80120E80 = 1;
+                    } else {
+                        gRaceResultState = 2;
+                    }
+                }
+            } else {
+                currentTime = gRaceElapsedTimer.fraction + (gRaceElapsedTimer.seconds * COURSE_TIME_SECOND) +
+                              (gRaceElapsedTimer.minutes * COURSE_TIME_MINUTE);
+                i = 0;
+                for (;;) {
+                    recordTime = gGameSaveDataBuffer[0].raceRecords[gRaceCourseIndex.signedValue][i].fraction +
+                                 (gGameSaveDataBuffer[0].raceRecords[gRaceCourseIndex.signedValue][i].seconds *
+                                  COURSE_TIME_SECOND) +
+                                 (gGameSaveDataBuffer[0].raceRecords[gRaceCourseIndex.signedValue][i].minutes *
+                                  COURSE_TIME_MINUTE);
+                    if (currentTime < recordTime) {
+                        break;
+                    }
+                    i++;
+
+                    if (!(i < 5)) {
+                        break;
+                    }
+                }
+                if (gRaceChallengeFailed != 0) {
+                    i = 5;
+                }
+                if (i < 5) {
+                    gRaceResultState = 1;
+                    D_80120E80 = 1;
+                } else {
+                    gRaceResultState = 2;
+                }
+            }
+            break;
+    }
+
+    gCurrentGameTask->callbackData1 = 0x3C;
+    setCurrentGameTaskCallback(updateRaceResultsFlow, 0);
+    if (D_80120E80 != 0) {
+        requestMusicSequenceBank(6);
+        if ((gPlayerCount == 1) && (gRaceSplitscreenMode == 0)) {
+            createCallbackTaskWithUserId((CallbackTaskCallback)updateRaceUiResultAwardBadgeDelay, 6, 0x64, 0xA9);
+        }
+        createCallbackTaskWithUserId((CallbackTaskCallback)initFallingConfetti, 5, 0x64, D_80120E80 - 1);
+    }
+    updateRaceFlowFrame();
+}
+
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/updateRaceResultsFlow.s")
 
 void updateRaceResultsMusicFlow(void) {
     if (countActiveMusicSequences() == 0) {

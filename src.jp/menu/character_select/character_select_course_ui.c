@@ -16,6 +16,7 @@
 #include "game/menu/renderer/menu_render_utils.h"
 #include "game/race/player/race_player_input.h"
 
+#define CHARACTER_SELECT_POPUP_FONT_HANDLE (gAssetHandles[0x1F])
 #define CHARACTER_SELECT_FRAME_TEXTURE_HANDLE (gAssetHandles[0x21])
 #define ASSET_HANDLE(index) (gAssetHandles[index])
 
@@ -39,6 +40,12 @@ typedef struct {
     s16 y2;
     s16 y3;
 } CharacterSelectCourseListInitLoop;
+
+extern const char D_800DFEC8[];
+
+extern const char D_800DFED0[];
+
+extern const char D_800DFED8[];
 
 extern s32 gMenuFlowState;
 
@@ -1822,7 +1829,72 @@ void initCharacterSelectCourseDescriptionPopup(CharacterSelectCourseWidgetActor 
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCourseConfirmCursor.s")
+void drawCharacterSelectCourseConfirmCursor(CharacterSelectCourseWidgetActor *arg0) {
+    u32 drawAlpha;
+    int isEvenState;
+    u16 alpha;
+    s16 state;
+
+    state = gMenuChoicePromptState[0];
+    if (state != 0) {
+        isEvenState = !(state & 1);
+        if (isEvenState) {
+            alpha = 0x100;
+        } else {
+            alpha = 0x60;
+        }
+
+        drawAlpha = alpha;
+        drawMenuSpriteWithAlpha(
+            arg0->x,
+            arg0->sprite.index,
+            getRelocatableHeapBlockBase(ASSET_HANDLE(0x24)),
+            0x18,
+            0x20,
+            0x20,
+            0,
+            drawAlpha,
+            0
+        );
+
+        if (drawAlpha == 0x100) {
+            alpha = 0x60;
+        } else {
+            alpha = 0x100;
+        }
+
+        drawMenuSpriteWithAlpha(
+            arg0->x,
+            arg0->y,
+            getRelocatableHeapBlockBase(ASSET_HANDLE(0x24)),
+            0x17,
+            0x20,
+            0x20,
+            0,
+            alpha,
+            0
+        );
+
+        state = gMenuChoicePromptState[0];
+        if ((state == 3) || (state == 4)) {
+            drawMenuSpriteWithAlpha(
+                arg0->x,
+                (s16)(((gMenuChoicePromptState[0] * 0x10) + arg0->y) - 0x30),
+                getRelocatableHeapBlockBase(ASSET_HANDLE(0x24)),
+                0x12,
+                0x20,
+                0x20,
+                0,
+                arg0->selection.unsignedCounter,
+                0
+            );
+            state = gMenuChoicePromptState[0];
+        }
+    }
+    if ((state >= 5) && (((s16)arg0->transition.alpha) == 0)) {
+        removeCallbackTask(arg0);
+    }
+}
 // clang-format on
 
 // clang-format off
@@ -2026,4 +2098,77 @@ void initCharacterSelectCourseExitPopup(CharacterSelectCourseWidgetActor *arg0) 
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCourseExitPopup);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_800235A8.s")
+void drawCharacterSelectCourseRecordTime(CharacterSelectCourseRecordTime *arg0, s32 x, s32 arg2, s32 arg3) {
+    char buffer[0x58];
+    CharacterSelectCourseRecordTime *record;
+    s16 y;
+    u16 color;
+    s32 i;
+
+    record = arg0;
+    y = arg2;
+    color = arg3;
+    sprintf(&buffer[-0x10], D_800DFEC8, record->minutes);
+    i = -0x10;
+    while (i < -0xE) {
+        {}
+        drawAssetTableSpriteWithExplicitPaletteWideIndex(
+            (s16)x,
+            y,
+            getRelocatableHeapBlockBase(CHARACTER_SELECT_POPUP_FONT_HANDLE),
+            ((u8)buffer[i] - 5) & 0xFFFF,
+            color
+        );
+        i++;
+        x += 8;
+    }
+    drawAssetTableSpriteWithExplicitPaletteWideIndex(
+        (s16)x,
+        y,
+        getRelocatableHeapBlockBase(CHARACTER_SELECT_POPUP_FONT_HANDLE),
+        0x36,
+        color
+    );
+
+    if ((gRaceSplitscreenMode == 2) || ((gRaceSplitscreenMode == 1) && (gRaceTypeSelection == 0))) {
+        x += 6;
+    } else {
+        x += 8;
+    }
+
+    sprintf(&buffer[-0x10], D_800DFED0, record->seconds);
+    i = -0x10;
+    while (i < -0xE) {
+        drawAssetTableSpriteWithExplicitPaletteWideIndex(
+            (s16)x,
+            y,
+            getRelocatableHeapBlockBase(CHARACTER_SELECT_POPUP_FONT_HANDLE),
+            ((u8)buffer[i] - 5) & 0xFFFF,
+            color
+        );
+        i++;
+        x += 8;
+    }
+    drawAssetTableSpriteWithExplicitPaletteWideIndex(
+        (s16)x,
+        y,
+        getRelocatableHeapBlockBase(CHARACTER_SELECT_POPUP_FONT_HANDLE),
+        0x35,
+        color
+    );
+
+    x += 8;
+    sprintf(&buffer[-0x10], D_800DFED8, record->centiseconds >> 8);
+    i = -0x10;
+    while (i != -0xE) {
+        drawAssetTableSpriteWithExplicitPaletteWideIndex(
+            (s16)x,
+            y,
+            getRelocatableHeapBlockBase(CHARACTER_SELECT_POPUP_FONT_HANDLE),
+            ((u8)buffer[i] - 5) & 0xFFFF,
+            color
+        );
+        i++;
+        x += 8;
+    }
+}

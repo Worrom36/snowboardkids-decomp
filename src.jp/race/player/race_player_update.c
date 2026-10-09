@@ -2946,7 +2946,89 @@ void updateRacePlayerMode08SpinoutRecover(RacePlayer *player) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80093020.s")
+void updateRacePlayerMode06TerrainFall(RacePlayer *player) {
+    if (player->updateState == 0) {
+        player->updateState++;
+        player->stateTimer = 0x3C;
+        player->stateFlags &= 0xFE0C1FFB;
+        player->stateFlags |= 0x42000;
+        player->updateTimer = 0;
+        setRaceCameraMode(player->playerIndex, 4);
+        player->targetGroundOffset = 0;
+        player->unk2E8 = player->coursePathIndex;
+        if (player->soundDisabled == 0) {
+            spawnRaceItemBreakParticles(player->playerIndex, player->unk330);
+        }
+        /* Rank-scaled recovery timer for humans and CPUs. With zero-based rank,
+         * integer truncation gives 60/53/45/38 updates for a base of 60. */
+        player->stateTimer -= (player->stateTimer * player->rankIndex) / 8;
+        player->rumbleTimer = 2;
+        player->rumblePatternId = 0;
+        setRaceMotionAnimation(player, 0x20);
+    }
+
+    switch (player->updateTimer) {
+        case 0:
+            player->stateTimer--;
+            if (player->stateTimer == 0) {
+                player->updateTimer++;
+            }
+            if (stepRaceMotionAnimationUntilEnd(player) != 0) {
+                setRaceMotionAnimation(player, 0x21);
+            }
+            break;
+        case 1:
+            if (stepRaceMotionAnimationUntilEnd(player) != 0) {
+                setRaceMotionAnimation(player, 0x21);
+            }
+            player->stateFlags |= 0x80000;
+            if (gViewportStates[(u16)player->playerIndex].overlayAlpha == 0xFF) {
+                player->updateTimer++;
+                player->verticalVelocityLimit = 0;
+                player->coursePathIndex = player->unk2E8;
+                while (1) {
+                    getRaceCourseSurfaceSpawnTransform(
+                        player->coursePathIndex,
+                        &player->pos.x,
+                        &player->pos.y,
+                        &player->pos.z,
+                        &player->facingAngle
+                    );
+                    if (isRacePlayerRespawnSurfaceValid(player) == 0) {
+                        player->coursePathIndex--;
+                    } else {
+                        break;
+                    }
+                }
+                player->pos.y = getRaceCourseSurfaceHeight(player->coursePathIndex, player->pos.x, player->pos.z);
+                player->previousPosition = player->pos;
+                player->velocity.x = 0;
+                player->velocity.y = 0;
+                player->velocity.z = 0;
+                player->stateFlags &= ~0x400;
+                player->leanAngle = 0;
+                updateRacePlayerLeanAngle(player, 0, 0);
+                setRaceMotionAnimation(player, 1);
+                stepRaceMotionAnimationUntilEnd(player);
+                setRaceCameraMode(player->playerIndex, 1);
+                player->targetGroundOffset = 0x40000;
+            }
+            break;
+        case 2:
+            player->stateFlags &= 0xFFF7FFFF;
+            if (gViewportStates[(u16)player->playerIndex].overlayAlpha == 0) {
+                player->mode = 0;
+                player->updateState = 0;
+                player->updateTimer = 0;
+                player->stateFlags = 0;
+            }
+            stepRaceMotionAnimationUntilEnd(player);
+            break;
+    }
+
+    player->velocity.y -= player->gravity;
+    player->pos.y += player->velocity.y;
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8009332C.s")
 
@@ -4249,7 +4331,74 @@ void updateRacePlayerMode35Character5(RacePlayer *player) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/updateRacePlayersPostUpdate.s")
+void updateRacePlayersPostUpdate(void) {
+    RacePlayer *player;
+    Vec3i *soundPos;
+    Vec3i *nextSoundPos;
+    s32 i;
+
+    if (gRaceUpdatePaused == 0) {
+        i = 0;
+        if (gRacePlayerCount > 0) {
+            for (;;) {
+                { updateRacePlayerPostUpdate(&gRacePlayers[i]); }
+                i++;
+
+                if (!(i < gRacePlayerCount)) {
+                    break;
+                }
+            }
+        }
+    }
+
+    i = 0;
+    if (gRacePlayerCount > 0) {
+        for (;;) {
+            updateSpeedFanEffect(&gRacePlayers[i]);
+            i++;
+
+            if (!(i < gRacePlayerCount)) {
+                break;
+            }
+        }
+        i = 0;
+    }
+
+    i = 0;
+    if (gRacePlayerCount > 0) {
+        for (;;) {
+            player = &gRacePlayers[i];
+            soundPos = &gRacePlayers[i].pos;
+            nextSoundPos = &gRacePlayers[i].unk28;
+            if (player->soundDisabled == 0) {
+                enqueuePlayerLoopingPositionalSoundRequest(
+                    player->unk584,
+                    soundPos,
+                    player->unk582,
+                    0x46,
+                    player->unk588,
+                    i
+                );
+            } else {
+                enqueuePlayerLoopingPositionalSoundRequest(player->unk584, soundPos, 0, 0x46, player->unk588, i);
+            }
+
+            *nextSoundPos = *soundPos;
+            player->unk28.y = player->groundCorrectionY + player->unk28.y - player->groundOffset + 0xA000;
+            if (player->soundDisabled == 0) {
+                addRenderCallback(&D_801248C8, (RenderCallback)drawRacePlayerModel, player);
+                addRenderCallback(&D_801248EC, (RenderCallback)drawRacePlayerGroundShadow, player);
+            } else {
+                addRenderCallback(&D_801248EC, (RenderCallback)drawRaceGhostPlayerModel, player);
+            }
+            i++;
+
+            if (!(i < gRacePlayerCount)) {
+                break;
+            }
+        }
+    }
+}
 
 void updateRacePlayerPostUpdate(RacePlayer *player) {
     unsigned long long random;

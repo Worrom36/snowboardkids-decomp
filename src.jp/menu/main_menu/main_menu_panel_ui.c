@@ -13,6 +13,12 @@
 #include "game/menu/renderer/menu_renderer.h"
 #include "game/menu/renderer/menu_render_utils.h"
 
+#define mainMenuModeSelectPrimaryIconTiles gMainMenuModeSelectByteData.titleAndPrimaryIcon.bytes.primaryIconTiles
+#define mainMenuModeSelectSecondaryIconTiles gMainMenuModeSelectByteData.secondaryIconTiles
+#define mainMenuModeSelectUpTargets gMainMenuModeSelectByteData.upTargets
+#define mainMenuModeSelectDownTargets gMainMenuModeSelectByteData.downTargets
+#define mainMenuModeSelectLeftTargets gMainMenuModeSelectByteData.leftTargets
+#define mainMenuModeSelectRightTargets gMainMenuModeSelectByteData.rightTargets
 #define MENU_PANEL_INPUT_REPEAT_FRAMES 4
 #define MENU_PANEL_ACCEPT_SOUND 0x18
 #define MENU_PANEL_SOUND_VOLUME 0x32
@@ -38,6 +44,10 @@ typedef struct {
     u8 leftTargets[0x10];
     u8 rightTargets[0x10];
 } MainMenuModeSelectByteData;
+
+extern MenuGlyphScript *mainMenuModeDescriptionTitles[];
+
+extern s16 gMenuFadeAlpha;
 
 extern MenuGlyphScript *mainMenuModeDescriptionTexts[];
 
@@ -146,13 +156,286 @@ void drawMainMenuModeSelectIcons(MenuPanelActor *arg0) {
     drawAssetTableSpriteWithExplicitPalette(-0x30, 0x4D, getRelocatableHeapBlockBase(gAssetHandles[0x28]), 2, 1);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_panel_ui/updateMainMenuModeSelectGrid.s")
+void updateMainMenuModeSelectGrid(MenuPanelActor *arg0) {
+    s32 temp_v1;
+    s32 var_v0;
+    u8 temp_a2;
+    u8 temp_a2_2;
+    u8 temp_a2_3;
+    u8 temp_a2_4;
+
+    // clang-format off
+    if (arg0) {} \
+    if ((gMenuFadeAlpha == 0) && (gMainMenuSelectionResult == 0)) { \
+        temp_v1 = gPlayerInputPressed[0]; \
+        { \
+            if (temp_v1 & (STICK_UP | U_JPAD)) { \
+                temp_a2 = mainMenuModeSelectUpTargets[gMainMenuModeSelection]; \
+                if (temp_a2 != gMainMenuModeSelection) { \
+                    gMainMenuModeSelection = temp_a2; \
+                    enqueueSoundEffect(0x19, 0x32); \
+                    temp_v1 = gPlayerInputPressed[0]; \
+                } \
+            } else if (temp_v1 & (STICK_DOWN | D_JPAD)) { \
+                var_v0 = gMainMenuModeSelection; \
+                temp_a2_2 = mainMenuModeSelectDownTargets[var_v0]; \
+                if (temp_a2_2 != var_v0) { \
+                    gMainMenuModeSelection = temp_a2_2; \
+                    enqueueSoundEffect(0x19, 0x32); \
+                    temp_v1 = gPlayerInputPressed[0]; \
+                } \
+            } else if (temp_v1 & (STICK_RIGHT | R_JPAD)) { \
+                temp_a2_3 = mainMenuModeSelectRightTargets[gMainMenuModeSelection]; \
+                if (temp_a2_3 != gMainMenuModeSelection) { \
+                    gMainMenuModeSelection = temp_a2_3; \
+                    enqueueSoundEffect(0x19, 0x32); \
+                    temp_v1 = gPlayerInputPressed[0]; \
+                } \
+            } else if (temp_v1 & (STICK_LEFT | L_JPAD)) { \
+                temp_a2_4 = mainMenuModeSelectLeftTargets[gMainMenuModeSelection]; \
+                if (temp_a2_4 != gMainMenuModeSelection) { \
+                    gMainMenuModeSelection = temp_a2_4; \
+                    enqueueSoundEffect(0x19, 0x32); \
+                    temp_v1 = gPlayerInputPressed[0]; \
+                } \
+            }
+            // clang-format on
+            if (temp_v1 & (A_BUTTON | B_BUTTON | START_BUTTON)) {
+                gMainMenuSelectionResult = 1;
+                if (temp_v1 & B_BUTTON) {
+                    gMainMenuModeSelection = 0xC;
+                }
+                enqueueSoundEffect(0x18, 0x32);
+            }
+        }
+    }
+
+    if (gMainMenuSelectionResult == 0) {
+        arg0->x = gFrameCounter & 0xF;
+        if (arg0->x >= 9) {
+            arg0->x = 0x10 - arg0->x;
+        }
+        arg0->x = (arg0->x * 0x10) + 0x7F;
+    } else if (gFrameCounter & 1) {
+        arg0->x = 0;
+    } else {
+        arg0->x = 0xFF;
+    }
+
+    addRenderCallback(&gMenuRenderCallbackList, drawMainMenuModeSelectFrame, arg0);
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawMainMenuModeSelectIcons, (void *)arg0);
+}
 
 void initMainMenuModeSelectGrid(MenuPanelActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateMainMenuModeSelectGrid);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/main_menu_panel_ui/drawMainMenuModeDescriptionPanel.s")
+void drawMainMenuModeDescriptionPanel(MenuPanelActor *arg0) {
+    s32 i;
+    u16 unused;
+    u16 lineY;
+    s32 visibleIndex;
+    s32 scriptIndex;
+    MenuGlyphScript glyphText[2];
+    u16 lineX;
+    u16 colorMode;
+    MenuGlyphScript *title;
+    MenuGlyphScript *titleCursor;
+
+    drawMenuSprite(
+        (s16)(arg0->x - 4),
+        (s16)(arg0->y + 0x14),
+        getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+        2,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    drawMenuSprite(
+        (s16)(arg0->x + 0xF8),
+        (s16)(arg0->y + 0x14),
+        getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+        4,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+
+    i = 0;
+    for (;;) {
+        drawMenuSprite(
+            (s16)(arg0->x + i + 0xC),
+            (s16)(arg0->y + 0x14),
+            getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+            3,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+        drawMenuSprite(
+            (s16)(arg0->x + i + 0xC),
+            (s16)(arg0->y + 0x4C),
+            getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+            8,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+        i += 0x10;
+
+        if (!(i < 0xF0)) {
+            break;
+        }
+    }
+
+    drawMenuSprite(
+        (s16)(arg0->x - 4),
+        (s16)(arg0->y + 0x4C),
+        getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+        7,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    drawMenuSprite(
+        (s16)(arg0->x + 0xF8),
+        (s16)(arg0->y + 0x4C),
+        getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+        9,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+
+    i = (arg0->selectionState == 4) * 0;
+    for (;;) {
+        drawMenuSprite(
+            (s16)(arg0->x - 4),
+            (s16)(arg0->y + i + 0x24),
+            getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+            5,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+        drawMenuSprite(
+            (s16)(arg0->x + 0xF8),
+            (s16)(arg0->y + i + 0x24),
+            getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+            6,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+        i += 0x10;
+
+        if (!(i <= 0x2F)) {
+            break;
+        }
+    }
+
+    glyphText[1] = 0xFFFF;
+    visibleIndex = 0;
+    scriptIndex = 0;
+    lineX = 0;
+    lineY = 0;
+    colorMode = 7;
+
+    for (;;) {
+        if (visibleIndex == arg0->selectedTile) {
+            visibleIndex = 0;
+            break;
+        }
+
+        glyphText[0] = arg0->tileList[scriptIndex++];
+        switch (glyphText[0]) {
+            case 0xFFFF:
+                arg0->selectionState = 1;
+                visibleIndex = arg0->selectedTile;
+                continue;
+            case 0xFFFD:
+                lineY = lineY + 0x10;
+                lineX = 0;
+                continue;
+            case 0xFFFB:
+                arg0->selectionState = 2;
+                arg0->tileListStart = &arg0->tileList[scriptIndex];
+                visibleIndex = arg0->selectedTile;
+                continue;
+            case 0xFFFC:
+                colorMode = arg0->tileList[scriptIndex++];
+                continue;
+            default:
+                drawMenuColoredGlyphScript(
+                    (s16)(arg0->x + lineX),
+                    (s16)(arg0->y + lineY + 0x18),
+                    glyphText,
+                    0,
+                    0x100,
+                    colorMode,
+                    0x29
+                );
+                lineX = lineX + 0x10;
+                visibleIndex++;
+                continue;
+        }
+    }
+
+    if ((arg0->selectionState != 0) && (gMainMenuSelectionResult == 0)) {
+        drawMenuSprite(
+            (s16)(arg0->x + 0xF4),
+            (s16)(arg0->y + 0x48),
+            getRelocatableHeapBlockBase(gAssetHandles[0x2A]),
+            (gFrameCounter >> 4) & 1,
+            0x20,
+            0x20,
+            0,
+            0
+        );
+    }
+
+    title = mainMenuModeDescriptionTitles[gMainMenuModeSelection];
+    titleCursor = title;
+    if (*title != 0xFFFF) {
+        for (;;) {
+            visibleIndex++;
+            titleCursor++;
+
+            if (!(*titleCursor != 0xFFFF)) {
+                break;
+            }
+        }
+    }
+    visibleIndex *= 0x10;
+    visibleIndex = -(visibleIndex / 2);
+
+    drawMenuColoredGlyphScript((s16)visibleIndex, (s16)(-0x48 - arg0->y), title, 0, 0x100, 4, 0x29);
+
+    if ((s32)gMainMenuModeSelection < 6) {
+        drawAssetTableSprite(
+            -0x10,
+            (s16)(-0x30 - arg0->y),
+            getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+            mainMenuModeSelectPrimaryIconTiles[gMainMenuModeSelection]
+        );
+        return;
+    }
+
+    drawAssetTableSprite(
+        -0x10,
+        (s16)(-0x30 - arg0->y),
+        getRelocatableHeapBlockBase(gAssetHandles[0x1F]),
+        mainMenuModeSelectSecondaryIconTiles[gMainMenuModeSelection]
+    );
+}
 
 void scrollMainMenuModeDescriptionPanelOut(MenuPanelActor *arg0) {
     arg0->y += MENU_PANEL_SCROLL_STEP;

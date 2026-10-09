@@ -603,7 +603,111 @@ void drawRaceSetupSavePlayerPanels(TitleMenuWidgetItemView *actor) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_setup/race_setup_ui/updateRaceSetupSavePanelFrame.s")
+void updateRaceSetupSavePanelFrame(RectListActor *arg0) {
+    u8 state;
+    s32 outer;
+    s32 i;
+    s16 delta0;
+    s16 delta1;
+
+    outer = gRaceSetupSavePanelFrameState;
+    state = arg0->frame;
+    if (gRaceSetupSavePanelFrameState != state) {
+        state = outer;
+        arg0->frame = outer;
+    }
+
+    switch (state) {
+        case 0:
+            outer = 0;
+            while (outer != 0x10) {
+                i = 0;
+                while (i != 4) {
+                    if (i < 2) {
+                        delta0 = 1;
+                    } else {
+                        delta0 = -1;
+                    }
+                    if (i & 1) {
+                        delta1 = -1;
+                    } else {
+                        delta1 = 1;
+                    }
+
+                    arg0->rectCoords[i] += delta0;
+
+                    if (i == 0) {
+                        arg0->stepAccumulator += arg0->stepIncrement;
+                    }
+                    if (arg0->stepAccumulator >= arg0->stepLimit) {
+                        arg0->rectCoords[i + 4] += delta1;
+                        if (i == 3) {
+                            arg0->stepAccumulator -= arg0->stepLimit;
+                        }
+                    }
+
+                    if (i <= 0) {
+                        delta0 = 1;
+                    } else {
+                        delta0 = -1;
+                    }
+                    if ((i + 1) & 1) {
+                        delta1 = -1;
+                    } else {
+                        delta1 = 1;
+                    }
+
+                    arg0->rectCoords[i + 1] += delta0;
+
+                    if (i == -1) {
+                        arg0->stepAccumulator += arg0->stepIncrement;
+                    }
+                    if (arg0->stepAccumulator >= arg0->stepLimit) {
+                        arg0->rectCoords[i + 5] += delta1;
+                        if (i == 2) {
+                            arg0->stepAccumulator -= arg0->stepLimit;
+                        }
+                    }
+
+                    i += 2;
+                }
+
+                outer++;
+                if (arg0->rects[0].x0 == -0x88) {
+                    arg0->frame = 1;
+                    break;
+                }
+            }
+            state = arg0->frame;
+            break;
+        case 2:
+            arg0->rects[1].y0 += 0x10;
+            arg0->rects[1].y1 += 0x10;
+            if (arg0->rects[1].y0 == 0x24) {
+                arg0->frame = 3;
+            }
+            state = arg0->frame;
+            break;
+        case 1:
+        case 3:
+        default:
+            break;
+    }
+
+    gRaceSetupMenuSubState.forceUpdate = state;
+    for (i = 0; i < 4; i++) {
+        gRaceSetupSavePanelRects[0][i] = arg0->rectCoords[i];
+        gRaceSetupSavePanelRects[1][i] = arg0->rectCoords[i + 4];
+    }
+
+    if (gMenuFlowState == 0x63) {
+        removeCallbackTask(arg0);
+        gMenuFlowState = 0;
+        return;
+    }
+
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSetupSavePlayerPanels, (void *)arg0);
+}
 
 void initRaceSetupSavePanelFrame(RectListActor *arg0) {
     RectListActor *actor = arg0;

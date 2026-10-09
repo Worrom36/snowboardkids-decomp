@@ -19,6 +19,10 @@
 #define RACE_HUD_POPUP_FONT_HANDLE (gAssetHandles[0x1F])
 #define ASSET_HANDLE(index) (gAssetHandles[index])
 
+extern u16 gRaceProgressMeterIconTiles[36];
+
+extern u16 gRaceProgressMeterIconPalettes[6];
+
 extern s32 gMenuFlowState;
 
 extern s16 gRaceLapCount;
@@ -492,7 +496,114 @@ void decrementRaceChallengeTimeLimit(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/drawRaceCourseProgressMeter.s")
+void drawRaceCourseProgressMeter(void *arg0) {
+    s32 i;
+    s32 j;
+    union {
+        s32 playerId;
+        AssetTable *assetTable;
+    } temp;
+    s32 order[4];
+    s16 xBase;
+    s16 yBase;
+
+    order[0] = 0;
+    order[1] = 1;
+    order[2] = 2;
+    order[3] = 3;
+
+    for (i = 0; i < 3; i++) {
+        for (j = i + 1; j < 4; j++) {
+            if (gRacePlayers[order[j]].rankIndex < gRacePlayers[order[i]].rankIndex) {
+                temp.playerId = order[i];
+                order[i] = order[j];
+                order[j] = temp.playerId;
+            }
+        }
+    }
+
+    if (gRaceHudMode == RACE_HUD_MODE_ONE_PLAYER) {
+        xBase = 0x78;
+        yBase = -0x56;
+    }
+    if (gRaceHudMode == RACE_HUD_MODE_TWO_PLAYER) {
+        xBase = 0x78;
+        yBase = -0x48;
+    }
+    if ((gRaceHudMode == RACE_HUD_MODE_THREE_PLAYER) || (gRaceHudMode == RACE_HUD_MODE_FOUR_PLAYER)) {
+        xBase = -8;
+        yBase = -0x48;
+    }
+
+    drawAssetTableSprite(
+        (s16)(xBase + 4),
+        (s16)(yBase + 4),
+        getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
+        0x50
+    );
+
+    i = 3;
+    while (i >= 0) {
+        if (((gRacePlayers[order[i]].stateFlags & RACE_PLAYER_COLLISION_SQUASHED) != 0) ||
+            (gRacePlayers[order[i]].progressMeterSquashFrame != 0)) {
+            gRacePlayers[order[i]].progressMeterSquashFrame++;
+        }
+        if (((gRacePlayers[order[i]].stateFlags & RACE_PLAYER_COLLISION_SQUASHED) != 0) &&
+            (gRacePlayers[order[i]].progressMeterSquashFrame >= 5)) {
+            gRacePlayers[order[i]].progressMeterSquashFrame = 4;
+        }
+        if (gRacePlayers[order[i]].progressMeterSquashFrame >= 6) {
+            gRacePlayers[order[i]].progressMeterSquashFrame = 0;
+        }
+
+        if (gRacePlayers[order[i]].progressMeterSquashFrame != 0) {
+            if (gRacePlayers[order[i]].activeSparkleEffectCount != 0) {
+                temp.assetTable = getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE);
+                drawAssetTableSpriteWithExplicitPalette(
+                    (s16)(xBase - 8),
+                    (s16)(gRacePlayers[order[i]].progressMeterPosition + yBase),
+                    temp.assetTable,
+                    (
+                        &gRaceProgressMeterIconTiles[gRacePlayers[order[i]].progressMeterSquashFrame]
+                    )[gRacePlayers[order[i]].characterId * 6],
+                    gRaceProgressMeterIconPalettes[gRacePlayers[order[i]].characterId]
+                );
+            } else {
+                temp.assetTable = getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE);
+                drawAssetTableSprite(
+                    (s16)(xBase - 8),
+                    (s16)(gRacePlayers[order[i]].progressMeterPosition + yBase),
+                    temp.assetTable,
+                    (
+                        &gRaceProgressMeterIconTiles[gRacePlayers[order[i]].progressMeterSquashFrame]
+                    )[gRacePlayers[order[i]].characterId * 6]
+                );
+            }
+        } else if (gRacePlayers[order[i]].activeSparkleEffectCount != 0) {
+            temp.assetTable = getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE);
+            drawAssetTableSpriteWithExplicitPalette(
+                xBase,
+                (s16)(gRacePlayers[order[i]].progressMeterPosition + yBase),
+                temp.assetTable,
+                (
+                    &gRaceProgressMeterIconTiles[gRacePlayers[order[i]].progressMeterSquashFrame]
+                )[gRacePlayers[order[i]].characterId * 6],
+                gRaceProgressMeterIconPalettes[gRacePlayers[order[i]].characterId]
+            );
+        } else {
+            temp.assetTable = getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE);
+            drawAssetTableSprite(
+                xBase,
+                (s16)(gRacePlayers[order[i]].progressMeterPosition + yBase),
+                temp.assetTable,
+                (
+                    &gRaceProgressMeterIconTiles[gRacePlayers[order[i]].progressMeterSquashFrame]
+                )[gRacePlayers[order[i]].characterId * 6]
+            );
+        }
+        i--;
+    }
+}
 
 void updateRaceCourseProgressMeter(void) {
     s32 meterPosition;

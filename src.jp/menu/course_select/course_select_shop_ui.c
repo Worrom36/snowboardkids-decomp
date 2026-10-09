@@ -14,6 +14,8 @@
 #include "game/menu/renderer/menu_renderer.h"
 #include "game/race/player/race_player_input.h"
 
+typedef MenuGlyphScript ShopDescriptionText[0x46];
+
 typedef struct {
     u16 center[16];
     u16 right[2];
@@ -29,6 +31,12 @@ enum {
     COURSE_DETAILS_OPTION_COUNT = 10,
     COURSE_DETAILS_ROW_SPACING = 0x13
 };
+
+extern u16 gCourseDetailsPreviewExtraTiles[];
+
+extern u16 gCourseDetailsPreviewCourseTiles[];
+
+extern ShopDescriptionText gShopMenuModeDescriptionText[5];
 
 extern const char gCourseUnlockPriceFormat4[];
 
@@ -715,7 +723,18 @@ void initShopMenuModeCursor(ShopMenuWidgetActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateShopMenuModeCursor);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/drawShopMenuDescriptionText.s")
+void drawShopMenuDescriptionText(ShopMenuWidgetActor *arg0) {
+    u8 var_v0;
+
+    if (gShopMenuDescriptionSeen == 0) {
+        var_v0 = 3;
+    } else if (gShopMenuShowNewCoursesMessage == 1) {
+        var_v0 = 4;
+    } else {
+        var_v0 = gCourseSelectModeSelection;
+    }
+    drawMenuGlyphScript(arg0->x, arg0->y, gShopMenuModeDescriptionText[var_v0], 1, arg0->sprite.index, 0);
+}
 
 void updateShopMenuDescriptionText(ShopMenuWidgetActor *arg0) {
     u8 state = arg0->transition.bytes.state;
@@ -840,9 +859,15 @@ void drawShopMenuMoneyPanel(ShopMenuWidgetActor *arg0) {
     drawMenuAsciiText((s16)(arg0->x + 0x10), (s16)(arg0->y + 0x10), sp40, 0, arg0->sprite.index);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002E7E4.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuMoneyPanel.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/initShopMenuMoneyPanel.s")
+void initShopMenuMoneyPanel(ShopMenuWidgetActor *arg0) {
+    arg0->x = 0x30;
+    arg0->y = 0x40;
+    arg0->sprite.index = 0;
+    arg0->transition.bytes.state = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateShopMenuMoneyPanel);
+}
 
 void updateShopMenuMoneyPanelForCourseSelectReturn(ShopMenuWidgetActor *arg0) {
     u8 state = arg0->transition.bytes.state;
@@ -1220,7 +1245,62 @@ void initCourseDetailsMenu(ShopMenuWidgetActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCourseDetailsMenu);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/drawCourseDetailsPreviewTile.s")
+void drawCourseDetailsPreviewTile(ShopMenuWidgetActor *arg0) {
+    s32 unused;
+    u16 tileIndex;
+
+    if (gCourseDetailsMenuSelection < COURSE_DETAILS_COURSES_PER_PAGE) {
+        tileIndex = gCourseDetailsPreviewCourseTiles
+            [gCourseDetailsPreviewPage * COURSE_DETAILS_COURSES_PER_PAGE + gCourseDetailsMenuSelection];
+    } else {
+        tileIndex = gCourseDetailsPreviewExtraTiles[gCourseDetailsPreviewPage * COURSE_DETAILS_COURSES_PER_PAGE];
+    }
+
+    drawMenuSpriteSubrect(
+        arg0->x,
+        arg0->y,
+        getRelocatableHeapBlockBase(gAssetHandles[0xD]),
+        tileIndex,
+        0,
+        0,
+        0x40,
+        0x1C,
+        0x20,
+        0x20
+    );
+    drawMenuSpriteSubrect(
+        (s16)(arg0->x + 0x40),
+        arg0->y,
+        getRelocatableHeapBlockBase(gAssetHandles[0xD]),
+        tileIndex,
+        0,
+        0x1C,
+        0x40,
+        0x1C,
+        0x20,
+        0x20
+    );
+    drawMenuSprite(
+        (s16)(arg0->x - 4),
+        (s16)(arg0->y - 1),
+        getRelocatableHeapBlockBase(gAssetHandles[0x27]),
+        0xA,
+        0x20,
+        0x20,
+        0,
+        0
+    );
+    drawMenuSprite(
+        (s16)(arg0->x + 0x3C),
+        (s16)(arg0->y - 1),
+        getRelocatableHeapBlockBase(gAssetHandles[0x27]),
+        0xB,
+        0x20,
+        0x20,
+        1,
+        0
+    );
+}
 
 void updateCourseDetailsPreviewTile(ShopMenuWidgetActor *arg0) {
     u8 state;

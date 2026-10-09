@@ -622,7 +622,21 @@ void drawCongratulationsBannerSprite(MenuScreenEffectActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/renderer/menu_screen_effects/updateCongratulationsBannerSprite.s")
+void updateCongratulationsBannerSprite(MenuScreenEffectActor *arg0) {
+    s16 v;
+    arg0->unk18.half.hi += 1;
+    v = arg0->unk18.half.hi;
+    if (v >= 0x3D) {
+        arg0->unk18.half.hi = 0;
+        v = arg0->unk18.half.hi;
+    }
+    if (v < 0xA) {
+        arg0->unk18.half.lo = v;
+    } else {
+        arg0->unk18.half.lo = 0;
+    }
+    addRenderCallback(&gRaceOverlayRenderCallbackList, (RenderCallback)drawCongratulationsBannerSprite, arg0);
+}
 
 void drawPassAwardLabel(MenuScreenEffectActor *arg0) {
     gDPPipeSync(gRegionAllocPtr++);

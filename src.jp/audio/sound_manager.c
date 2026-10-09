@@ -56,6 +56,52 @@ typedef struct SoundQueueEntry {
     u8 unk5;
 } SoundQueueEntry;
 
+extern s32 gPlayerPositionalSoundHandle0[];
+
+extern s32 gPlayerPositionalSoundHandle1;
+
+extern s16 gPlayerLoopingSoundId0;
+
+extern s32 gPlayerLoopingSoundHandle1;
+
+extern SoundHandleNode gSoundHandleNodes[];
+
+extern s32 gPlayerLoopingSoundHandle0;
+
+extern s32 gPlayerPositionalSoundHandle2;
+
+extern f32 D_800D9FDC[SOUND_BANK_WAVE_COUNT];
+
+extern s32 gPlayerPositionalSoundHandle3;
+
+extern u8 *D_800DAC2C[108];
+
+extern s16 gPlayerLoopingSoundId1;
+
+extern s16 gPlayerLoopingSoundId3;
+
+extern u8 D_800D9EE0[SOUND_BANK_WAVE_COUNT + 1];
+
+extern s32 D_800DADDC[108];
+
+extern s16 gPlayerLoopingSoundId2;
+
+extern SchedulerState gSchedulerState;
+
+extern s32 gPlayerLoopingSoundHandle3;
+
+extern s32 gPlayerLoopingSoundHandle2;
+
+extern u8 gCurrentQueuedSoundId;
+
+extern u8 gCurrentQueuedSoundPan;
+
+extern u8 gCurrentQueuedSoundVolume;
+
+extern u8 gCurrentQueuedSoundPriority;
+
+extern u8 gCurrentQueuedSoundAux;
+
 extern u16 gCourseMusicSequenceBanks[14];
 extern PositionalSoundRequest *gPendingPositionalSoundRequests;
 extern SoundHandleNode *gActiveSoundHandleListHead;
@@ -81,7 +127,79 @@ extern void stopCurrentMusicSequence(s32 arg0);
 extern s32 reserveSoundEffectQueueWriteIndex(void);
 extern s32 calculatePositionalSoundVolume(Vec3i *pos, s32 volume);
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/func_80071380.s")
+void initSoundManager(void) {
+    PlayerCommandInit init;
+    void *nullPtr;
+    s32 pad0;
+    s32 pad1;
+    SoundHandleNode **freeList;
+    SoundHandleNode *node;
+
+    gPendingMusicCommand = 0;
+    gPendingMusicCommandArg = 0;
+    gMusicSequenceStopped = 1;
+    nullPtr = NULL;
+    gCurrentMusicSequenceHandle = 0;
+    gCurrentMusicSequenceBank = -1;
+
+    // clang-format off
+    { \
+        freeList = gFreeSoundHandleStack; \
+        node = gSoundHandleNodes; \
+        for (;;) { \
+            *freeList = node; \
+            node++; \
+            freeList++; \
+
+        if (!(node < (SoundHandleNode *)&gActiveSoundHandleListHead)) { break; }
+} \
+        gFreeSoundHandleCount = 13; \
+        gCurrentQueuedSoundType = 0; \
+    }
+    // clang-format on
+
+    gSoundQueueWriteIndex = 0;
+    gSoundQueueReadIndex = 0;
+    gActiveSoundHandleListHead = nullPtr;
+    gActiveSoundHandleListTail = nullPtr;
+    gPlayerPositionalSoundHandle0[0] = 0;
+    gPlayerLoopingSoundHandle0 = 0;
+    gPlayerLoopingSoundId0 = 0;
+    gPlayerPositionalSoundHandle1 = 0;
+    gPlayerLoopingSoundHandle1 = 0;
+    gPlayerLoopingSoundId1 = 0;
+    gPlayerPositionalSoundHandle2 = 0;
+    gPlayerLoopingSoundHandle2 = 0;
+    gPlayerLoopingSoundId2 = 0;
+    gPlayerPositionalSoundHandle3 = 0;
+    gPlayerLoopingSoundHandle3 = 0;
+    gPlayerLoopingSoundId3 = 0;
+    gSharedLoopingPositionalSoundHandle = 0;
+
+    gAssetHandles[3] = allocRelocatableHeapBlock(SOUND_HEAP_SIZE);
+    LOAD_ASSET(SOUND_POINTER_BANK, 4);
+    gAssetHandles[5] = allocRelocatableHeapBlock(MUSIC_SEQUENCE_BUFFER_SIZE);
+
+    init.count = 0x18;
+    init.unk4 = &gSchedulerState;
+    init.outputRate = 0x6E;
+    init.heapBase = (u8 *)getRelocatableHeapBlockBase(gAssetHandles[3]);
+    init.heapLen = SOUND_HEAP_SIZE;
+    init.soundBank = (PlayerCommandBank *)getRelocatableHeapBlockBase(gAssetHandles[4]);
+    init.sampleBaseOffset = (s32)&_27E290_ROM_START;
+    init.tuningTable = D_800D9EE0;
+    init.pitchOffsetTable = D_800D9FDC;
+    init.fxHeader = D_800DAC2C;
+    init.unk28 = D_800DADDC;
+    init.maxUpdates = 0x100;
+    init.maxFXBusses = 0x5622;
+    init.unk34 = 0x2000;
+    init.unk38 = 1;
+    init.unk3C = 0x20;
+    init.unk40 = 0x1000;
+    MusInitialize(&init);
+    MusSetMasterVolume(1, 0x7FFF);
+}
 
 void stopCurrentMusicSequence(s32 arg0) {
     if (gMusicSequenceStopped == 0) {
@@ -181,9 +299,148 @@ SoundHandleNode *acquireSoundEffectHandleNode(void) {
     return gFreeSoundHandleStack[gFreeSoundHandleCount];
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/func_80071810.s")
+s32 startCurrentQueuedSoundEffect(void) {
+    SoundHandleNode *temp_v0;
+    SoundHandleNode *temp_v0_2;
+    SoundHandleNode *var_v1;
+    s32 var_a0;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/func_800719D0.s")
+    temp_v0 = acquireSoundEffectHandleNode();
+    if (temp_v0 == NULL) {
+        if (gCurrentQueuedSoundPriority < gActiveSoundHandleListTail->priority) {
+            return 1;
+        }
+        if (gActiveSoundHandleListTail->stopRequested != 0) {
+            gActiveSoundHandleListTail->stopRequested = 0;
+            MusHandleStop(gActiveSoundHandleListTail->handle, 0);
+        }
+        return 0;
+    }
+
+    var_a0 = gCurrentQueuedSoundId;
+    if ((var_a0 >= 0x70) || (var_a0 < 0)) {
+        var_a0 = (gCurrentQueuedSoundId = 0);
+    }
+
+    temp_v0->handle =
+        MusStartEffect2(var_a0, gCurrentQueuedSoundVolume, gCurrentQueuedSoundPan, 0, gCurrentQueuedSoundPriority);
+    temp_v0->volume = gCurrentQueuedSoundAux;
+    temp_v0->priority = gCurrentQueuedSoundPriority;
+    temp_v0->stopRequested = 1;
+
+    if (gActiveSoundHandleListHead == NULL) {
+        temp_v0->prev = gActiveSoundHandleListHead;
+        temp_v0->next = NULL;
+        gActiveSoundHandleListHead = (gActiveSoundHandleListTail = temp_v0);
+        return 1;
+    }
+
+    var_v1 = gActiveSoundHandleListHead;
+    if (gActiveSoundHandleListHead != NULL) {
+        for (;;) {
+            if (temp_v0->priority >=
+                (s32)((u64)((((var_v1->priority & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFFULL)) {
+                temp_v0_2 = var_v1->prev;
+                temp_v0->next = var_v1;
+                temp_v0->prev = temp_v0_2;
+                if (temp_v0_2 == NULL) {
+                    gActiveSoundHandleListHead = temp_v0;
+                } else {
+                    temp_v0_2->next = temp_v0;
+                }
+                var_v1->prev = temp_v0;
+                return 1;
+            }
+            var_v1 = var_v1->next;
+
+            if (!(var_v1 != NULL)) {
+                break;
+            }
+        }
+    }
+
+    temp_v0->next = gActiveSoundHandleListTail->next;
+    temp_v0->prev = gActiveSoundHandleListTail;
+    gActiveSoundHandleListTail->next = temp_v0;
+    gActiveSoundHandleListTail = temp_v0;
+    return 1;
+}
+
+void updateSoundManager(void) {
+    SoundHandleNode *node;
+    s32 *left;
+    s32 *right;
+    SoundQueueEntry *entry;
+    s32 index;
+
+    osStopThread(&gAudioThread);
+
+    node = gActiveSoundHandleListHead;
+    while (node != NULL) {
+        if (node->handle == 0) {
+            releaseSoundEffectHandleNode(node);
+            goto next_node;
+        } else {
+            if (MusHandleAsk(node->handle) == 0) {
+                releaseSoundEffectHandleNode(node);
+            }
+        }
+    next_node:
+        node = node->next;
+    }
+
+    right = &gPlayerLoopingSoundHandle0, left = gPlayerPositionalSoundHandle0;
+    for (;;) {
+        if ((*right != 0) && (MusHandleAsk(*right) == 0)) {
+            *right = 0;
+        }
+        if ((*left != 0) && (MusHandleAsk(*left) == 0)) {
+            *left = 0;
+        }
+        right++;
+
+        if (!(&gPlayerLoopingSoundHandle0 > ++left)) {
+            break;
+        }
+    }
+
+    if ((gSharedLoopingPositionalSoundHandle != 0) && (MusHandleAsk(gSharedLoopingPositionalSoundHandle) == 0)) {
+        gSharedLoopingPositionalSoundHandle = 0;
+    }
+
+    if (gCurrentQueuedSoundType == 0) {
+        index = reserveSoundEffectQueueReadIndex();
+        if (index != -1) {
+            entry = &gSoundQueue[index];
+            gCurrentQueuedSoundType = entry->type;
+            gCurrentQueuedSoundId = entry->soundId;
+            gCurrentQueuedSoundVolume = entry->volume;
+            gCurrentQueuedSoundPan = entry->pan;
+            gCurrentQueuedSoundPriority = entry->priority;
+            gCurrentQueuedSoundAux = entry->unk5;
+        }
+    }
+
+    if ((gCurrentQueuedSoundType == 1) && (startCurrentQueuedSoundEffect() != 0)) {
+        gCurrentQueuedSoundType = 0;
+    }
+
+    if ((gCurrentMusicSequenceHandle != 0) && (MusHandleAsk(gCurrentMusicSequenceHandle) == 0)) {
+        gCurrentMusicSequenceHandle = 0;
+        gCurrentMusicSequenceBank = -1;
+    }
+
+    if ((gPendingMusicCommand == 1) && (loadMusicSequenceBank(gPendingMusicCommandArg) == 0)) {
+        gPendingMusicCommand = 0;
+    }
+
+    if (gPendingMusicCommand == 2) {
+        stopCurrentMusicSequence(gPendingMusicCommandArg);
+        gPendingMusicCommand = 0;
+    }
+
+    osStartThread(&gAudioThread);
+}
 
 void requestMusicSequenceBank(s32 arg0) {
     if (arg0 != gCurrentMusicSequenceBank) {
@@ -301,9 +558,75 @@ s32 calculatePositionalSoundVolume(Vec3i *pos, s32 volume) {
     return adjustedVolume;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/func_80072068.s")
+void updatePlayerLoopingPositionalSound(s32 soundId, s32 mode, s32 volume, f32 pitch) {
+    s32 adjustedVolume;
+    s32 activeCameras;
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/audio/sound_manager/func_800722BC.s")
+    if ((f64)pitch > 6.0) {
+        pitch = 6.0f;
+    }
+    if ((f64)pitch < -6.0) {
+        pitch = -6.0f;
+    }
+
+    adjustedVolume = calculatePositionalSoundVolume(&gRacePlayers[mode].pos, volume);
+
+    activeCameras = 0;
+    if (gRaceCameras[0].initialized.signedValue != 0) {
+        activeCameras = 1;
+    }
+    if (gRaceCameras[1].initialized.signedValue != 0) {
+        activeCameras += 1;
+    }
+    if (gRaceCameras[2].initialized.signedValue != 0) {
+        activeCameras += 1;
+    }
+    if (gRaceCameras[3].initialized.signedValue != 0) {
+        activeCameras += 1;
+    }
+    if (gRaceDemoPlaybackEnabled != 0) {
+        activeCameras = 4;
+    }
+
+    adjustedVolume = adjustedVolume - ((((activeCameras * 10) - 1) * adjustedVolume) / 100);
+
+    if (adjustedVolume == 0) {
+        if (*(&gPlayerLoopingSoundHandle0 + mode) != 0) {
+            MusHandleStop(*(&gPlayerLoopingSoundHandle0 + mode), 0);
+            *(&gPlayerLoopingSoundHandle0 + mode) = 0;
+        }
+    } else {
+        if ((*(&gPlayerLoopingSoundHandle0 + mode) != 0) && (soundId != *(&gPlayerLoopingSoundId0 + mode))) {
+            MusHandleStop(*(&gPlayerLoopingSoundHandle0 + mode), 0);
+            *(&gPlayerLoopingSoundHandle0 + mode) = 0;
+        }
+
+        if (*(&gPlayerLoopingSoundHandle0 + mode) == 0) {
+            *(&gPlayerLoopingSoundId0 + mode) = soundId;
+            *(&gPlayerLoopingSoundHandle0 + mode) = MusStartEffect2(soundId, adjustedVolume, 0x80, 0, 0x46);
+            MusHandleSetFreqOffset(*(&gPlayerLoopingSoundHandle0 + mode), pitch);
+        } else {
+            MusHandleSetVolume(*(&gPlayerLoopingSoundHandle0 + mode), adjustedVolume);
+            MusHandleSetFreqOffset(*(&gPlayerLoopingSoundHandle0 + mode), pitch);
+        }
+    }
+}
+
+void playPlayerPositionalSound(s32 soundId, s32 playerIndex, s32 volume, s32 minVolume) {
+    s32 adjustedVolume;
+
+    adjustedVolume = calculatePositionalSoundVolume(&gRacePlayers[playerIndex].pos, volume);
+    if (adjustedVolume < minVolume) {
+        adjustedVolume = minVolume;
+    }
+    if (adjustedVolume != 0) {
+        if (gPlayerPositionalSoundHandle0[playerIndex] != 0) {
+            MusHandleStop(gPlayerPositionalSoundHandle0[playerIndex], 0);
+            gPlayerPositionalSoundHandle0[playerIndex] = 0;
+        }
+        gPlayerPositionalSoundHandle0[playerIndex] = MusStartEffect2(soundId, adjustedVolume, 0x80, 0, 0x5A);
+    }
+}
 
 void updateSingleLoopingPositionalSound(s16 soundId, Vec3i *pos, s16 volume) {
     s32 adjustedVolume;
