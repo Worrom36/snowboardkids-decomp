@@ -40,6 +40,8 @@ typedef struct {
     s16 y3;
 } CharacterSelectCourseListInitLoop;
 
+extern s32 gMenuFlowState;
+
 extern CharacterSelectCourseText gCharacterSelectCourseNameText[10];
 
 extern u8 gCourseSelectFromRaceTypeMenu;
@@ -209,10 +211,115 @@ void initCharacterSelectLimitedCourseList(CharacterSelectCourseMenuFrameActor *a
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectLimitedCourseList);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_8001CA90.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewFrame.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePreviewFrame.s")
+void updateCharacterSelectCoursePreviewFrame(CharacterSelectCourseWidgetActor *arg0) {
+    u8 state;
+    u8 *new_var;
+    int switchState;
+    u32 selectedSpriteIndex;
+    int menuState;
+    register s32 selectedIndex;
+    register u16 spriteIndex;
+
+    selectedIndex = gRaceCourseIndex.signedValue;
+    spriteIndex = (u16)arg0->sprite.index;
+    selectedSpriteIndex = spriteIndex;
+    if ((selectedIndex >= (s32)selectedSpriteIndex) && (arg0->transition.bytes.state != 0) && (arg0->y != -0x48)) {
+        switchState = state = arg0->transition.bytes.state = 2;
+    } else {
+        switchState = state = arg0->transition.bytes.state;
+        if ((selectedIndex < (s32)selectedSpriteIndex) && (switchState != 0) && (arg0->y != -0x140)) {
+            switchState = state = arg0->transition.bytes.state = 1;
+        } else if ((switchState != 0) && (switchState < 4)) {
+            switchState++;
+            switchState--;
+            switchState = state = arg0->transition.bytes.state = 3;
+        }
+    }
+
+    if (switchState != gCharacterSelectCourseCursorState.previewFrameState) {
+        switchState = state = arg0->transition.bytes.state =
+            gCharacterSelectCourseCursorState.previewFrameState;
+    }
+
+    switch (switchState) {
+        case 0:
+            arg0->x -= 0x26;
+            if (arg0->x < -7) {
+                arg0->x = -8;
+                arg0->transition.bytes.state = 3;
+                gActiveMenuTask =
+                    createCallbackTask((CallbackTaskCallback)initCharacterSelectCourseListCursor, 0, 0x64);
+                createCallbackTask((CallbackTaskCallback)initCharacterSelectCourseTitleCursor, 0, 0x62);
+                createCallbackTask((CallbackTaskCallback)initCharacterSelectCourseStatsBadge, 0, 0x62);
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            menuState = gRacePlayers[0].menuState;
+            new_var = &gRacePlayers[0].menuState;
+            if (menuState == 1) {
+                arg0->transition.bytes.state = 4;
+                menuState = *new_var;
+            }
+            if (menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 3;
+                gRacePlayers[0].menuState = 6;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                state = 6 & 0xFF;
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            if (arg0->x >= 0x94) {
+                arg0->transition.bytes.state = 6;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 6:
+            arg0->transition.bytes.state = 7;
+            gRacePlayers[0].menuState = 8;
+            state = arg0->transition.bytes.state;
+            break;
+    }
+
+    gCharacterSelectCourseCursorState.previewFrameState = state;
+    if (arg0->transition.bytes.state == 7) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePreviewFrame, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCoursePreviewFrame(CharacterSelectCourseWidgetActor *arg0) {
@@ -224,10 +331,79 @@ void initCharacterSelectCoursePreviewFrame(CharacterSelectCourseWidgetActor *arg
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCoursePreviewFrame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_8001D2AC.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel1.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePreviewPanel1.s")
+void updateCharacterSelectCoursePreviewPanel1(CharacterSelectCourseWidgetActor *arg0) {
+    int state;
+    u8 *stateField = &arg0->transition.bytes.state;
+
+    if ((gRaceCourseIndex.signedValue >= (s32)(u16)arg0->sprite.index) && (arg0->y != -0x48)) {
+        state = arg0->transition.bytes.state = 2;
+    } else if ((gRaceCourseIndex.signedValue < (s32)(u16)arg0->sprite.index) && (arg0->y != -0x140)) {
+        state = arg0->transition.bytes.state = 1;
+    } else {
+        state = *stateField;
+        if (state < 4) {
+            state = arg0->transition.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 4;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 3;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+        case 6:
+            state = arg0->transition.bytes.state = 7;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePreviewPanel1, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCoursePreviewPanel1(CharacterSelectCourseWidgetActor *arg0) {
@@ -239,10 +415,76 @@ void initCharacterSelectCoursePreviewPanel1(CharacterSelectCourseWidgetActor *ar
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCoursePreviewPanel1);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_8001D850.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel2.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePreviewPanel2.s")
+void updateCharacterSelectCoursePreviewPanel2(CharacterSelectCourseWidgetActor *arg0) {
+    int state;
+    u8 *stateField = &arg0->transition.bytes.state;
+
+    if ((gRaceCourseIndex.signedValue >= (s32)(u16)arg0->sprite.index) && (arg0->y != -0x48)) {
+        state = arg0->transition.bytes.state = 2;
+    } else if ((gRaceCourseIndex.signedValue < (s32)(u16)arg0->sprite.index) && (arg0->y != -0x140)) {
+        state = arg0->transition.bytes.state = 1;
+    } else {
+        state = *stateField;
+        if (state < 4) {
+            state = arg0->transition.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 4;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 3;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePreviewPanel2, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCoursePreviewPanel2(CharacterSelectCourseWidgetActor *arg0) {
@@ -254,10 +496,76 @@ void initCharacterSelectCoursePreviewPanel2(CharacterSelectCourseWidgetActor *ar
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCoursePreviewPanel2);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_8001DDE4.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel3.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePreviewPanel3.s")
+void updateCharacterSelectCoursePreviewPanel3(CharacterSelectCourseWidgetActor *arg0) {
+    int state;
+    u8 *stateField = &arg0->transition.bytes.state;
+
+    if ((gRaceCourseIndex.signedValue >= (s32)(u16)arg0->sprite.index) && (arg0->y != -0x48)) {
+        state = arg0->transition.bytes.state = 2;
+    } else if ((gRaceCourseIndex.signedValue < (s32)(u16)arg0->sprite.index) && (arg0->y != -0x140)) {
+        state = arg0->transition.bytes.state = 1;
+    } else {
+        state = *stateField;
+        if (state < 4) {
+            state = arg0->transition.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 4;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 3;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePreviewPanel3, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCoursePreviewPanel3(CharacterSelectCourseWidgetActor *arg0) {
@@ -269,10 +577,76 @@ void initCharacterSelectCoursePreviewPanel3(CharacterSelectCourseWidgetActor *ar
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCoursePreviewPanel3);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_8001E378.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel4.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePreviewPanel4.s")
+void updateCharacterSelectCoursePreviewPanel4(CharacterSelectCourseWidgetActor *arg0) {
+    int state;
+    u8 *stateField = &arg0->transition.bytes.state;
+
+    if ((gRaceCourseIndex.signedValue >= (s32)(u16)arg0->sprite.index) && (arg0->y != -0x48)) {
+        state = arg0->transition.bytes.state = 2;
+    } else if ((gRaceCourseIndex.signedValue < (s32)(u16)arg0->sprite.index) && (arg0->y != -0x140)) {
+        state = arg0->transition.bytes.state = 1;
+    } else {
+        state = *stateField;
+        if (state < 4) {
+            state = arg0->transition.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 4;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 3;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePreviewPanel4, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCoursePreviewPanel4(CharacterSelectCourseWidgetActor *arg0) {
@@ -284,10 +658,76 @@ void initCharacterSelectCoursePreviewPanel4(CharacterSelectCourseWidgetActor *ar
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCoursePreviewPanel4);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_8001E90C.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel5.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePreviewPanel5.s")
+void updateCharacterSelectCoursePreviewPanel5(CharacterSelectCourseWidgetActor *arg0) {
+    int state;
+    u8 *stateField = &arg0->transition.bytes.state;
+
+    if ((gRaceCourseIndex.signedValue >= (s32)(u16)arg0->sprite.index) && (arg0->y != -0x48)) {
+        state = arg0->transition.bytes.state = 2;
+    } else if ((gRaceCourseIndex.signedValue < (s32)(u16)arg0->sprite.index) && (arg0->y != -0x140)) {
+        state = arg0->transition.bytes.state = 1;
+    } else {
+        state = *stateField;
+        if (state < 4) {
+            state = arg0->transition.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 4;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 3;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePreviewPanel5, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCoursePreviewPanel5(CharacterSelectCourseWidgetActor *arg0) {
@@ -299,10 +739,76 @@ void initCharacterSelectCoursePreviewPanel5(CharacterSelectCourseWidgetActor *ar
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCoursePreviewPanel5);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_8001EEA0.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel6.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePreviewPanel6.s")
+void updateCharacterSelectCoursePreviewPanel6(CharacterSelectCourseWidgetActor *arg0) {
+    int state;
+    u8 *stateField = &arg0->transition.bytes.state;
+
+    if ((gRaceCourseIndex.signedValue >= (s32)(u16)arg0->sprite.index) && (arg0->y != -0x48)) {
+        state = arg0->transition.bytes.state = 2;
+    } else if ((gRaceCourseIndex.signedValue < (s32)(u16)arg0->sprite.index) && (arg0->y != -0x140)) {
+        state = arg0->transition.bytes.state = 1;
+    } else {
+        state = *stateField;
+        if (state < 4) {
+            state = arg0->transition.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 4;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 3;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePreviewPanel6, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCoursePreviewPanel6(CharacterSelectCourseWidgetActor *arg0) {
@@ -314,10 +820,76 @@ void initCharacterSelectCoursePreviewPanel6(CharacterSelectCourseWidgetActor *ar
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCoursePreviewPanel6);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_8001F434.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel7.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePreviewPanel7.s")
+void updateCharacterSelectCoursePreviewPanel7(CharacterSelectCourseWidgetActor *arg0) {
+    int state;
+    u8 *stateField = &arg0->transition.bytes.state;
+
+    if ((gRaceCourseIndex.signedValue >= (s32)(u16)arg0->sprite.index) && (arg0->y != -0x48)) {
+        state = arg0->transition.bytes.state = 2;
+    } else if ((gRaceCourseIndex.signedValue < (s32)(u16)arg0->sprite.index) && (arg0->y != -0x140)) {
+        state = arg0->transition.bytes.state = 1;
+    } else {
+        state = *stateField;
+        if (state < 4) {
+            state = arg0->transition.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 4;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 3;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePreviewPanel7, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCoursePreviewPanel7(CharacterSelectCourseWidgetActor *arg0) {
@@ -329,10 +901,76 @@ void initCharacterSelectCoursePreviewPanel7(CharacterSelectCourseWidgetActor *ar
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCoursePreviewPanel7);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_8001F9C8.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel8.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePreviewPanel8.s")
+void updateCharacterSelectCoursePreviewPanel8(CharacterSelectCourseWidgetActor *arg0) {
+    int state;
+    u8 *stateField = &arg0->transition.bytes.state;
+
+    if ((gRaceCourseIndex.signedValue >= (s32)(u16)arg0->sprite.index) && (arg0->y != -0x48)) {
+        state = arg0->transition.bytes.state = 2;
+    } else if ((gRaceCourseIndex.signedValue < (s32)(u16)arg0->sprite.index) && (arg0->y != -0x140)) {
+        state = arg0->transition.bytes.state = 1;
+    } else {
+        state = *stateField;
+        if (state < 4) {
+            state = arg0->transition.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 4;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 3;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePreviewPanel8, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCoursePreviewPanel8(CharacterSelectCourseWidgetActor *arg0) {
@@ -344,10 +982,76 @@ void initCharacterSelectCoursePreviewPanel8(CharacterSelectCourseWidgetActor *ar
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCoursePreviewPanel8);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_8001FF5C.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel9.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCoursePreviewPanel9.s")
+void updateCharacterSelectCoursePreviewPanel9(CharacterSelectCourseWidgetActor *arg0) {
+    int state;
+    u8 *stateField = &arg0->transition.bytes.state;
+
+    if ((gRaceCourseIndex.signedValue >= (s32)(u16)arg0->sprite.index) && (arg0->y != -0x48)) {
+        state = arg0->transition.bytes.state = 2;
+    } else if ((gRaceCourseIndex.signedValue < (s32)(u16)arg0->sprite.index) && (arg0->y != -0x140)) {
+        state = arg0->transition.bytes.state = 1;
+    } else {
+        state = *stateField;
+        if (state < 4) {
+            state = arg0->transition.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->transition.bytes.state = 3;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->transition.bytes.state = 4;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->transition.bytes.state = 3;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCoursePreviewPanel9, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCoursePreviewPanel9(CharacterSelectCourseWidgetActor *arg0) {
@@ -359,10 +1063,96 @@ void initCharacterSelectCoursePreviewPanel9(CharacterSelectCourseWidgetActor *ar
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCoursePreviewPanel9);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_800204F0.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCourseExitPreviewPanel.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseExitPreviewPanel.s")
+void updateCharacterSelectCourseExitPreviewPanel(CharacterSelectCourseWidgetActor *arg0) {
+    int state;
+    u8 *stateField = &arg0->row.bytes.subState;
+
+    if ((gRaceCourseIndex.signedValue == gCharacterSelectCourseExitOptionIndex) && (arg0->y != -0x48) &&
+        ((s32)arg0->row.bytes.subState < 6)) {
+        state = arg0->row.bytes.subState = 2;
+    } else {
+        state = (s32)arg0->row.bytes.subState;
+        if ((gRaceCourseIndex.signedValue != gCharacterSelectCourseExitOptionIndex) && (arg0->y != -0x140) &&
+            (state < 6)) {
+            state = arg0->row.bytes.subState = 1;
+        } else {
+            state = arg0->row.bytes.subState;
+            if (state < 4) {
+                state = arg0->row.bytes.subState = 3;
+            }
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->row.bytes.subState = 3;
+            }
+            state = arg0->row.bytes.subState;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->row.bytes.subState = 6;
+                arg0->transition.alpha = 8;
+            }
+            state = arg0->row.bytes.subState;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->row.bytes.subState = 4;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->row.bytes.subState = 5;
+            }
+            state = arg0->row.bytes.subState;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                arg0->row.bytes.subState = 3;
+            }
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->row.bytes.subState = 5;
+            }
+            state = arg0->row.bytes.subState;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+        case 6:
+            arg0->y -= arg0->transition.alpha;
+            state = arg0->row.bytes.subState = 7;
+            break;
+        case 7:
+            arg0->y += arg0->transition.alpha;
+            arg0->transition.alpha /= 2;
+            if (arg0->transition.alpha == 0) {
+                arg0->row.bytes.subState = 3;
+            } else {
+                arg0->row.bytes.subState = 6;
+            }
+            state = arg0->row.bytes.subState;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseExitPreviewPanel, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCourseExitPreviewPanel(CharacterSelectCourseWidgetActor *arg0) {
@@ -776,7 +1566,66 @@ void drawCharacterSelectCourseRecordsFrame(CharacterSelectCourseWidgetActor *arg
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseRecordsFrame.s")
+void updateCharacterSelectCourseRecordsFrame(CharacterSelectCourseWidgetActor *arg0) {
+    u32 state = arg0->sprite.bytes.state;
+
+    switch (state) {
+        case 0:
+            arg0->x += 0x20;
+            if (arg0->x >= -0x88) {
+                arg0->x = -0x88;
+                arg0->sprite.bytes.state = 1;
+                createCallbackTask((CallbackTaskCallback)initCharacterSelectCourseDescriptionPopup, 0, 0x63);
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 1:
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->sprite.bytes.state = 5;
+            }
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->sprite.bytes.state = 2;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x < -0x127) {
+                arg0->sprite.bytes.state = 3;
+                arg0->x = -0x128;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 3:
+            if (gRacePlayers[0].menuState == 5) {
+                state = arg0->sprite.bytes.state = 4;
+            }
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= -0x88) {
+                arg0->x = -0x88;
+                arg0->sprite.bytes.state = 1;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 5:
+            arg0->x -= 0x20;
+            if (arg0->x < -0x107) {
+                arg0->sprite.bytes.state = 6;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 6:
+            state = arg0->sprite.bytes.state = 7;
+            break;
+    }
+    if (state == 7) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseRecordsFrame, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCourseRecordsFrame(CharacterSelectCourseWidgetActor *arg0) {
@@ -808,7 +1657,79 @@ void drawCharacterSelectCourseNamePopup(CharacterSelectCourseWidgetActor *arg0) 
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseNamePopup.s")
+void updateCharacterSelectCourseNamePopup(CharacterSelectCourseWidgetActor *arg0) {
+    u8 state;
+    u8 globalState;
+
+    state = arg0->transition.bytes.state;
+    if (state != (globalState = gCharacterSelectCourseCursorState.submenuState)) {
+        arg0->transition.bytes.state = globalState;
+        state = globalState;
+        arg0->transition.bytes.timer = gCharacterSelectCourseCursorState.submenuTimer;
+    }
+
+    if (state) {
+        while (0) {}
+    }
+    switch (state) {
+        case 0:
+            if ((++arg0->transition.bytes.timer) == 2) {
+                arg0->transition.bytes.state = 1;
+                arg0->transition.bytes.timer = state * 0;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            arg0->sprite.index += 0x30;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->transition.bytes.state = 2;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->transition.bytes.timer = (arg0->transition.bytes.timer + 1) & 0xF;
+            if (gRacePlayers[0].menuState == 3) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            state = arg0->transition.bytes.state;
+            arg0->transition.bytes.timer = 0;
+            break;
+        case 4:
+            arg0->transition.bytes.timer++;
+            if ((gRacePlayers[0].menuState == 3) || (gRacePlayers[0].menuState == 7)) {
+                arg0->transition.bytes.state = 5;
+            }
+            if (globalState) {}
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x -= 0x20;
+            if (arg0->x < -0xFF) {
+                arg0->transition.bytes.state = 6;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 6:
+            break;
+    }
+
+    (arg0 ? &gCharacterSelectCourseCursorState : &gCharacterSelectCourseCursorState)->submenuState = state;
+    (arg0 ? &gCharacterSelectCourseCursorState : &gCharacterSelectCourseCursorState)->submenuTimer =
+        arg0->transition.bytes.timer;
+
+    if (arg0->transition.bytes.state == 6) {
+        removeCallbackTask(arg0);
+        gMenuScratch0.task = NULL;
+        gCharacterSelectCourseCursorState.submenuState = 0;
+        gCharacterSelectCourseCursorState.submenuTimer = 0;
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseNamePopup, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCourseNamePopup(CharacterSelectCourseWidgetActor *arg0) {
@@ -819,10 +1740,77 @@ void initCharacterSelectCourseNamePopup(CharacterSelectCourseWidgetActor *arg0) 
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCourseNamePopup);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_80022130.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCourseDescriptionPopup.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseDescriptionPopup.s")
+void updateCharacterSelectCourseDescriptionPopup(CharacterSelectCourseWidgetActor *arg0) {
+    u32 state = arg0->transition.bytes.state;
+
+    switch (state) {
+        case 0:
+            if (++arg0->transition.bytes.timer == 2) {
+                arg0->transition.bytes.state = 1;
+                arg0->transition.bytes.timer = 0;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            arg0->sprite.index += 0x30;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->transition.bytes.state = 2;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            if ((gRacePlayers[0].menuState == 7) || (gRacePlayers[0].menuState == 1)) {
+                state = arg0->transition.bytes.state = 3;
+            }
+            break;
+        case 3:
+            arg0->x -= 0x20;
+            if (arg0->x < -0x11F) {
+                if (gRacePlayers[0].menuState == 7) {
+                    arg0->transition.bytes.state = 7;
+                } else {
+                    arg0->transition.bytes.state = 4;
+                }
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 5) {
+                state = arg0->transition.bytes.state = 5;
+            }
+            break;
+        case 5:
+            arg0->x += 0x20;
+            if (arg0->x >= -0x84) {
+                arg0->transition.bytes.state = 2;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 6:
+            if (gRacePlayers[0].menuState == 7) {
+                arg0->transition.bytes.state = 3;
+            }
+            if (gRacePlayers[0].menuState == 0) {
+                arg0->transition.bytes.state = 2;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 7:
+            state = arg0->transition.bytes.state = 8;
+            break;
+    }
+    if (state == 8) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseDescriptionPopup, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCourseDescriptionPopup(CharacterSelectCourseWidgetActor *arg0) {
@@ -884,10 +1872,58 @@ void initCharacterSelectCourseConfirmCursor(CharacterSelectCourseWidgetActor *ar
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateCharacterSelectCourseConfirmCursor);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/func_80022768.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCourseRecordsPopup.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseRecordsPopup.s")
+void updateCharacterSelectCourseRecordsPopup(CharacterSelectCourseWidgetActor *arg0) {
+    u8 state = arg0->sprite.bytes.state;
+    u8 unk;
+    s16 target;
+
+    switch (state) {
+        case 0:
+            unk = gRaceTypeSelection;
+            if ((gRaceSplitscreenMode == 2) || ((gRaceSplitscreenMode == 1) && (unk == 0))) {
+                target = -0x8A;
+            } else {
+                target = -0x88;
+            }
+            arg0->x += 0x20;
+            if (arg0->x >= target) {
+                arg0->x = target;
+                arg0->sprite.bytes.state = 1;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 1:
+            if ((gRacePlayers[0].menuState == 3) || (gRacePlayers[0].menuState == 7)) {
+                state = arg0->sprite.bytes.state = 2;
+            }
+            break;
+        case 2:
+            arg0->x -= 0x20;
+            if (arg0->x < -0xEF) {
+                arg0->x = -0xF0;
+                arg0->sprite.bytes.state = 3;
+            }
+            state = arg0->sprite.bytes.state;
+            break;
+        case 3:
+            state = arg0->sprite.bytes.state = 4;
+            break;
+        case 4:
+            break;
+    }
+    state = arg0->sprite.bytes.state;
+    if (state == 4) {
+        removeCallbackTask(arg0);
+        gRacePlayers[0].menuState = 4;
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseRecordsPopup, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCourseRecordsPopup(CharacterSelectCourseWidgetActor *arg0) {
@@ -915,7 +1951,72 @@ void drawCharacterSelectCourseExitPopup(CharacterSelectCourseWidgetActor *arg0) 
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/updateCharacterSelectCourseExitPopup.s")
+void updateCharacterSelectCourseExitPopup(CharacterSelectCourseWidgetActor *arg0) {
+    u8 state;
+    u8 globalState;
+
+    state = arg0->transition.bytes.state;
+    if (state != (globalState = gCharacterSelectCourseCursorState.submenuState)) {
+        arg0->transition.bytes.state = globalState;
+        /* Preserve IDO's state/globalState register allocation. */
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        state = globalState;
+        arg0->transition.bytes.timer = gCharacterSelectCourseCursorState.submenuTimer;
+    }
+
+    switch (state) {
+        case 0:
+            arg0->x += 0x20;
+            if (arg0->x >= -0x88) {
+                arg0->x = -0x88;
+                arg0->transition.bytes.state = 2;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 2:
+            arg0->transition.bytes.timer = (arg0->transition.bytes.timer + 1) & 0xF;
+            if (gRacePlayers[0].menuState == 3) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 3:
+            state = arg0->transition.bytes.state;
+            arg0->transition.bytes.timer = 0;
+            break;
+        case 4:
+            arg0->transition.bytes.timer++;
+            if ((gRacePlayers[0].menuState == 3) || (gRacePlayers[0].menuState == 7)) {
+                arg0->transition.bytes.state = 5;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 5:
+            arg0->x -= 0x20;
+            if (arg0->x < -0x107) {
+                arg0->transition.bytes.state = 6;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+    }
+
+    (arg0 ? &gCharacterSelectCourseCursorState : &gCharacterSelectCourseCursorState)->submenuState = state;
+    (arg0 ? &gCharacterSelectCourseCursorState : &gCharacterSelectCourseCursorState)
+        ->submenuTimer = arg0->transition.bytes.timer;
+
+    if (arg0->transition.bytes.state == 6) {
+        removeCallbackTask(arg0);
+        gMenuScratch0.task = NULL;
+        gCharacterSelectCourseCursorState.submenuState = 0;
+        gCharacterSelectCourseCursorState.submenuTimer = 0;
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectCourseExitPopup, arg0);
+}
 // clang-format on
 
 void initCharacterSelectCourseExitPopup(CharacterSelectCourseWidgetActor *arg0) {

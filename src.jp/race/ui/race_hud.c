@@ -19,6 +19,8 @@
 #define RACE_HUD_POPUP_FONT_HANDLE (gAssetHandles[0x1F])
 #define ASSET_HANDLE(index) (gAssetHandles[index])
 
+extern s32 gMenuFlowState;
+
 extern s16 gRaceLapCount;
 
 extern u8 gTrainingCourseLesson;
@@ -89,14 +91,14 @@ void initRaceHud(void) {
     gRaceChallengeFailed = 0;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_80078068.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/drawTrickAttackChallengeHud.s")
 
 void drawTrickAttackChallengeLabels(void *arg0) {
     drawMenuAsciiTextDefaultScale(0x60, -0x61, gRaceHudTrickAttackPointLabel, 5);
     drawMenuAsciiTextDefaultScale(0x38, 0x47, gRaceHudTrickAttackTimeLimitLabel, 5);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_800784C0.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/drawScoreAttackChallengeHud.s")
 
 void drawScoreAttackChallengeLabels(void *arg0) {
     char sp18[0x20];
@@ -183,7 +185,7 @@ void drawTargetTimeChallengeLabels(void *arg0) {
     drawMenuAsciiTextDefaultScale(-0x68, -0x48, sp28, 6);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_80078C54.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/drawTimeTrialHud.s")
 
 void drawTimeTrialLabels(void *unused) {
     char bestLapText[0x20];
@@ -363,7 +365,7 @@ void drawTrainingRaceHud(void *arg0) {
     drawAssetTableSprite(-0x88, 0x40, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x29);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/func_800794DC.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/drawTwoPlayerRaceHud.s")
 
 void drawTwoPlayerLapCounter(void *arg0) {
     s32 y;
@@ -516,7 +518,161 @@ void updateRaceCourseProgressMeter(void) {
     addRenderCallback(&gMenuRenderCallbackList, drawRaceCourseProgressMeter, 0);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/ui/race_hud/updateRaceHud.s")
+void updateRaceHud(void) {
+    s32 i;
+
+    gRaceHudCoinSpinnerFrame++;
+    if (gRaceHudCoinSpinnerFrame >= 12) {
+        gRaceHudCoinSpinnerFrame = 0;
+    }
+
+    switch (*(u16 *)&gRaceHudMode) {
+        case RACE_HUD_MODE_ONE_PLAYER:
+            if (gRacePlayers[0].itemEffectPalette != 0) {
+                if (gRacePlayers[0].itemEffectPalette == 4) {
+                    spawnRaceUiSparkle(-0x20, -0x60, 0, 0, 0);
+                }
+                gRacePlayers[0].itemEffectPalette--;
+            }
+            if (gRacePlayers[0].actionEffectPalette != 0) {
+                if (gRacePlayers[0].actionEffectPalette == 4) {
+                    spawnRaceUiSparkle(0, -0x60, 0, 0, 1);
+                }
+                gRacePlayers[0].actionEffectPalette--;
+            }
+            addRenderCallback(&gRaceOverlayRenderCallbackList, drawSinglePlayerRaceHud, 0);
+            addRenderCallback(&gRaceForegroundRenderCallbackList, noopRaceHudCallback, 0);
+            updateRaceCourseProgressMeter();
+            return;
+        case RACE_HUD_MODE_TWO_PLAYER:
+            for (i = 0; i < 2; i++) {
+                if (gRacePlayers[i].itemEffectPalette != 0) {
+                    if (gRacePlayers[i].itemEffectPalette == 4) {
+                        spawnRaceUiSparkle(-0x88, -0x30, (s16)i, 0, 0);
+                    }
+                    gRacePlayers[i].itemEffectPalette--;
+                }
+                if (gRacePlayers[i].actionEffectPalette != 0) {
+                    if (gRacePlayers[i].actionEffectPalette == 4) {
+                        spawnRaceUiSparkle(-0x68, -0x30, (s16)i, 0, 1);
+                    }
+                    gRacePlayers[i].actionEffectPalette--;
+                }
+            }
+            addRenderCallback(&gRaceOverlayRenderCallbackList, drawTwoPlayerRaceHud, 0);
+            addRenderCallback(&gRaceForegroundRenderCallbackList, drawTwoPlayerLapCounter, 0);
+            updateRaceCourseProgressMeter();
+            return;
+        case RACE_HUD_MODE_FOUR_PLAYER:
+            if (gRacePlayers[3].itemEffectPalette != 0) {
+                if (gRacePlayers[3].itemEffectPalette == 4) {
+                    spawnRaceUiSparkle(-0x10, -0x30, 3, 1, 0);
+                }
+                gRacePlayers[3].itemEffectPalette--;
+            }
+            if (gRacePlayers[3].actionEffectPalette != 0) {
+                if (gRacePlayers[3].actionEffectPalette == 4) {
+                    spawnRaceUiSparkle(0, -0x30, 3, 1, 1);
+                }
+                gRacePlayers[3].actionEffectPalette--;
+            }
+        case RACE_HUD_MODE_THREE_PLAYER:
+            for (i = 0; i < 3; i++) {
+                if (gRacePlayers[i].itemEffectPalette != 0) {
+                    if (gRacePlayers[i].itemEffectPalette == 4) {
+                        spawnRaceUiSparkle(-0x10, -0x30, (s16)i, 1, 0);
+                    }
+                    gRacePlayers[i].itemEffectPalette--;
+                }
+                if (gRacePlayers[i].actionEffectPalette != 0) {
+                    if (gRacePlayers[i].actionEffectPalette == 4) {
+                        spawnRaceUiSparkle(0, -0x30, (s16)i, 1, 1);
+                    }
+                    gRacePlayers[i].actionEffectPalette--;
+                }
+            }
+            addRenderCallback(&gRaceOverlayRenderCallbackList, drawMultiplayerRaceHud, 0);
+            addRenderCallback(&gRaceForegroundRenderCallbackList, drawMultiplayerScoreAndLapCounter, 0);
+            updateRaceCourseProgressMeter();
+            if ((s16)gRaceHudMode == RACE_HUD_MODE_THREE_PLAYER) {
+                addRenderCallback(&gMenuRenderCallbackList, drawThreePlayerNoEntryPanel, 0);
+            }
+            return;
+        case RACE_HUD_MODE_TIME_TRIAL: {
+            s32 sp40;
+            s32 sp3C;
+
+            if (!(gMenuFlowState & 3)) {
+                incrementRaceElapsedTimer();
+                if (gRaceTimeTrialFinishRecorded == 0) {
+                    getRacePlayerRankingProgress(0, &sp40, &sp3C);
+                    if ((gRaceCourseStartEntries[gRaceCourseIndex.signedValue].finishLinePathIndex * 8) < sp40) {
+                        gRaceTimeTrialFinishTime = gRaceElapsedTimer;
+                        gRaceTimeTrialFinishRecorded = 1;
+                        createCallbackTask((CallbackTaskCallback)initTimeTrialRecordDeltaPopup, 0, 0);
+                    }
+                }
+            }
+            addRenderCallback(&gRaceOverlayRenderCallbackList, drawTimeTrialHud, 0);
+            addRenderCallback(&gRaceForegroundRenderCallbackList, drawTimeTrialLabels, 0);
+            return;
+        }
+        case RACE_HUD_MODE_TARGET_TIME_CHALLENGE: {
+            RaceTimer sp38;
+
+            if (!(gMenuFlowState & 3)) {
+                incrementRaceElapsedTimer();
+            }
+            if (calculateRaceTimerDelta(
+                    &gRaceCourseTargetTimes[gRaceCourseIndex.signedValue],
+                    &gRaceElapsedTimer,
+                    &sp38
+                ) != 0) {
+                gRaceChallengeFailed = 1;
+            }
+            addRenderCallback(&gRaceOverlayRenderCallbackList, drawTargetTimeChallengeHud, 0);
+            addRenderCallback(&gRaceForegroundRenderCallbackList, drawTargetTimeChallengeLabels, 0);
+            return;
+        }
+        case RACE_HUD_MODE_SCORE_ATTACK:
+            if (!(gMenuFlowState & 3)) {
+                decrementRaceChallengeTimeLimit();
+            }
+            if ((gRaceChallengeTimeLimit.minutes == 0) && (gRaceChallengeTimeLimit.seconds == 0) &&
+                (gRaceChallengeTimeLimit.fraction == 0)) {
+                gRaceChallengeFailed = 1;
+            }
+            addRenderCallback(&gRaceOverlayRenderCallbackList, drawScoreAttackChallengeHud, 0);
+            addRenderCallback(&gRaceForegroundRenderCallbackList, drawScoreAttackChallengeLabels, 0);
+            return;
+        case RACE_HUD_MODE_TRICK_ATTACK:
+            if (!(gMenuFlowState & 3)) {
+                decrementRaceChallengeTimeLimit();
+            }
+            if ((gRaceChallengeTimeLimit.minutes == 0) && (gRaceChallengeTimeLimit.seconds == 0) &&
+                (gRaceChallengeTimeLimit.fraction == 0)) {
+                gRaceChallengeFailed = 1;
+            }
+            addRenderCallback(&gRaceOverlayRenderCallbackList, drawTrickAttackChallengeHud, 0);
+            addRenderCallback(&gRaceForegroundRenderCallbackList, drawTrickAttackChallengeLabels, 0);
+            return;
+        case RACE_HUD_MODE_TRAINING_OR_DEMO:
+            if (gRacePlayers[0].itemEffectPalette != 0) {
+                if (gRacePlayers[0].itemEffectPalette == 4) {
+                    spawnRaceUiSparkle(-0x20, -0x60, 0, 0, 0);
+                }
+                gRacePlayers[0].itemEffectPalette--;
+            }
+            if (gRacePlayers[0].actionEffectPalette != 0) {
+                if (gRacePlayers[0].actionEffectPalette == 4) {
+                    spawnRaceUiSparkle(0, -0x60, 0, 0, 1);
+                }
+                gRacePlayers[0].actionEffectPalette--;
+            }
+            addRenderCallback(&gRaceOverlayRenderCallbackList, drawTrainingRaceHud, 0);
+            return;
+    }
+}
 
 s32 calculateRaceTimerDelta(RaceTimer *arg0, RaceTimer *arg1, RaceTimer *arg2) {
     s32 total1;

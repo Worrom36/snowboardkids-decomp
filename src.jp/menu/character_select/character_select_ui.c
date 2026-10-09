@@ -16,6 +16,8 @@
 #define CHARACTER_SELECT_UI_BANNER_TEXTURE_HANDLE (gAssetHandles[0x29])
 #define CHARACTER_SELECT_UI_UNUSED_HANDLE (gAssetHandles[0x1F])
 
+extern s32 gMenuFlowState;
+
 extern const char gCharacterSelectCharacterStatFormat[];
 
 extern CharacterSelectUiCharacterStats gCharacterSelectCharacterStats[];
@@ -235,7 +237,71 @@ void drawCharacterSelectConfirmationBanner(CharacterSelectUiBannerActor *arg0) {
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/updateCharacterSelectConfirmationBanner.s")
+void updateCharacterSelectConfirmationBanner(CharacterSelectUiBannerActor *arg0) {
+    s16 alpha;
+    s32 state;
+    CharacterSelectUiBannerActor *actor;
+
+    actor = arg0;
+    if (gCharacterSelectHudState.phase != arg0->state) {
+        arg0->state = gCharacterSelectHudState.phase;
+        arg0->alpha = gCharacterSelectHudState.bannerAlpha;
+        arg0->bounceTimer = gCharacterSelectHudState.bannerBounceTimer;
+        arg0->confirmationCursorAlpha = gCharacterSelectHudState.bannerBounceOffset;
+    }
+
+    if (gCharacterSelectHudState.confirmationChoice != actor->mode) {
+        actor->mode = gCharacterSelectHudState.confirmationChoice;
+    }
+
+    alpha = actor->alpha;
+    state = actor->state;
+    if ((0x100 != (alpha ^ 0)) && (state != 0)) {
+        if ((state == 4) || (state == 1)) {
+            actor->alpha = alpha + 0x30;
+            if (actor->alpha >= 0x100) {
+                actor->alpha = 0x100;
+            }
+        } else {
+            actor->alpha = alpha - 0x30;
+            if (actor->alpha <= 0) {
+                actor->alpha = 0;
+            }
+        }
+    } else {
+        switch (state) {
+            case 0:
+            case 3:
+                break;
+            case 1:
+                actor->frame = (actor->frame + 1) & 0xF;
+                break;
+            case 2:
+                actor->alpha = alpha - 0x25;
+                if (actor->alpha <= 0) {
+                    actor->alpha = 0;
+                }
+                actor->state = 3;
+                gCharacterSelectHudState.exitMode = 1;
+                gMenuFlowState = 0x63;
+                break;
+            case 4:
+                if (actor->bounceTimer < 0x10) {
+                    actor->confirmationCursorAlpha -= 9;
+                } else {
+                    actor->confirmationCursorAlpha += 9;
+                }
+                actor->bounceTimer = (actor->bounceTimer + 1) & 0x1F;
+                break;
+        }
+    }
+
+    gCharacterSelectHudState.phase = actor->state;
+    gCharacterSelectHudState.bannerAlpha = actor->alpha;
+    if (actor->state != 8) {
+        addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectConfirmationBanner, actor);
+    }
+}
 // clang-format on
 
 void initCharacterSelectConfirmationBanner(CharacterSelectUiBannerActor *arg0) {
@@ -318,7 +384,47 @@ void drawCharacterSelectPlayerPanelFrames(CharacterSelectUiPlayerPanelFrameActor
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_ui/updateCharacterSelectPlayerPanelFrames.s")
+void updateCharacterSelectPlayerPanelFrames(CharacterSelectUiPlayerPanelFrameActor *arg0) {
+    u8 var_v0;
+    u8 desired;
+    u8 var_v1;
+    CharacterSelectUiPlayerPanelFrameActor *actor;
+    CharacterSelectUiRosterIconActor *owner;
+
+    owner = gMenuScratch0.rosterIcons;
+    actor = arg0;
+    var_v0 = actor->transitionState;
+    desired = gCharacterSelectHudState.exitMode;
+    var_v1 = var_v0;
+    if (desired != var_v0) {
+        actor->transitionState = desired;
+        var_v0 = desired & 0xFF;
+        actor->frameLimit = gCharacterSelectHudState.cursorX;
+        var_v0 = actor->transitionState;
+        var_v1 = var_v0;
+        actor->frameStep = gCharacterSelectHudState.cursorY;
+    }
+
+    switch (var_v1) {
+        case 1:
+            actor->y[1] += 8;
+            actor->y[3] += 8;
+            if (actor->y[3] == 0x24) {
+                actor->transitionState = 2;
+                owner->state = 1;
+            }
+            var_v0 = actor->transitionState;
+            break;
+        case 0:
+        case 2:
+        case 3:
+        case 4:
+            break;
+    }
+
+    (var_v0 ? &gCharacterSelectHudState : &gCharacterSelectHudState)->exitMode = var_v0;
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCharacterSelectPlayerPanelFrames, actor);
+}
 // clang-format on
 
 void initCharacterSelectPlayerPanelFrames(CharacterSelectUiPlayerPanelFrameActor *arg0) {

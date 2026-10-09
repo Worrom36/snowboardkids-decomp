@@ -357,3 +357,5 @@ _ADDR_2002490_VRAM = 0x02002490;
 drawAssetTableSpriteWideIndex = drawAssetTableSprite;
 _2427D0_ROM_START = 0x00242530;
 _2427D0_ROM_END = 0x00243040;
+gRaceSplitscreenSelectCursorAnimState = gRaceSplitscreenSelectCursorTarget;
+gControllerPakRaceRecordSaveStatusTransitionStep = gControllerPakRaceRecordSaveStatusTransition;

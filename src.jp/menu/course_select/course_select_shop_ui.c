@@ -383,7 +383,84 @@ void drawShopMenuSelectedModePanel(ShopMenuWidgetActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuSelectedModePanel.s")
+void updateShopMenuSelectedModePanel(ShopMenuWidgetActor *arg0) {
+    int state;
+
+    if ((gCourseSelectModeSelection >= (u16)arg0->item.counter) && (arg0->item.bytes.subState != 0) &&
+        (arg0->y != -0x48)) {
+        state = arg0->item.bytes.subState = 2;
+    } else {
+        state = arg0->item.bytes.subState;
+        if ((gCourseSelectModeSelection < (u16)arg0->item.counter) && (state != 0) && (arg0->y != -0x140)) {
+            state = arg0->item.bytes.subState = 1;
+        } else {
+            state = arg0->item.bytes.subState;
+            if ((state != 0) && (state < 4)) {
+                state = arg0->item.bytes.subState = 3;
+            }
+        }
+    }
+
+    switch (state) {
+        case 0:
+            arg0->x -= 0x20;
+            if (arg0->item.bytes.subTimer == 0) {
+                createCallbackTask((CallbackTaskCallback)initShopMenuSidePanel, 0, 0x63);
+            }
+            arg0->item.bytes.subTimer++;
+            if (arg0->x < -7) {
+                arg0->x = -8;
+                arg0->item.bytes.subState = 3;
+                createCallbackTask((CallbackTaskCallback)initShopMenuDescriptionText, 0, 0x64);
+                gActiveMenuTask = createCallbackTask((CallbackTaskCallback)initShopMenuModeCursor, 0, 0x64);
+                createCallbackTask((CallbackTaskCallback)initShopMenuPromptPanel, 0, 0x64);
+                createCallbackTask((CallbackTaskCallback)initShopMenuSparkles, 0, 0x60);
+                createCallbackTask((CallbackTaskCallback)initShopMenuMoneyPanel, 0, 0x64);
+            }
+            state = arg0->item.bytes.subState;
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->item.bytes.subState = 3;
+            }
+            state = arg0->item.bytes.subState;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->item.bytes.subState = 3;
+            }
+            state = arg0->item.bytes.subState;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->item.bytes.subState = 4;
+            }
+            state = arg0->item.bytes.subState;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->item.bytes.subState = 5;
+            }
+            state = arg0->item.bytes.subState;
+            break;
+        case 5:
+            gRacePlayers[0].menuState = 2;
+            state = arg0->item.bytes.subState;
+            break;
+    }
+
+    if ((state == 5) && (gRacePlayers[0].menuState == 2)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuSelectedModePanel, arg0);
+}
 
 void initShopMenuSelectedModePanel(ShopMenuWidgetActor *arg0) {
     arg0->x = 0x94;
@@ -396,9 +473,68 @@ void initShopMenuSelectedModePanel(ShopMenuWidgetActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateShopMenuSelectedModePanel);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002D604.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/drawShopMenuUnselectedModePanel.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuUnselectedModePanel.s")
+void updateShopMenuUnselectedModePanel(ShopMenuWidgetActor *arg0) {
+    int state;
+
+    if ((gCourseSelectModeSelection >= (u16)arg0->sprite.index) && (arg0->y != -0x48)) {
+        state = arg0->item.bytes.state = 2;
+    } else if ((gCourseSelectModeSelection < (u16)arg0->sprite.index) && (arg0->y != -0x140)) {
+        state = arg0->item.bytes.state = 1;
+    } else {
+        state = arg0->item.bytes.state;
+        if (state < 4) {
+            state = arg0->item.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+        case 5:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->item.bytes.state = 3;
+            }
+            state = arg0->item.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->item.bytes.state = 3;
+            }
+            state = arg0->item.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                if (arg0->y == -0x140) {
+                    arg0->item.bytes.state = 5;
+                } else {
+                    arg0->item.bytes.state = 4;
+                }
+            }
+            state = arg0->item.bytes.state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->item.bytes.state = 5;
+            }
+            state = arg0->item.bytes.state;
+            break;
+    }
+
+    if (state == 5) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuUnselectedModePanel, arg0);
+}
 
 void initShopMenuUnselectedModePanel(ShopMenuWidgetActor *arg0) {
     arg0->x = -8;
@@ -409,9 +545,80 @@ void initShopMenuUnselectedModePanel(ShopMenuWidgetActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateShopMenuUnselectedModePanel);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002DB64.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/drawShopMenuCourseListPanel.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuCourseListPanel.s")
+void updateShopMenuCourseListPanel(ShopMenuWidgetActor *arg0) {
+    u8 *stateField;
+    int state;
+
+    stateField = &arg0->item.bytes.state;
+
+    if ((gCourseSelectModeSelection == 2) && (arg0->y != -0x48) && (arg0->item.bytes.state < 6)) {
+        state = arg0->item.bytes.state = 2;
+    } else {
+        state = arg0->item.bytes.state;
+        if ((gCourseSelectModeSelection != 2) && (arg0->y != -0x140) && (state < 6)) {
+            state = arg0->item.bytes.state = 1;
+        } else if (state < 4) {
+            state = arg0->item.bytes.state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+        case 4:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->item.bytes.state = 3;
+            }
+            state = arg0->item.bytes.state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->item.bytes.state = 6;
+                arg0->transition.counter = 8;
+            }
+            state = arg0->item.bytes.state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->item.bytes.state = 5;
+            }
+            state = arg0->item.bytes.state;
+            break;
+        case 5:
+            arg0->x += 0x20;
+            state = *stateField;
+            break;
+        case 6:
+            arg0->y -= arg0->transition.counter;
+            arg0->item.bytes.state = 7;
+            state = arg0->item.bytes.state;
+            break;
+        case 7:
+            arg0->y += arg0->transition.counter;
+            arg0->transition.counter = arg0->transition.counter / 2;
+            if (arg0->transition.counter == 0) {
+                arg0->item.bytes.state = 3;
+            } else {
+                arg0->item.bytes.state = 6;
+            }
+            state = arg0->item.bytes.state;
+            break;
+    }
+
+    if ((state == 5) && (arg0->x >= 0x94)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuCourseListPanel, arg0);
+}
 
 void initShopMenuCourseListPanel(ShopMenuWidgetActor *arg0) {
     arg0->x = -8;
@@ -438,7 +645,66 @@ void drawShopMenuModeCursor(ShopMenuWidgetActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateShopMenuModeCursor.s")
+void updateShopMenuModeCursor(ShopMenuWidgetActor *arg0) {
+    u8 state;
+    u8 globalState;
+
+    state = arg0->transition.bytes.state;
+    if (state != (globalState = COURSE_SELECT_STATUS_LAYOUT.cursorState)) {
+        arg0->transition.bytes.state = globalState;
+        /* Preserve IDO's state/globalState register allocation. */
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        state = globalState;
+        arg0->sprite.index = COURSE_SELECT_STATUS_LAYOUT.cursorValue;
+        arg0->transition.bytes.timer = (s16)COURSE_SELECT_STATUS_LAYOUT.purchaseMessageState;
+    }
+
+    switch (state) {
+        case 0:
+            arg0->sprite.index += 0x26;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->transition.bytes.state = 1;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 1:
+            if ((s32)arg0->transition.bytes.timer < 0x10) {
+                arg0->sprite.index -= 9;
+            } else {
+                arg0->sprite.index += 9;
+            }
+            state = arg0->transition.bytes.state;
+            arg0->transition.bytes.timer = (arg0->transition.bytes.timer + 1) & 0x1F;
+            break;
+        case 2:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->transition.bytes.state = 3;
+            }
+            break;
+        case 3:
+            arg0->x -= 0x20;
+            if (arg0->x < -0xEF) {
+                arg0->transition.bytes.state = 4;
+            }
+            state = arg0->transition.bytes.state;
+            break;
+        case 4:
+        case 5:
+            break;
+    }
+
+    gCourseSelectCursorState = state;
+    if (arg0->transition.bytes.state == 4) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawShopMenuModeCursor, arg0);
+}
 
 void initShopMenuModeCursor(ShopMenuWidgetActor *arg0) {
     arg0->x = -0x7C;
@@ -576,7 +842,7 @@ void drawShopMenuMoneyPanel(ShopMenuWidgetActor *arg0) {
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002E7E4.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/func_8002E8E4.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/initShopMenuMoneyPanel.s")
 
 void updateShopMenuMoneyPanelForCourseSelectReturn(ShopMenuWidgetActor *arg0) {
     u8 state = arg0->transition.bytes.state;
@@ -739,7 +1005,75 @@ void drawCourseUnlockPricePanel(ShopMenuWidgetActor *arg0) {
     );
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/course_select/course_select_shop_ui/updateCourseUnlockPricePanel.s")
+void updateCourseUnlockPricePanel(ShopMenuWidgetActor *arg0) {
+    s32 amount;
+    s32 price;
+
+    switch (arg0->slide.bytes.state) {
+        case 0:
+            arg0->sprite.index += 0x26;
+            if (arg0->sprite.index >= 0x100) {
+                arg0->sprite.index = 0x100;
+                arg0->slide.bytes.state = 1;
+            }
+            break;
+        case 1:
+            arg0->item.price = gCourseUnlockPrices[gRacePlayers[0].menuSelection];
+            if (gCurrentGameTask->callbackData1 >= 2) {
+                arg0->slide.bytes.state = 2;
+            }
+            break;
+        case 2:
+            price = arg0->item.price;
+            if ((u32)price < 100U) {
+                amount = 0xFFFF;
+                amount = price & amount;
+            } else {
+                if (gPlayerInputHeld[0] & A_BUTTON) {
+                    if ((u32)price < 5000U) {
+                        amount = price & 0xFFFF;
+                    } else {
+                        amount = 5000;
+                    }
+                } else {
+                    amount = 500;
+                }
+            }
+            arg0->item.price = price - amount;
+            gRacePlayers[0].money -= amount;
+            /* Required for IDO register allocation. */
+            if (gCurrentGameTask && gCurrentGameTask) {}
+            if (arg0->item.price == 0) {
+                arg0->slide.bytes.state = 3;
+                gGameSaveDataBuffer[0].courseUnlockStates[gRacePlayers[0].menuSelection] = 9;
+            }
+            break;
+        case 3:
+            arg0->slide.bytes.timer++;
+            if (arg0->slide.bytes.timer >= 0x14) {
+                arg0->slide.bytes.timer = 0;
+                arg0->slide.bytes.state = 4;
+                gCurrentGameTask->callbackData1 = gCurrentGameTask->callbackData1 + 2;
+            }
+            break;
+        case 4:
+            if (gRacePlayers[0].menuState == 3) {
+                arg0->slide.bytes.state = 5;
+            }
+            /* fallthrough */
+        case 5:
+            arg0->x += 0x20;
+            if (arg0->x >= 0x94) {
+                arg0->slide.bytes.state = 6;
+            }
+            break;
+    }
+    if (((gMenuChoicePromptState[0] >= 5) && (gMenuChoicePromptState[0] != 9)) || (arg0->slide.bytes.state == 6)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawCourseUnlockPricePanel, arg0);
+}
 
 void initCourseUnlockPricePanel(ShopMenuWidgetActor *arg0) {
     arg0->x = 0x20;

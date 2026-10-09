@@ -38,6 +38,8 @@ typedef struct {
     MenuGlyphScript exitMessage[10];
 } ControllerPakRaceRecordSaveUiData;
 
+extern u8 gControllerPakRaceRecordSaveStatusTransitionStep;
+
 extern u16 gControllerPakRaceRecordSaveStatusTransitionNextStatus;
 
 extern const char D_800E0F30[];
@@ -253,7 +255,44 @@ void drawControllerPakRaceRecordSavePromptFrame(ControllerPakRaceRecordSavePromp
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_race_record_save_ui/updateControllerPakRaceRecordSavePromptFrame.s")
+void updateControllerPakRaceRecordSavePromptFrame(ControllerPakRaceRecordSavePromptFrameActor *arg0) {
+    u8 state = arg0->state;
+
+    switch (state) {
+        case 0:
+            arg0->scale += 0x26;
+            if (arg0->scale >= 0x100) {
+                arg0->scale = 0x100;
+                arg0->state = 1;
+                gMenuScratch1.recordSaveMessage =
+                    createCallbackTask((CallbackTaskCallback)initControllerPakRaceRecordSaveStatusMessage, 0, 0x63);
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            state = arg0->state = 2;
+            break;
+        case 2:
+            if ((gControllerPakStatusCodes[0] == 5) && (gMenuSelectionConfirmTimer == 0x14)) {
+                state = arg0->state = 3;
+            }
+            break;
+        case 3:
+            arg0->common.x -= 0x20;
+            if (arg0->common.x < -0x117) {
+                arg0->state = 4;
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            break;
+    }
+    if ((unsigned int)state == 4) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawControllerPakRaceRecordSavePromptFrame, arg0);
+}
 // clang-format on
 
 void initControllerPakRaceRecordSavePromptFrame(ControllerPakRaceRecordSavePromptFrameActor *arg0) {
@@ -291,7 +330,64 @@ void drawControllerPakRaceRecordSaveStatusMessage(ControllerPakRaceRecordSaveSta
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/controller_pak/controller_pak_race_record_save_ui/updateControllerPakRaceRecordSaveStatusMessage.s")
+void updateControllerPakRaceRecordSaveStatusMessage(ControllerPakRaceRecordSaveStatusMessageActor *arg0) {
+    u8 state;
+    u8 globalState;
+
+    state = arg0->state;
+    if (state != (globalState = gControllerPakRaceRecordSaveStatusTransition.step)) {
+        arg0->state = globalState;
+        state = globalState;
+        arg0->alpha = gControllerPakRaceRecordSaveStatusTransition.alpha;
+        arg0->targetStatus = gControllerPakRaceRecordSaveStatusTransition.targetStatus;
+    }
+
+    switch (state) {
+        case 0:
+            arg0->state = 1;
+            state = arg0->state;
+            break;
+        case 1:
+            if ((gControllerPakStatusCodes[0] == 5) && (gMenuSelectionConfirmTimer == 0x14)) {
+                arg0->state = 4;
+                state = arg0->state;
+            }
+            break;
+        case 2:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            arg0->alpha -= 0x26;
+            if (arg0->alpha <= (state * 0)) {
+                arg0->alpha = 0;
+                arg0->state = 2;
+                gMenuChoicePromptState[0] = 0;
+                gControllerPakStatusCodes[0] = arg0->targetStatus;
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->common.x -= 0x20;
+            if (arg0->common.x < -0x117) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+    }
+
+    arg0->arrowFrame = (arg0->arrowFrame + 1) & 0xF;
+    gControllerPakRaceRecordSaveStatusTransitionStep = state;
+    if ((u8)arg0->state == 5) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawControllerPakRaceRecordSaveStatusMessage, arg0);
+}
 // clang-format on
 
 void initControllerPakRaceRecordSaveStatusMessage(ControllerPakRaceRecordSaveStatusMessageActor *arg0) {

@@ -33,6 +33,8 @@
 #define CONTROLLER_PAK_U16_AT(cursor, field) (*(u16 *)((cursor) + CONTROLLER_PAK_SAVE_FIELD_OFFSET(field)))
 #define CONTROLLER_PAK_SAVE_FIELD_OFFSET(field) ((u32) & (((GameSaveData *)0)->field))
 
+extern u8 gMainMenuSecretCodeStep;
+
 extern u8 gRumblePakConnectedMask;
 extern u8 gControllerReadPending;
 extern OSMesgQueue gControllerSubsystemRequestQueue;
@@ -658,7 +660,30 @@ void fadeOutMainMenu(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/initMainMenuModeSelect.s")
+void initMainMenuModeSelect(void) {
+    resetAllViewports();
+    gViewportStates[0].overlayAlpha = 0x80;
+    gFramebufferRenderInterval.value = 0;
+    configureMenuViewport(0, 0xA0, 0x78, 0x120, 0xD0, 0x140, 0xF0, 1.3333334f);
+    LOAD_RAW_ASSET(_1467B0, 8);
+    LOAD_ASSET(_1DE360, 9);
+    LOAD_ASSET(_1F1A90, 0x28);
+    resetRaceCameras();
+    setRaceCameraMode(0, 0x1F);
+    initCallbackTaskScheduler(0);
+    createCallbackTaskWithUserId((CallbackTaskCallback)initMainMenuBoardModels, 0, 0x64, 0);
+    gMenuFlowState = 0;
+    gMainMenuSelectionResult = 0;
+    createCallbackTaskWithUserId((CallbackTaskCallback)&initMainMenuModeSelectMenuOptions, 0, 0x64, 0);
+    setBootFadeColor(0x20, 0x40, 0x50);
+    loadMainMenuSceneModelAnimationBank();
+    initMainMenuSceneModel(4, 4);
+    setMainMenuSceneModelAnimation(4, 5);
+    setMainMenuSceneModelPosition(4, 0xFFE00000, 0, 0x509000);
+    setMainMenuSceneModelRotation(4, 0, 0x100, 0);
+    setCurrentGameTaskCallback(updateMainMenuModeSelect, 0);
+    requestMusicSequenceBank(7);
+}
 
 void updateMainMenuModeSelect(void) {
     s32 temp_v0;
@@ -728,7 +753,27 @@ void exitMainMenuModeSelect(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/initMainMenuSettings.s")
+void initMainMenuSettings(void) {
+    resetAllViewports();
+    configureMenuViewport(0, 0xA0, 0x78, 0x120, 0xD0, 0x140, 0xF0, 1.3333334f);
+    gViewportStates[0].overlayAlpha = 0x80;
+    gFramebufferRenderInterval.value = 0;
+    LOAD_ASSET(_593D10, 0x29);
+    LOAD_ASSET(_1F1A90, 0x28);
+    LOAD_ASSET(_60F1A0, 0x2A);
+    LOAD_RAW_ASSET(_1467B0, 8);
+    LOAD_ASSET(_1DE360, 9);
+    resetRaceCameras();
+    setRaceCameraMode(0, 0x1F);
+    initCallbackTaskScheduler(0);
+    gMenuFlowState = 0;
+    gMainMenuSelectionResult = 0;
+    createCallbackTaskWithUserId((CallbackTaskCallback)&initMainMenuSettingsPanel, 0, 0x64, 0);
+    createCallbackTaskWithUserId((CallbackTaskCallback)&initMainMenuBoardModels, 0, 0x64, 0);
+    setBootFadeColor(0x20, 0x40, 0x50);
+    setCurrentGameTaskCallback(&updateMainMenuSettings, 0);
+    requestMusicSequenceBank(7);
+}
 
 void updateMainMenuSettings(void) {
     s32 temp_v1;
@@ -830,4 +875,151 @@ void exitMainMenuSettings(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/main_menu/controller_main_menu_flow/checkMainMenuSecretCode.s")
+s32 checkMainMenuSecretCode(void) {
+    switch (gMainMenuSecretCodeStep) {
+        case 0:
+            if (gPlayerInputHeld[0] == STICK_DOWN) {
+                gMainMenuSecretCodeStep++;
+            }
+            goto end0;
+        case 1:
+            if ((gPlayerInputHeld[0] != STICK_DOWN) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == STICK_UP) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 2:
+            if ((gPlayerInputHeld[0] != STICK_UP) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == D_JPAD) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 3:
+            if ((gPlayerInputHeld[0] != D_JPAD) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == U_JPAD) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 4:
+            if ((gPlayerInputHeld[0] != U_JPAD) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == D_CBUTTONS) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 5:
+            if ((gPlayerInputHeld[0] != D_CBUTTONS) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == U_CBUTTONS) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 6:
+            if ((gPlayerInputHeld[0] != U_CBUTTONS) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == L_TRIG) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 7:
+            if ((gPlayerInputHeld[0] != L_TRIG) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == R_TRIG) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 8:
+            if ((gPlayerInputHeld[0] != R_TRIG) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == Z_TRIG) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 9:
+            if ((gPlayerInputHeld[0] != Z_TRIG) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == L_JPAD) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 10:
+            if ((gPlayerInputHeld[0] != L_JPAD) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == R_CBUTTONS) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 11:
+            if ((gPlayerInputHeld[0] != R_CBUTTONS) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == STICK_UP) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 12:
+            if ((gPlayerInputHeld[0] != STICK_UP) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == B_BUTTON) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 13:
+            if ((gPlayerInputHeld[0] != B_BUTTON) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == R_JPAD) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 14:
+            if ((gPlayerInputHeld[0] != R_JPAD) && (gPlayerInputHeld[0] != 0)) {
+                if (gPlayerInputHeld[0] == L_CBUTTONS) {
+                    gMainMenuSecretCodeStep++;
+                } else {
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        case 15:
+            if (gPlayerInputHeld[0] != L_CBUTTONS) {
+                if (gPlayerInputHeld[0] != 0) {
+                    if (gPlayerInputHeld[0] == START_BUTTON) {
+                        return 1;
+                    }
+                    gMainMenuSecretCodeStep = -1;
+                }
+            }
+            goto end0;
+        default:
+        end0:
+            return 0;
+    }
+}

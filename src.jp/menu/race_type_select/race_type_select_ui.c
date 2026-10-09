@@ -14,6 +14,8 @@
 
 #define ASSET_HANDLE(index) (gAssetHandles[(index)])
 
+extern s32 gMenuFlowState;
+
 extern u8 gMenuExitSelection;
 extern const char gRaceTypeSelectEntryFeeFormat[];
 
@@ -341,7 +343,82 @@ void drawRaceTypeSelectOption0Frame(RaceTypeSelectOption0FrameActor *arg0) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/updateRaceTypeSelectOption0Frame.s")
+void updateRaceTypeSelectOption0Frame(RaceTypeSelectOption0FrameActor *arg0) {
+    int state;
+
+    if ((gRaceTypeSelection >= (u16)arg0->optionIndex) && (arg0->state != 0) && (arg0->y != -0x48)) {
+        state = arg0->state = 2;
+    } else {
+        state = arg0->state;
+        if ((gRaceTypeSelection < (u16)arg0->optionIndex) && (state != 0) && (arg0->y != -0x140)) {
+            state = arg0->state = 1;
+        } else {
+            state = arg0->state;
+            if ((state != 0) && (state < 4)) {
+                state = arg0->state = 3;
+            }
+        }
+    }
+
+    switch (state) {
+        case 0:
+            arg0->x -= 0x20;
+            if (arg0->cornerSpawnTimer == 0) {
+                createCallbackTask((CallbackTaskCallback)initRaceTypeSelectCornerSprites, 0, 0x63);
+            }
+            arg0->cornerSpawnTimer++;
+            if (arg0->x < -7) {
+                arg0->x = -8;
+                arg0->state = 3;
+                gActiveMenuTask = createCallbackTask((CallbackTaskCallback)initRaceTypeSelectCursor, 0, 0x64);
+                createCallbackTask((CallbackTaskCallback)initRaceTypeSelectPortrait, 0, 0x64);
+                createCallbackTask((CallbackTaskCallback)initRaceTypeSelectArrowPrompt, 0, 0x64);
+                createCallbackTask((CallbackTaskCallback)initRaceTypeSelectEntryFee, 0, 0x64);
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->state = 4;
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+        case 5:
+            gRacePlayers[0].menuState = 2;
+            state = arg0->state;
+            break;
+    }
+
+    if ((state == 5) && (gRacePlayers[0].menuState == 2)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceTypeSelectOption0Frame, arg0);
+}
 
 void initRaceTypeSelectOption0Frame(RaceTypeSelectOption0FrameActor *arg0) {
     arg0->x = 0x94;
@@ -354,9 +431,68 @@ void initRaceTypeSelectOption0Frame(RaceTypeSelectOption0FrameActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceTypeSelectOption0Frame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/func_8002A0B8.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/drawRaceTypeSelectOption1Frame.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/updateRaceTypeSelectOption1Frame.s")
+void updateRaceTypeSelectOption1Frame(RaceTypeSelectOptionFrameActor *arg0) {
+    int state;
+
+    if ((gRaceTypeSelection >= (u16)arg0->optionIndex) && (arg0->y != -0x48)) {
+        state = arg0->state = 2;
+    } else if ((gRaceTypeSelection < (u16)arg0->optionIndex) && (arg0->y != -0x140)) {
+        state = arg0->state = 1;
+    } else {
+        state = arg0->state;
+        if (state < 4) {
+            state = arg0->state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+        case 5:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                if (arg0->y == -0x140) {
+                    arg0->state = 5;
+                } else {
+                    arg0->state = 4;
+                }
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+    }
+
+    if (state == 5) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceTypeSelectOption1Frame, arg0);
+}
 
 void initRaceTypeSelectOption1Frame(RaceTypeSelectOptionFrameActor *arg0) {
     arg0->x = -8;
@@ -367,9 +503,68 @@ void initRaceTypeSelectOption1Frame(RaceTypeSelectOptionFrameActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceTypeSelectOption1Frame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/func_8002A618.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/drawRaceTypeSelectOption2Frame.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/updateRaceTypeSelectOption2Frame.s")
+void updateRaceTypeSelectOption2Frame(RaceTypeSelectOptionFrameActor *arg0) {
+    int state;
+
+    if ((gRaceTypeSelection >= (u16)arg0->optionIndex) && (arg0->y != -0x48)) {
+        state = arg0->state = 2;
+    } else if ((gRaceTypeSelection < (u16)arg0->optionIndex) && (arg0->y != -0x140)) {
+        state = arg0->state = 1;
+    } else {
+        state = arg0->state;
+        if (state < 4) {
+            state = arg0->state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+        case 5:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                if (arg0->y == -0x140) {
+                    arg0->state = 5;
+                } else {
+                    arg0->state = 4;
+                }
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+    }
+
+    if (state == 5) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceTypeSelectOption2Frame, arg0);
+}
 
 void initRaceTypeSelectOption2Frame(RaceTypeSelectOptionFrameActor *arg0) {
     arg0->x = -8;
@@ -380,9 +575,85 @@ void initRaceTypeSelectOption2Frame(RaceTypeSelectOptionFrameActor *arg0) {
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceTypeSelectOption2Frame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/func_8002AB78.s")
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/drawRaceTypeSelectOption3Frame.s")
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/updateRaceTypeSelectOption3Frame.s")
+void updateRaceTypeSelectOption3Frame(RaceTypeSelectExitFrameActor *arg0) {
+    int state;
+
+    if ((gRaceTypeSelection == 3) && (arg0->y != -0x48) && ((s32)arg0->state < 6)) {
+        state = arg0->state = 2;
+    } else {
+        state = (s32)arg0->state;
+        if ((gRaceTypeSelection != 3) && (arg0->y != -0x140) && (state < 6)) {
+            state = arg0->state = 1;
+        } else {
+            state = arg0->state;
+            if (state < 4) {
+                state = arg0->state = 3;
+            }
+        }
+    }
+
+    switch (state) {
+        case 0:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->state = 6;
+                arg0->bounceStep = 8;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                if (arg0->y == -0x140) {
+                    arg0->state = 5;
+                } else {
+                    arg0->state = 4;
+                }
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+        case 6:
+            arg0->y -= arg0->bounceStep;
+            state = arg0->state = 7;
+            break;
+        case 7:
+            arg0->y += arg0->bounceStep;
+            arg0->bounceStep /= 2;
+            if (arg0->bounceStep == 0) {
+                arg0->state = 3;
+            } else {
+                arg0->state = 6;
+            }
+            state = arg0->state;
+            break;
+    }
+
+    if (state == 5) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceTypeSelectOption3Frame, arg0);
+}
 
 void initRaceTypeSelectOption3Frame(RaceTypeSelectExitFrameActor *arg0) {
     arg0->x = -8;
@@ -407,7 +678,64 @@ void drawRaceTypeSelectCursor(RaceTypeSelectAnimatedWidgetActor *arg0) {
     );
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/race_type_select/race_type_select_ui/updateRaceTypeSelectCursor.s")
+void updateRaceTypeSelectCursor(RaceTypeSelectAnimatedWidgetActor *arg0) {
+    u8 state;
+    u8 globalState;
+
+    state = arg0->state;
+    if (state != (globalState = gRaceTypeSelectCursorTarget.state)) {
+        arg0->state = globalState;
+        /* Preserve IDO's state/globalState register allocation. */
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        state = globalState;
+        arg0->alpha = gRaceTypeSelectCursorTarget.alpha;
+    }
+
+    switch (state) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if ((s32)arg0->animationTimer < 0x10) {
+                arg0->alpha -= 9;
+            } else {
+                arg0->alpha += 9;
+            }
+            state = arg0->state;
+            arg0->animationTimer = (arg0->animationTimer + 1) & 0x1F;
+            break;
+        case 2:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->state = 3;
+            }
+            break;
+        case 3:
+            arg0->x -= 0x20;
+            if (arg0->x < -0xEF) {
+                arg0->state = 4;
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            break;
+    }
+
+    gRaceTypeSelectCursorAnimState = state;
+    if (arg0->state == 4) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceTypeSelectCursor, arg0);
+}
 
 void initRaceTypeSelectCursor(RaceTypeSelectAnimatedWidgetActor *arg0) {
     arg0->x = -0x7C;

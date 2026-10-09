@@ -43,6 +43,15 @@
 #define COURSE_GRID_ENTRY_FREE -1
 #define COURSE_GRID_ENTRY_END -2
 typedef struct {
+    u8 boardTuningIndex;
+    u8 snowboardTextureIndex;
+} RaceCpuBoardConfig;
+
+typedef struct {
+    u8 characterIds[10 * 4];
+} RaceCourseCharacterIdTable;
+
+typedef struct {
     s16 status;
     s16 courseId;
     s32 unk4;
@@ -55,6 +64,20 @@ typedef struct {
     u8 pad4[4];
     s8 unk8;
 } Unk80043040;
+
+extern u8 gTrainingCourseLesson;
+
+extern RaceCourseCharacterIdTable D_800DB7F4;
+
+extern u8 gMainMenuModeSelection;
+
+extern RaceCpuBoardConfig *gRaceCpuBoardConfigsByCourse[10];
+
+extern u8 gRaceCourseActionAndItemTriggerChances[12];
+
+extern s16 gRacePlayerAttackStartTimer;
+
+extern s8 gRacePlayerCount;
 
 extern u16 D_800DB8F0[16];
 
@@ -309,7 +332,30 @@ void openRaceSplitscreenSelectFlow(void) {
     suspendGameTask(2);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/handleRaceSplitscreenSelectFlow.s")
+void handleRaceSplitscreenSelectFlow(void) {
+    if (gMenuFlowState == 1) {
+        gMenuFlowState = 0;
+        setCurrentGameTaskCallback(&openRaceCharacterSelectMenuFlow, 0);
+        return;
+    }
+    switch (gRaceSplitscreenMode) {
+        case 0:
+        case 2:
+            setCurrentGameTaskCallback(&openMultiplayerCourseSelectFlow, 0);
+            return;
+        case 1:
+            setCurrentGameTaskCallback(&openRaceTypeSelectFlow, 0);
+            return;
+        case 3:
+            setCurrentGameTaskCallback(&openSinglePlayerCourseSelectFlow, 0);
+            return;
+        case 4:
+            setCurrentGameTaskCallback(&openRaceRecordSaveOptionsFlow, 0);
+            /* fallthrough */
+        default:
+            return;
+    }
+}
 
 void openRaceTypeSelectFlow(void) {
     setCurrentGameTaskCallback(&handleRaceTypeSelectFlow, 0);
@@ -397,7 +443,221 @@ void openPassAwardCelebrationFlow(void) {
     suspendGameTask(2);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/initRaceSceneFlow.s")
+void initRaceSceneFlow(void) {
+    s32 i;
+    s32 j;
+    s32 k;
+    s32 pad;
+    s32 duplicate;
+    RaceCpuBoardConfig *characterEntry;
+    RaceInputHistoryBuffer *history;
+    u16 *replayRecordFlag;
+
+    gRaceUpdatePaused = 0;
+    D_80120E77 = 0;
+    gRaceCameraModeChangeDisabled = 0;
+    gRaceResultState = 0;
+    gRaceDemoPlaybackEnabled = 0;
+    gTrainingCourseLesson = 0;
+    gMainMenuModeSelection = 0;
+    gPendingEndingCreditsFlow = 0;
+    stopSoundEffects();
+    requestMusicSequenceStop(0);
+    gRacePlayers[0].isCpu = 1;
+    gRacePlayers[1].isCpu = 1;
+    gRacePlayers[2].isCpu = 1;
+    gRacePlayers[3].isCpu = 1;
+    gRacePlayers[0].actionTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[1].actionTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[2].actionTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[3].actionTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[0].itemTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[1].itemTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[2].itemTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    gRacePlayers[3].itemTriggerChance = gRaceCourseActionAndItemTriggerChances[gRaceCourseIndex.signedValue];
+    if (gPlayerCount != 1) {
+        gRacePlayers[0].actionTriggerChance = 0;
+        gRacePlayers[1].actionTriggerChance = 0;
+        gRacePlayers[2].actionTriggerChance = 0;
+        gRacePlayers[3].actionTriggerChance = 0;
+        gRacePlayers[0].itemTriggerChance = 0;
+        gRacePlayers[1].itemTriggerChance = 0;
+        gRacePlayers[2].itemTriggerChance = 0;
+        gRacePlayers[3].itemTriggerChance = 0;
+    }
+    gRacePlayers[0].unk17 = 0;
+    gRacePlayers[1].unk17 = 1;
+    gRacePlayers[2].unk17 = 2;
+    gRacePlayers[3].unk17 = 3;
+    for (i = 0; i < gPlayerCount; i++) {
+        gRacePlayers[i].isCpu = 0;
+    }
+    gRacePlayers[0].characterId = gRacePlayers[0].selectedCharacterId;
+    gRacePlayers[1].characterId = gRacePlayers[1].selectedCharacterId;
+    gRacePlayers[2].characterId = gRacePlayers[2].selectedCharacterId;
+    gRacePlayers[3].characterId = gRacePlayers[3].selectedCharacterId;
+    gRacePlayers[0].characterVariant = gRacePlayers[0].menuSelection;
+    gRacePlayers[1].characterVariant = gRacePlayers[1].menuSelection;
+    gRacePlayers[2].characterVariant = gRacePlayers[2].menuSelection;
+    gRacePlayers[3].characterVariant = gRacePlayers[3].menuSelection;
+    gRacePlayers[0].snowboardTextureIndex = gRacePlayers[0].selectionUnlockState;
+    gRacePlayers[1].snowboardTextureIndex = gRacePlayers[1].selectionUnlockState;
+    gRacePlayers[2].snowboardTextureIndex = gRacePlayers[2].selectionUnlockState;
+    gRacePlayers[3].snowboardTextureIndex = gRacePlayers[3].selectionUnlockState;
+
+    for (i = gPlayerCount, k = 0; i < 4; i++) {
+        while (1) {
+            duplicate = 1;
+            gRacePlayers[i].characterId = D_800DB7F4.characterIds[gRaceCourseIndex.signedValue * 4 + k++];
+            for (j = 0; j < gPlayerCount; j++) {
+                if (gRacePlayers[i].characterId == gRacePlayers[j].characterId) {
+                    duplicate = 0;
+                }
+            }
+            if (duplicate != 0) {
+                break;
+            }
+        }
+        characterEntry =
+            &gRaceCpuBoardConfigsByCourse[gRaceCourseIndex.signedValue][gRacePlayers[i].characterId & 0xFFFFFFFFu];
+        gRacePlayers[i].characterVariant = characterEntry->boardTuningIndex;
+        gRacePlayers[i].snowboardTextureIndex = characterEntry->snowboardTextureIndex;
+    }
+    if (gRaceSplitscreenMode == 0) {
+        gRacePlayers[0].isActive = 1;
+        gRacePlayers[1].isActive = 1;
+        gRacePlayers[2].isActive = 1;
+        gRacePlayers[3].isActive = 1;
+        gRacePlayerCount = 4;
+        gRacePlayerAttackStartTimer = 0x64;
+        initCallbackTaskScheduler(1);
+    } else {
+        gRacePlayers[0].isActive = 1;
+        gRacePlayers[1].isActive = 0;
+        gRacePlayers[2].isActive = 0;
+        gRacePlayers[3].isActive = 0;
+        gRacePlayerCount = 1;
+        gRaceLapCount = 1;
+        gRacePlayerAttackStartTimer = 0x64;
+        initCallbackTaskScheduler(2);
+    }
+    for (i = 0; i < 4; i++) {
+        gRacePlayers[i].unk15 = 0;
+        gRacePlayers[i].replayInputSource = RACE_PLAYER_INPUT_LIVE;
+        gRacePlayers[i].soundDisabled = 0;
+    }
+
+    if (gRaceSplitscreenMode == 2) {
+        clearRaceReplayCourseGrid();
+        gRacePlayers[0].unk15 = 1;
+        gAssetHandles[0x2B] = allocRelocatableHeapBlock(0x34CC);
+        history = getRelocatableHeapBlockBase(gAssetHandles[0x2B]);
+        history->writeIndex = 0;
+        history->enabled = 1;
+        history->courseId = gRaceCourseIndex.signedValue;
+        history->characterId = gRacePlayers[0].characterId;
+        history->characterVariant = gRacePlayers[0].characterVariant;
+        history->unkC = gRacePlayers[0].snowboardTextureIndex;
+
+        for (i = 0; i < 0x1194; i++) {
+            history->stickX[i] = 0;
+            history->stickY[i] = 0;
+            history->buttons[i] = 0;
+        }
+
+        switch (gRaceCourseIndex.signedValue) {
+            case 0:
+                replayRecordFlag = &gGameSaveDataBuffer[0].replaySlots[0].length;
+                break;
+
+            case 1:
+                replayRecordFlag = &gGameSaveDataBuffer[0].replaySlots[1].length;
+                break;
+
+            case 2:
+                replayRecordFlag = &gGameSaveDataBuffer[0].replaySlots[2].length;
+                break;
+
+            case 3:
+                replayRecordFlag = &gGameSaveDataBuffer[0].replaySlots[3].length;
+                break;
+
+            case 4:
+                replayRecordFlag = &gGameSaveDataBuffer[0].replaySlots[4].length;
+                break;
+
+            case 5:
+                replayRecordFlag = &gGameSaveDataBuffer[0].replaySlots[5].length;
+                break;
+
+            case 6:
+                replayRecordFlag = &gGameSaveDataBuffer[0].replaySlots[6].length;
+                break;
+
+            case 8:
+                replayRecordFlag = &gGameSaveDataBuffer[0].replaySlots[7].length;
+                break;
+
+            case 9:
+                replayRecordFlag = &gGameSaveDataBuffer[0].replaySlots[8].length;
+                break;
+        }
+
+        if ((gRaceCourseIndex.signedValue != 7) && ((*replayRecordFlag) != 0)) {
+            gAssetHandles[0x7] = allocRelocatableHeapBlock(0x34CC);
+            loadCurrentRaceRecordReplayData();
+            history = getRelocatableHeapBlockBase(gAssetHandles[0x7]);
+            if (history->enabled) {
+                history->writeIndex = 0;
+                gRacePlayers[1].isActive = 1;
+                gRacePlayers[1].isCpu = 0;
+                gRacePlayers[1].soundDisabled = 1;
+                gRacePlayers[1].replayInputSource = RACE_PLAYER_INPUT_HISTORY_07;
+                gRacePlayers[1].characterId = history->characterId;
+                gRacePlayers[1].characterVariant = history->characterVariant;
+                gRacePlayers[1].snowboardTextureIndex = history->unkC;
+                gRacePlayerCount = 2;
+            }
+        }
+    }
+
+    loadRaceCourseAssets();
+    loadRaceCharacterAssets();
+    gMenuFlowState = 1;
+    resetRaceCameras();
+    resetAllViewports();
+
+    if (gRaceCourseIndex.signedValue != 6) {
+        configureViewport(0, 0xA0, 0x78, 0x120, 0xD0, 0x140, 0xF0, 1.3333334f);
+    } else {
+        configureRaceViewport(0, 0xA0, 0x78, 0x120, 0xD0, 0x140, 0xF0, 1.3333334f);
+    }
+    gRacePlayerHudStatuses[0].active = 1;
+    gFramebufferRenderInterval.value = 0;
+    initRacePlayers();
+    initRaceHud();
+    initRaceCourseSceneTasks();
+    gMenuFadeAlpha = 0xFF;
+    if (gRaceSplitscreenMode == 2) {
+        resetSecondaryRng();
+    }
+    gRaceRumbleEnabled = 1;
+    if (gRaceSplitscreenMode == 0) {
+        gCurrentGameTask->callbackData0 = 0;
+        gCurrentGameTask->callbackData1 = 0;
+        gCurrentGameTask->callbackData2 = 0x1E;
+        createCallbackTask((CallbackTaskCallback)initCourseRecordBannerFadeOut, 0, 0x64);
+        setCurrentGameTaskCallback(fadeOutPassAwardCelebrationFlow, 0);
+    } else {
+        createCallbackTask((CallbackTaskCallback)initRaceCountdownPrompt, 6, 0x64);
+        createCallbackTask((CallbackTaskCallback)initRaceStartOverlay, 6, 0x64);
+        setCurrentGameTaskCallback(startRaceGameplayFlow, 0);
+    }
+    for (i = 0; i < gPlayerCount; i++) {
+        requestRumbleMotorInit(i);
+    }
+    updateRelocatableHeap();
+}
 
 void fadeOutPassAwardCelebrationFlow(void) {
     gMenuFadeAlpha -= 8;
@@ -414,7 +674,87 @@ void fadeOutPassAwardCelebrationFlow(void) {
     gViewportStates[0].overlayAlpha = 0xFF;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/fadeInRaceGameplayViewports.s")
+void fadeInRaceGameplayViewports(void) {
+    s32 temp_a0;
+    GameTask *state;
+
+    state = gCurrentGameTask;
+    temp_a0 = state->callbackData1;
+    if (temp_a0 >= 0x32) {
+        gMenuFadeOverlayActive = 1;
+        gMenuFadeAlpha += 0x16;
+        if (gMenuFadeAlpha >= 0x100) {
+            setRaceCameraMode(0, 1);
+            gMenuFadeAlpha = 0xFF;
+            createCallbackTask((CallbackTaskCallback)initRaceCountdownPrompt, 6, 0x64);
+            createCallbackTask((CallbackTaskCallback)initRaceStartOverlay, 6, 0x64);
+            switch (gPlayerCount & 0xFFFFFFFF) {
+                case 1:
+                    if (gRaceCourseIndex.signedValue != 6) {
+                        configureViewport(0, 0xA0, 0x78, 0x120, 0xD0, 0x140, 0xF0, 1.3333334f);
+                    } else {
+                        configureRaceViewport(0, 0xA0, 0x78, 0x120, 0xD0, 0x140, 0xF0, 1.3333334f);
+                    }
+                    gRaceCameras[0].initialized.value = 1;
+                    gFramebufferRenderInterval.value = 0;
+                    break;
+                case 2:
+                    if (gRaceCourseIndex.signedValue != 6) {
+                        configureViewport(0, 0xA0, 0x43, 0x120, 0x68, 0x140, 0x78, 2.6666667f);
+                        configureViewport(1, 0xA0, 0xAD, 0x120, 0x68, 0x140, 0x78, 2.6666667f);
+                    } else {
+                        configureRaceViewport(0, 0xA0, 0x43, 0x120, 0x68, 0x140, 0x78, 2.6666667f);
+                        configureRaceViewport(1, 0xA0, 0xAD, 0x120, 0x68, 0x140, 0x78, 2.6666667f);
+                    }
+                    gRaceCameras[0].initialized.value = 1;
+                    gRaceCameras[1].initialized.value = 1;
+                    gFramebufferRenderInterval.value = 1;
+                    break;
+                case 3:
+                    if (gRaceCourseIndex.signedValue != 6) {
+                        configureViewport(0, 0x57, 0x43, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                        configureViewport(1, 0x57, 0xAD, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                        configureViewport(2, 0xE9, 0x43, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                    } else {
+                        configureRaceViewport(0, 0x57, 0x43, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                        configureRaceViewport(1, 0x57, 0xAD, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                        configureRaceViewport(2, 0xE9, 0x43, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                    }
+                    gRaceCameras[0].initialized.value = 1;
+                    gRaceCameras[1].initialized.value = 1;
+                    gRaceCameras[2].initialized.value = 1;
+                    gFramebufferRenderInterval.value = 1;
+                    break;
+                case 4:
+                    if (gRaceCourseIndex.signedValue != 6) {
+                        configureViewport(0, 0x57, 0x43, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                        configureViewport(1, 0x57, 0xAD, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                        configureViewport(2, 0xE9, 0x43, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                        configureViewport(3, 0xE9, 0xAD, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                    } else {
+                        configureRaceViewport(0, 0x57, 0x43, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                        configureRaceViewport(1, 0x57, 0xAD, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                        configureRaceViewport(2, 0xE9, 0x43, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                        configureRaceViewport(3, 0xE9, 0xAD, 0x90, 0x68, 0xA0, 0x78, 1.3333334f);
+                    }
+                    gRaceCameras[0].initialized.value = 1;
+                    gRaceCameras[1].initialized.value = 1;
+                    gRaceCameras[2].initialized.value = 1;
+                    gRaceCameras[3].initialized.value = 1;
+                    gFramebufferRenderInterval.value = 1;
+                    break;
+            }
+            setCurrentGameTaskCallback(startRaceGameplayFlow, 0);
+        }
+    } else {
+        state->callbackData1 = temp_a0 + 1;
+        gMenuFadeAlpha -= 0x10;
+        if (gMenuFadeAlpha < 0) {
+            gMenuFadeAlpha = 0;
+        }
+    }
+    updateRaceFlowFrame();
+}
 
 void startRaceGameplayFlow(void) {
     if (gMenuFadeAlpha != 0) {
@@ -544,7 +884,584 @@ void interpolateRaceViewport(
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/zoomRaceWinnerViewport.s")
+void zoomRaceWinnerViewport(void) {
+    gCurrentGameTask->callbackData0 += 1;
+    switch (gCurrentGameTask->callbackData1) {
+        case 0:
+            interpolateRaceViewport(
+                0,
+                0xA0,
+                0x43,
+                0x120,
+                0x68,
+                0x140,
+                0x78,
+                2.6666667f,
+                0xA0,
+                0x78,
+                0x120,
+                0xD0,
+                0x140,
+                0xF0,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                1,
+                0xA0,
+                0xAD,
+                0x120,
+                0x68,
+                0x140,
+                0x78,
+                2.6666667f,
+                0xA0,
+                0x115,
+                0x120,
+                0x68,
+                0x140,
+                0x78,
+                2.6666667f
+            );
+            if (gCurrentGameTask->callbackData0 == 0xF) {
+                resetViewport(1);
+                gRaceCameras[1].initialized.value = 0;
+            }
+            break;
+        case 1:
+            interpolateRaceViewport(
+                1,
+                0xA0,
+                0xAD,
+                0x120,
+                0x68,
+                0x140,
+                0x78,
+                2.6666667f,
+                0xA0,
+                0x78,
+                0x120,
+                0xD0,
+                0x140,
+                0xF0,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                0,
+                0xA0,
+                0x43,
+                0x120,
+                0x68,
+                0x140,
+                0x78,
+                2.6666667f,
+                0xA0,
+                -0x25,
+                0x120,
+                0x68,
+                0x140,
+                0x78,
+                2.6666667f
+            );
+            if (gCurrentGameTask->callbackData0 == 0xF) {
+                resetViewport(0);
+                gRaceCameras[0].initialized.value = 0;
+            }
+            break;
+        case 2:
+            interpolateRaceViewport(
+                0,
+                0x57,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0xA0,
+                0x78,
+                0x120,
+                0xD0,
+                0x140,
+                0xF0,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                1,
+                0x57,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0x57,
+                0x115,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                2,
+                0xE9,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0x179,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            if (gCurrentGameTask->callbackData0 == 0xF) {
+                gRaceCameras[1].initialized.value = 0;
+                gRaceCameras[2].initialized.value = 0;
+                resetViewport(1);
+                resetViewport(2);
+            }
+            break;
+        case 3:
+            interpolateRaceViewport(
+                1,
+                0x57,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0xA0,
+                0x78,
+                0x120,
+                0xD0,
+                0x140,
+                0xF0,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                0,
+                0x57,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0x57,
+                -0x25,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                2,
+                0xE9,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0x179,
+                -0x25,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            if (gCurrentGameTask->callbackData0 == 0xF) {
+                gRaceCameras[0].initialized.value = 0;
+                gRaceCameras[2].initialized.value = 0;
+                resetViewport(0);
+                resetViewport(2);
+            }
+            break;
+        case 4:
+            interpolateRaceViewport(
+                2,
+                0xE9,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0xA0,
+                0x78,
+                0x120,
+                0xD0,
+                0x140,
+                0xF0,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                0,
+                0x57,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                -0x39,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                1,
+                0x57,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                -0x39,
+                0x115,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            if (gCurrentGameTask->callbackData0 == 0xF) {
+                gRaceCameras[0].initialized.value = 0;
+                gRaceCameras[1].initialized.value = 0;
+                resetViewport(0);
+                resetViewport(1);
+            }
+            break;
+        case 5:
+            interpolateRaceViewport(
+                0,
+                0x57,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0xA0,
+                0x78,
+                0x120,
+                0xD0,
+                0x140,
+                0xF0,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                1,
+                0x57,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0x57,
+                0x115,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                2,
+                0xE9,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0x179,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                3,
+                0xE9,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0x179,
+                0x115,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            if (gCurrentGameTask->callbackData0 == 0xF) {
+                resetViewport(1);
+                resetViewport(2);
+                resetViewport(3);
+                gRaceCameras[1].initialized.value = 0;
+                gRaceCameras[2].initialized.value = 0;
+                gRaceCameras[3].initialized.value = 0;
+            }
+            break;
+        case 6:
+            interpolateRaceViewport(
+                1,
+                0x57,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0xA0,
+                0x78,
+                0x120,
+                0xD0,
+                0x140,
+                0xF0,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                0,
+                0x57,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0x57,
+                -0x25,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                2,
+                0xE9,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0x179,
+                -0x25,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                3,
+                0xE9,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0x179,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            if (gCurrentGameTask->callbackData0 == 0xF) {
+                gRaceCameras[0].initialized.value = 0;
+                gRaceCameras[2].initialized.value = 0;
+                gRaceCameras[3].initialized.value = 0;
+                resetViewport(0);
+                resetViewport(2);
+                resetViewport(3);
+            }
+            break;
+        case 7:
+            interpolateRaceViewport(
+                2,
+                0xE9,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0xA0,
+                0x78,
+                0x120,
+                0xD0,
+                0x140,
+                0xF0,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                0,
+                0x57,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                -0x39,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                1,
+                0x57,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                -0x39,
+                0x115,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                3,
+                0xE9,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0xE9,
+                0x115,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            if (gCurrentGameTask->callbackData0 == 0xF) {
+                gRaceCameras[0].initialized.value = 0;
+                gRaceCameras[1].initialized.value = 0;
+                gRaceCameras[3].initialized.value = 0;
+                resetViewport(0);
+                resetViewport(1);
+                resetViewport(3);
+            }
+            break;
+        case 8:
+            interpolateRaceViewport(
+                3,
+                0xE9,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0xA0,
+                0x78,
+                0x120,
+                0xD0,
+                0x140,
+                0xF0,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                0,
+                0x57,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                -0x39,
+                -0x25,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                1,
+                0x57,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                -0x39,
+                0xAD,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            interpolateRaceViewport(
+                2,
+                0xE9,
+                0x43,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f,
+                0xE9,
+                -0x25,
+                0x90,
+                0x68,
+                0xA0,
+                0x78,
+                1.3333334f
+            );
+            if (gCurrentGameTask->callbackData0 == 0xF) {
+                gRaceCameras[0].initialized.value = 0;
+                gRaceCameras[1].initialized.value = 0;
+                gRaceCameras[2].initialized.value = 0;
+                resetViewport(0);
+                resetViewport(1);
+                resetViewport(2);
+            }
+            break;
+    }
+    updateRaceFlowFrame();
+    if (gCurrentGameTask->callbackData0 == 0xF) {
+        setCurrentGameTaskCallback(prepareRaceResultsFlow, 0);
+    }
+}
 
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/prepareRaceResultsFlow.s")
 
@@ -598,7 +1515,106 @@ void fadeOutRaceResultsFlow(void) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/initRaceGhostReplayFlow.s")
+void initRaceGhostReplayFlow(void) {
+    s32 one;
+    s8 active;
+    s32 inactive;
+    s32 freedHandle26;
+    s32 freedHandle25;
+    Unk80043040 *asset;
+
+    gRaceUpdatePaused = 0;
+    gRaceCameraModeChangeDisabled = 1;
+    gRaceResultState = 0;
+    asset = (Unk80043040 *)getRelocatableHeapBlockBase(gAssetHandles[0x2B]);
+    if (asset->unk8 == 0) {
+        gFramebufferSwapHold = 1;
+        setCurrentGameTaskCallback(finalizeRaceExitFlow, 0);
+        return;
+    }
+    if (hasPendingRaceReplayCourseGridEntry() == 0) {
+        gFramebufferSwapHold = 1;
+        setCurrentGameTaskCallback(finalizeRaceExitFlow, 0);
+        return;
+    }
+    asset->unk0 = 0;
+    if (gAssetHandles[0x21] != -1) {
+        gAssetHandles[0x21] = freeRelocatableHeapBlock(gAssetHandles[0x21]);
+    }
+    if (gAssetHandles[0x22] != -1) {
+        gAssetHandles[0x22] = freeRelocatableHeapBlock(gAssetHandles[0x22]);
+    }
+    if (gAssetHandles[0x23] != -1) {
+        gAssetHandles[0x23] = freeRelocatableHeapBlock(gAssetHandles[0x23]);
+    }
+    if (gAssetHandles[0x24] != -1) {
+        gAssetHandles[0x24] = freeRelocatableHeapBlock(gAssetHandles[0x24]);
+    }
+    if (gAssetHandles[0x25] != -1) {
+        freedHandle25 = freeRelocatableHeapBlock(gAssetHandles[0x25]);
+        gAssetHandles[0x25] = freedHandle25;
+    }
+    if (gAssetHandles[0x26] != -1) {
+        freedHandle26 = freeRelocatableHeapBlock(gAssetHandles[0x26]);
+        gAssetHandles[0x26] = freedHandle26;
+    }
+    if (gAssetHandles[0x27] != -1) {
+        gAssetHandles[0x27] = freeRelocatableHeapBlock(gAssetHandles[0x27]);
+    }
+    if (gAssetHandles[0x28] != -1) {
+        gAssetHandles[0x28] = freeRelocatableHeapBlock(gAssetHandles[0x28]);
+    }
+    if (gAssetHandles[0x1F] != -1) {
+        gAssetHandles[0x1F] = freeRelocatableHeapBlock(gAssetHandles[0x1F]);
+    }
+    asset->unk0 = 0;
+    one = 1;
+    active = 1;
+    gRacePlayers[0].isCpu = 0;
+    gRacePlayers[1].isCpu = one;
+    gRacePlayers[2].isCpu = one;
+    gRacePlayers[3].isCpu = one;
+    gRacePlayers[0].isActive = active;
+    gRacePlayers[1].isActive = 0;
+    gRacePlayers[2].isActive = 0;
+    inactive = 0;
+    gRacePlayers[3].isActive = inactive;
+    gRacePlayerCount = active;
+    gRaceLapCount = active;
+    gRacePlayerAttackStartTimer = 0x64;
+    initCallbackTaskScheduler(2);
+    for (one = 0; one < RACE_PLAYER_COUNT; one++) {
+        gRacePlayers[one].unk15 = 0;
+        gRacePlayers[one].replayInputSource = RACE_PLAYER_INPUT_LIVE;
+        gRacePlayers[one].soundDisabled = 0;
+    }
+    gRacePlayers[0].replayInputSource = RACE_PLAYER_INPUT_HISTORY_2B;
+    gMenuFlowState = 0;
+    resetRaceCameras();
+    resetAllViewports();
+    if (gRaceCourseIndex.signedValue != 6) {
+        configureViewport(0, 0xA0, 0x78, 0x100, 0xB0, 0x120, 0xD0, 1.3333334f);
+    } else {
+        configureRaceViewport(0, 0xA0, 0x78, 0x100, 0xB0, 0x120, 0xD0, 1.3333334f);
+    }
+    LOAD_ASSET(_598A70, 0x29);
+    gRacePlayerHudStatuses[0].active = 1;
+    gFramebufferRenderInterval.value = 0;
+    resetSecondaryRng();
+    initRacePlayers();
+    initRaceHud();
+    initRaceCourseSceneTasks();
+    gMenuFadeAlpha = 0xFF;
+    updateRelocatableHeap();
+    requestMusicSequenceBank(0);
+    gCurrentGameTask->callbackData0 = 0;
+    gCurrentGameTask->callbackData1 = 0;
+    createCallbackTask((CallbackTaskCallback)updateRaceUiPrizePayoutContinuePrompt, 6, 0x64);
+    if (D_80120E81 == -1) {
+        createCallbackTask((CallbackTaskCallback)updateRaceGhostUnavailableMessage, 6, 0x64);
+    }
+    setCurrentGameTaskCallback(updateRaceGhostReplayFlow, 0);
+}
 
 void updateRaceGhostReplayFlow(void) {
     void *sp18;
@@ -725,7 +1741,63 @@ s32 areRacePlayersFinished(void) {
     return 1;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/flow/race_flow/initRaceRecordSettingsFlow.s")
+void initRaceRecordSettingsFlow(void) {
+    gRaceLapCount = gRaceCourseStartEntries[gRaceCourseIndex.signedValue].lapCount;
+    if (gRaceSplitscreenMode != 0) {
+        setCurrentGameTaskCallback(initRaceSceneFlow, 0);
+        return;
+    }
+    if (gPlayerCount == 1) {
+        setCurrentGameTaskCallback(initRaceSceneFlow, 0);
+        return;
+    }
+    if (gRaceRecordSettingsEnabled == 0) {
+        setCurrentGameTaskCallback(initRaceSceneFlow, 0);
+        return;
+    }
+    resetAllViewports();
+    gFramebufferRenderInterval.value = 0;
+    LOAD_ASSET(_593D10, 0x29);
+    LOAD_ASSET(_60F1A0, 0x2A);
+    LOAD_ASSET(_59DFE0, 0x26);
+    LOAD_ASSET(_1F1A90, 0x28);
+    switch (gRaceCourseIndex.unsignedValue) {
+        case 0:
+            LOAD_ASSET(BIG_SNOWMAN_COURSE_SPRITES, 0x1D);
+            break;
+        case 1:
+            LOAD_ASSET(SUNSET_ROCK_COURSE_SPRITES, 0x1D);
+            break;
+        case 2:
+            LOAD_ASSET(NIGHT_HIGHWAY_COURSE_SPRITES, 0x1D);
+            break;
+        case 3:
+            LOAD_ASSET(GRASS_VALLEY_COURSE_SPRITES, 0x1D);
+            break;
+        case 4:
+            LOAD_ASSET(DIZZY_LAND_COURSE_SPRITES, 0x1D);
+            break;
+        case 5:
+            LOAD_ASSET(QUICKSAND_VALLEY_COURSE_SPRITES, 0x1D);
+            break;
+        case 6:
+            LOAD_ASSET(SILVER_MOUNTAIN_COURSE_SPRITES, 0x1D);
+            break;
+        case 8:
+            LOAD_ASSET(NINJA_LAND_COURSE_SPRITES, 0x1D);
+            break;
+        case 9:
+            LOAD_ASSET(ROOKIE_MOUNTAIN_COURSE_SPRITES, 0x1D);
+            break;
+    }
+    LOAD_ASSET(RACE_EFFECT_SPRITES, 0x1C);
+    initCallbackTaskScheduler(0);
+    gMenuFlowState = 0;
+    createCallbackTaskWithUserId((CallbackTaskCallback)initRaceRecordSettingsPanel, 0, 0x64, 0);
+    createCallbackTask((CallbackTaskCallback)initScrollingMenuBackdropActor, 0, 0x5E);
+    setCurrentGameTaskCallback(updateRaceRecordSettingsFlow, 0);
+    requestMusicSequenceBank(7);
+}
 
 void updateRaceRecordSettingsFlow(void) {
     s32 temp_v0;

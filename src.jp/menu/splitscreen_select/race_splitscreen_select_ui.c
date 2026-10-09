@@ -15,6 +15,10 @@
 #define RACE_SPLITSCREEN_SELECT_TEXTURE_HANDLE (gAssetHandles[0x21])
 #define ASSET_HANDLE(index) (gAssetHandles[(index)])
 
+extern s32 gMenuFlowState;
+
+extern u8 gRaceSplitscreenSelectCursorAnimState;
+
 extern u8 gMenuExitSelection;
 extern const char gRaceSplitscreenSelectEntryFeeFormat[];
 
@@ -353,7 +357,82 @@ void drawRaceSplitscreenSelectOption0Frame(RaceSplitscreenSelectOption0FrameActo
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectOption0Frame.s")
+void updateRaceSplitscreenSelectOption0Frame(RaceSplitscreenSelectOption0FrameActor *arg0) {
+    int state;
+
+    if ((gRaceSplitscreenMode >= (u16)arg0->optionIndex) && (arg0->state != 0) && (arg0->y != -0x48)) {
+        state = arg0->state = 2;
+    } else {
+        state = arg0->state;
+        if ((gRaceSplitscreenMode < (u16)arg0->optionIndex) && (state != 0) && (arg0->y != -0x140)) {
+            state = arg0->state = 1;
+        } else {
+            state = arg0->state;
+            if ((state != 0) && (state < 4)) {
+                state = arg0->state = 3;
+            }
+        }
+    }
+
+    switch (state) {
+        case 0:
+            arg0->x -= 0x20;
+            if (arg0->cornerSpawnTimer == 0) {
+                createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectCornerSprites, 0, 0x63);
+            }
+            arg0->cornerSpawnTimer++;
+            if (arg0->x < -7) {
+                arg0->x = -8;
+                arg0->state = 3;
+                gActiveMenuTask = createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectCursor, 0, 0x64);
+                createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectPortrait, 0, 0x64);
+                createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectArrowPrompt, 0, 0x64);
+                createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectEntryFee, 0, 0x64);
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                arg0->state = 4;
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+        case 5:
+            gRacePlayers[0].menuState = 2;
+            state = arg0->state;
+            break;
+    }
+
+    if ((state == 5) && (gRacePlayers[0].menuState == 2)) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectOption0Frame, arg0);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectOption0Frame(RaceSplitscreenSelectOption0FrameActor *arg0) {
@@ -367,10 +446,71 @@ void initRaceSplitscreenSelectOption0Frame(RaceSplitscreenSelectOption0FrameActo
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSplitscreenSelectOption0Frame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/func_8001946C.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/drawRaceSplitscreenSelectOption1Frame.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectOption1Frame.s")
+void updateRaceSplitscreenSelectOption1Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
+    int state;
+
+    if ((gRaceSplitscreenMode >= (u16)arg0->optionIndex) && (arg0->y != -0x48)) {
+        state = arg0->state = 2;
+    } else if ((gRaceSplitscreenMode < (u16)arg0->optionIndex) && (arg0->y != -0x140)) {
+        state = arg0->state = 1;
+    } else {
+        state = arg0->state;
+        if (state < 4) {
+            state = arg0->state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+        case 5:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                if (arg0->y == -0x140) {
+                    arg0->state = 5;
+                } else {
+                    arg0->state = 4;
+                }
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+    }
+
+    if (state == 5) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectOption1Frame, arg0);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectOption1Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
@@ -382,10 +522,71 @@ void initRaceSplitscreenSelectOption1Frame(RaceSplitscreenSelectOptionFrameActor
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSplitscreenSelectOption1Frame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/func_800199CC.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/drawRaceSplitscreenSelectOption2Frame.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectOption2Frame.s")
+void updateRaceSplitscreenSelectOption2Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
+    int state;
+
+    if ((gRaceSplitscreenMode >= (u16)arg0->optionIndex) && (arg0->y != -0x48)) {
+        state = arg0->state = 2;
+    } else if ((gRaceSplitscreenMode < (u16)arg0->optionIndex) && (arg0->y != -0x140)) {
+        state = arg0->state = 1;
+    } else {
+        state = arg0->state;
+        if (state < 4) {
+            state = arg0->state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+        case 5:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                if (arg0->y == -0x140) {
+                    arg0->state = 5;
+                } else {
+                    arg0->state = 4;
+                }
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+    }
+
+    if (state == 5) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectOption2Frame, arg0);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectOption2Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
@@ -397,10 +598,71 @@ void initRaceSplitscreenSelectOption2Frame(RaceSplitscreenSelectOptionFrameActor
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSplitscreenSelectOption2Frame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/func_80019F2C.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/drawRaceSplitscreenSelectOption3Frame.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectOption3Frame.s")
+void updateRaceSplitscreenSelectOption3Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
+    int state;
+
+    if ((gRaceSplitscreenMode >= (u16)arg0->optionIndex) && (arg0->y != -0x48)) {
+        state = arg0->state = 2;
+    } else if ((gRaceSplitscreenMode < (u16)arg0->optionIndex) && (arg0->y != -0x140)) {
+        state = arg0->state = 1;
+    } else {
+        state = arg0->state;
+        if (state < 4) {
+            state = arg0->state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+        case 5:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                if (arg0->y == -0x140) {
+                    arg0->state = 5;
+                } else {
+                    arg0->state = 4;
+                }
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+    }
+
+    if (state == 5) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectOption3Frame, arg0);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectOption3Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
@@ -412,10 +674,72 @@ void initRaceSplitscreenSelectOption3Frame(RaceSplitscreenSelectOptionFrameActor
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSplitscreenSelectOption3Frame);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/func_8001A48C.s")
+// clang-format off
+#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/drawRaceSplitscreenSelectOption4Frame.s")
+// clang-format on
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectOption4Frame.s")
+void updateRaceSplitscreenSelectOption4Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
+    int state;
+
+    gMenuFlowState = 0;
+    if ((gRaceSplitscreenMode >= (u16)arg0->optionIndex) && (arg0->y != -0x48)) {
+        state = arg0->state = 2;
+    } else if ((gRaceSplitscreenMode < (u16)arg0->optionIndex) && (arg0->y != -0x140)) {
+        state = arg0->state = 1;
+    } else {
+        state = arg0->state;
+        if (state < 4) {
+            state = arg0->state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+        case 5:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                if (arg0->y == -0x140) {
+                    arg0->state = 5;
+                } else {
+                    arg0->state = 4;
+                }
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+    }
+
+    if (state == 5) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectOption4Frame, arg0);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectOption4Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
@@ -442,7 +766,63 @@ void drawRaceSplitscreenSelectCursor(RaceSplitscreenSelectAnimatedWidgetActor *a
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/splitscreen_select/race_splitscreen_select_ui/updateRaceSplitscreenSelectCursor.s")
+void updateRaceSplitscreenSelectCursor(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
+    u8 state;
+    u8 globalState;
+
+    state = arg0->state;
+    if (state != (globalState = gRaceSplitscreenSelectCursorTarget.state)) {
+        arg0->state = globalState;
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        if (1) {}
+        state = globalState;
+        arg0->alpha = gRaceSplitscreenSelectCursorTarget.alphaTarget;
+    }
+
+    switch (state) {
+        case 0:
+            arg0->alpha += 0x26;
+            if (arg0->alpha >= 0x100) {
+                arg0->alpha = 0x100;
+                arg0->state = 1;
+            }
+            state = arg0->state;
+            break;
+        case 1:
+            if ((s32)arg0->animationTimer < 0x10) {
+                arg0->alpha -= 9;
+            } else {
+                arg0->alpha += 9;
+            }
+            state = arg0->state;
+            arg0->animationTimer = (arg0->animationTimer + 1) & 0x1F;
+            break;
+        case 2:
+            if (gRacePlayers[0].menuState == 1) {
+                state = arg0->state = 3;
+            }
+            break;
+        case 3:
+            arg0->x -= 0x20;
+            if (arg0->x < -0xEF) {
+                arg0->state = 4;
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            break;
+    }
+
+    gRaceSplitscreenSelectCursorAnimState = state;
+    if (arg0->state == 4) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectCursor, arg0);
+}
 // clang-format on
 
 void initRaceSplitscreenSelectCursor(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
