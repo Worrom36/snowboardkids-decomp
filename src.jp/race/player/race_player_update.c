@@ -57,6 +57,8 @@ extern void (*gRacePlayerModePostUpdateHandlers[])(RacePlayer *);
 
 extern void (*gRacePlayerMode30StateHandlers[])(RacePlayer *);
 
+extern void (*D_800DE018[])(RacePlayer *);
+
 extern u16 gRacePlayerVoiceBaseSoundIds[];
 
 extern u16 gRacePlayerVoiceSplitSoundOffsets[];
@@ -3827,7 +3829,9 @@ void updateRacePlayerMode40Stun(RacePlayer *player) {
     player->rumblePatternId = 2;
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80094C4C.s")
+void func_80094C4C(RacePlayer *player) {
+    D_800DE018[player->updateState](player);
+}
 
 void updateRacePlayerMode07AlignToLaunchRamp(RacePlayer *player) {
     s16 angleDelta;
