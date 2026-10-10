@@ -554,7 +554,7 @@ def dependencies(root, row, include_group=True):
             if isinstance(value, dict):
                 for k, v in value.items():
                     # Relocation sources are object identities, not files.
-                    if k == 'relocations':
+                    if k == 'relocations' or k.endswith('_relocations'):
                         continue
                     if k in ('source', 'path') and isinstance(v, str):
                         result.append(str(safe_path(root, path.parent / v).relative_to(root)))

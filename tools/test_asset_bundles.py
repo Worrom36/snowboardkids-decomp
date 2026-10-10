@@ -120,6 +120,23 @@ class BundleTests(unittest.TestCase):
             self.assertEqual(dependencies(root, row),
                              ['assets/layout/segments.yaml', 'frames.yaml', 'record.yaml', 'texture.png'])
 
+    def test_fresh_collision_and_music_relocations_are_not_file_dependencies(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for decoder, key, identity in (
+                ('course_surface_data', 'index_relocations', 'faces_0000'),
+                ('music_table', 'event_relocations', 'sequence_0000'),
+                ('music_sequence', 'envelope_relocations', 'sequence_000508/event_000006'),
+            ):
+                with self.subTest(decoder=decoder):
+                    (root/'record.yaml').write_bytes(dump({
+                        'sections': [dict(source='mesh.yaml')],
+                        key: [dict(source=identity, field=0, target='coordinates_0000')],
+                    }))
+                    row = dict(source='record.yaml', decoder=decoder)
+                    self.assertEqual(dependencies(root, row),
+                                     ['assets/layout/segments.yaml', 'mesh.yaml', 'record.yaml'])
+
     def test_commands_reject_nonliteral_edits(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d)/'model.c'
