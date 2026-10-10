@@ -63,6 +63,8 @@ extern void (*D_800DE000[])(RacePlayer *);
 
 extern void (*D_800DE060[])(RacePlayer *);
 
+extern void (*D_800DE048[])(RacePlayer *);
+
 extern u16 gRacePlayerVoiceBaseSoundIds[];
 
 extern u16 gRacePlayerVoiceSplitSoundOffsets[];
@@ -4340,7 +4342,10 @@ void updateRacePlayerMode30AttackResolve(RacePlayer *player) {
     stepRaceMotionLoopingJointAnimation(player);
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_80095F2C.s")
+void func_80095F2C(RacePlayer *player) {
+    updateRacePlayerLeanAngle(player, 0, 0);
+    D_800DE048[player->characterId](player);
+}
 
 void updateRacePlayerMode32Character0(RacePlayer *player) {
     if (player->updateTimer == 0) {
