@@ -1,7 +1,9 @@
 Snowboard Kids  
 [![Build](https://github.com/cdlewis/snowboardkids-decomp/actions/workflows/build.yaml/badge.svg)](https://github.com/cdlewis/snowboardkids-decomp/actions/workflows/build.yaml)
-[![Code](https://decomp.dev/cdlewis/snowboardkids-decomp/us.svg?mode=shield&measure=code&label=Code)](https://decomp.dev/cdlewis/snowboardkids-decomp)
-[![Data](https://decomp.dev/cdlewis/snowboardkids-decomp/us.svg?mode=shield&measure=data&label=Data)](https://decomp.dev/cdlewis/snowboardkids-decomp)
+[![US Code](https://decomp.dev/cdlewis/snowboardkids-decomp/us.svg?mode=shield&measure=code&label=US%20Code)](https://decomp.dev/cdlewis/snowboardkids-decomp)
+[![US Data](https://decomp.dev/cdlewis/snowboardkids-decomp/us.svg?mode=shield&measure=data&label=US%20Data)](https://decomp.dev/cdlewis/snowboardkids-decomp)
+[![JP Code](https://decomp.dev/cdlewis/snowboardkids-decomp/jp.svg?mode=shield&measure=code&label=JP%20Code)](https://decomp.dev/cdlewis/snowboardkids-decomp)
+[![JP Data](https://decomp.dev/cdlewis/snowboardkids-decomp/jp.svg?mode=shield&measure=data&label=JP%20Data)](https://decomp.dev/cdlewis/snowboardkids-decomp)
 [![Chat](https://img.shields.io/discord/729856662357278750?color=%237289DA&logo=discord&logoColor=%23FFFFFF)](https://discord.gg/bwQ85rUED)
 =============
 
