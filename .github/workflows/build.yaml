@@ -8,6 +8,20 @@ jobs:
   build:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - version: us
+            report_version: usa
+            baserom: snowboardkids.z64
+          - version: jp
+            report_version: jp
+            baserom: snowboardkids.jp.z64
+    env:
+      VERSION: ${{ matrix.version }}
+      REPORT_VERSION: ${{ matrix.report_version }}
+      BASEROM_FILENAME: ${{ matrix.baserom }}
 
     steps:
       - name: Install system packages
@@ -34,13 +48,13 @@ jobs:
           path: baserom
 
       - name: Decrypt baserom
-        run: gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+        run: gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output "$BASEROM_FILENAME" "$BASEROM_FILENAME.gpg"
         env:
           BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
         working-directory: baserom
 
       - name: Copy decrypted rom to main repo
-        run: cp baserom/snowboardkids.z64 main/
+        run: cp "baserom/$BASEROM_FILENAME" main/
 
       - name: Build toolchain
         run: make -s -C tools
@@ -54,15 +68,19 @@ jobs:
         working-directory: main
 
       - name: Build and verify ROM
-        run: PATH="$(pwd)/.venv/bin:$PATH" ./tools/build-and-verify.sh
+        run: |
+          export PATH="$(pwd)/.venv/bin:$PATH"
+          make VERSION="$VERSION" extract
+          make -j8 VERSION="$VERSION" all
         working-directory: main
 
       - name: Generate objdiff report
-        run: PATH="$(pwd)/.venv/bin:$PATH" python3 -m mapfile_parser objdiff_report
+        run: PATH="$(pwd)/.venv/bin:$PATH" python3 -m mapfile_parser objdiff_report --version "$REPORT_VERSION"
         working-directory: main
 
       - name: Upload progress report artifact
         uses: actions/upload-artifact@v4
         with:
-          name: us_report
+          name: ${{ matrix.version }}_report
           path: main/report.json
+          if-no-files-found: error
