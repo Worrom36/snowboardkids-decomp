@@ -3403,3 +3403,10 @@ initGameSystems = 0x800990D0; // type:func rom:0x99CD0
 gSchedulerClientQueue = 0x80123370;
 gFramebufferRenderDoneQueue = 0x80123338;
 gLastSchedulerRetraceCounter = 0x80123B48;
+
+updateCharacterSelectMenu = 0x80004C98; // type:func rom:0x5898 size:0x5C8
+updateCharacterSelectConfirmationMenu = 0x80005260; // type:func rom:0x5E60 size:0x1D8
+fadeOutCharacterSelectMenu = 0x80005438; // type:func rom:0x6038 size:0xD8
+gCharacterSelectUnrestrictedSelection = 0x8010A188; // size:0x1
+gCharacterSelectIdOrder = 0x800B2CF0; // rom:0xB38F0 size:0xC
+gCharacterSelectVoiceSoundIds = 0x800B2CFC; // rom:0xB38FC size:0x14

@@ -47,7 +47,7 @@ segments:
       - [0x1050, c, menu/main_menu/controller_subsystem]
       - [0x1560, c, menu/main_menu/controller_main_menu_flow]
       - [0x3D10, c, menu/race_setup/race_setup_menu]
-      - [0x5530, asm, unresolved/005530]
+      - [0x5530, c, menu/character_select/character_select_menu]
       - [0x6110, c, menu/splitscreen_select/race_splitscreen_select_menu]
       - [0x6840, c, menu/character_select/character_select_course_menu]
       - [0x7B00, asm, unresolved/007B00]
@@ -388,7 +388,8 @@ segments:
       - {type: .bss, vram: 0x800E3F30, name: menu/main_menu/controller_subsystem}
       - {type: bss, vram: 0x800EBBD0, name: bss_800EBBD0}
       - {type: .bss, vram: 0x8010A120, name: menu/race_setup/race_setup_menu}
-      - {type: bss, vram: 0x8010A170, name: bss_8010A170}
+      - {type: .bss, vram: 0x8010A170, name: menu/character_select/character_select_menu}
+      - {type: bss, vram: 0x8010A190, name: bss_8010A190}
       - {type: .bss, vram: 0x8010A1A0, name: menu/character_select/character_select_course_menu}
       - {type: bss, vram: 0x8010A1B0, name: bss_8010A1B0}
       - {type: .bss, vram: 0x8010A4C0, name: ending/ending_credits_flow}
