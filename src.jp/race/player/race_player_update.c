@@ -59,6 +59,8 @@ extern void (*gRacePlayerMode30StateHandlers[])(RacePlayer *);
 
 extern void (*D_800DE018[])(RacePlayer *);
 
+extern void (*D_800DE000[])(RacePlayer *);
+
 extern u16 gRacePlayerVoiceBaseSoundIds[];
 
 extern u16 gRacePlayerVoiceSplitSoundOffsets[];
@@ -682,7 +684,9 @@ void updateRacePlayerMode22Airborne(RacePlayer *player) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_8008D91C.s")
+void func_8008D91C(RacePlayer *player) {
+    D_800DE000[player->updateState](player);
+}
 
 void updateRacePlayerAirborneLaunch(RacePlayer *player) {
     RaceCourseStartEntry *spawn;
