@@ -107,6 +107,16 @@ extern u8 gCourseSelectFromRaceTypeMenu;
 extern u8 gHighestUnlockedCourse;
 extern MenuGlyphScript gCharacterSelectCourseStartGameText[44];
 
+extern MenuGlyphScript D_800B6088[3][0x30];
+extern MenuGlyphScript D_800B61A8[3][0x30];
+extern MenuGlyphScript D_800B62C8[2][0x38];
+extern MenuGlyphScript D_800B63A8[];
+
+extern u16 D_800B5A7C[];
+extern const char D_800DFEB4[];
+extern const char D_800DFEB8[];
+extern const char D_800DFEBC[];
+
 void drawCharacterSelectCourseListOptions(CharacterSelectCourseMenuFrameActor *arg0) {
     register CharacterSelectCourseMenuFrameActor *actor;
     s16 *characterIds;
@@ -921,7 +931,53 @@ void initCharacterSelectCoursePreviewFrame(CharacterSelectCourseWidgetActor *arg
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel1.s")
+void drawCharacterSelectCoursePreviewPanel1(CharacterSelectCourseWidgetActor *arg0) {
+    s32 i;
+    for (i = 0; i < 16; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + ((i & 3) << 5),
+            arg0->y + ((i / 4) << 5),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].center[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    for (i = 0; i < 2; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + 0x80,
+            arg0->y + i * 0x40,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].right[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+        drawMenuSpriteTileClipped(
+            arg0->x + i * 0x40,
+            arg0->y + 0x80,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].bottom[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    drawMenuSpriteTileClipped(
+        arg0->x + 0x80,
+        arg0->y + 0x80,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].corner,
+        0,
+        0x100,
+        gMenuViewportWidth / 2,
+        gMenuViewportHeight / 2 - 0x2F
+    );
+}
 // clang-format on
 
 // clang-format off
@@ -1005,7 +1061,53 @@ void initCharacterSelectCoursePreviewPanel1(CharacterSelectCourseWidgetActor *ar
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel2.s")
+void drawCharacterSelectCoursePreviewPanel2(CharacterSelectCourseWidgetActor *arg0) {
+    s32 i;
+    for (i = 0; i < 16; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + ((i & 3) * 32),
+            arg0->y + ((i / 4) * 32),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].center[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    for (i = 0; i < 2; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + 0x80,
+            arg0->y + i * 0x40,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].right[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+        drawMenuSpriteTileClipped(
+            arg0->x + i * 0x40,
+            arg0->y + 0x80,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].bottom[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    drawMenuSpriteTileClipped(
+        arg0->x + 0x80,
+        arg0->y + 0x80,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].corner,
+        0,
+        0x100,
+        gMenuViewportWidth / 2,
+        gMenuViewportHeight / 2 - 0x2F
+    );
+}
 // clang-format on
 
 // clang-format off
@@ -1218,7 +1320,53 @@ void initCharacterSelectCoursePreviewPanel3(CharacterSelectCourseWidgetActor *ar
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel4.s")
+void drawCharacterSelectCoursePreviewPanel4(CharacterSelectCourseWidgetActor *arg0) {
+    s32 i;
+    for (i = 0; i < 16; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + ((i & 3) * 32),
+            arg0->y + ((i / 4) * 32),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].center[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    for (i = 0; i < 2; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + 0x80,
+            arg0->y + i * 0x40,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].right[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+        drawMenuSpriteTileClipped(
+            arg0->x + i * 0x40,
+            arg0->y + 0x80,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].bottom[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    drawMenuSpriteTileClipped(
+        arg0->x + 0x80,
+        arg0->y + 0x80,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].corner,
+        0,
+        0x100,
+        gMenuViewportWidth / 2,
+        gMenuViewportHeight / 2 - 0x2F
+    );
+}
 // clang-format on
 
 // clang-format off
@@ -1299,7 +1447,53 @@ void initCharacterSelectCoursePreviewPanel4(CharacterSelectCourseWidgetActor *ar
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel5.s")
+void drawCharacterSelectCoursePreviewPanel5(CharacterSelectCourseWidgetActor *arg0) {
+    s32 i;
+    for (i = 0; i < 16; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + ((i & 3) * 32),
+            arg0->y + ((i / 4) * 32),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].center[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    for (i = 0; i < 2; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + 0x80,
+            arg0->y + i * 0x40,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].right[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+        drawMenuSpriteTileClipped(
+            arg0->x + i * 0x40,
+            arg0->y + 0x80,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].bottom[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    drawMenuSpriteTileClipped(
+        arg0->x + 0x80,
+        arg0->y + 0x80,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].corner,
+        0,
+        0x100,
+        gMenuViewportWidth / 2,
+        gMenuViewportHeight / 2 - 0x2F
+    );
+}
 // clang-format on
 
 // clang-format off
@@ -1380,7 +1574,53 @@ void initCharacterSelectCoursePreviewPanel5(CharacterSelectCourseWidgetActor *ar
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel6.s")
+void drawCharacterSelectCoursePreviewPanel6(CharacterSelectCourseWidgetActor *arg0) {
+    s32 i;
+    for (i = 0; i < 16; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + ((i & 3) * 32),
+            arg0->y + ((i / 4) * 32),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].center[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    for (i = 0; i < 2; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + 0x80,
+            arg0->y + i * 0x40,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].right[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+        drawMenuSpriteTileClipped(
+            arg0->x + i * 0x40,
+            arg0->y + 0x80,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].bottom[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    drawMenuSpriteTileClipped(
+        arg0->x + 0x80,
+        arg0->y + 0x80,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].corner,
+        0,
+        0x100,
+        gMenuViewportWidth / 2,
+        gMenuViewportHeight / 2 - 0x2F
+    );
+}
 // clang-format on
 
 // clang-format off
@@ -1461,7 +1701,53 @@ void initCharacterSelectCoursePreviewPanel6(CharacterSelectCourseWidgetActor *ar
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel7.s")
+void drawCharacterSelectCoursePreviewPanel7(CharacterSelectCourseWidgetActor *arg0) {
+    s32 i;
+    for (i = 0; i < 16; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + ((i & 3) * 32),
+            arg0->y + ((i / 4) * 32),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].center[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    for (i = 0; i < 2; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + 0x80,
+            arg0->y + i * 0x40,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].right[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+        drawMenuSpriteTileClipped(
+            arg0->x + i * 0x40,
+            arg0->y + 0x80,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].bottom[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    drawMenuSpriteTileClipped(
+        arg0->x + 0x80,
+        arg0->y + 0x80,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].corner,
+        0,
+        0x100,
+        gMenuViewportWidth / 2,
+        gMenuViewportHeight / 2 - 0x2F
+    );
+}
 // clang-format on
 
 // clang-format off
@@ -1542,7 +1828,53 @@ void initCharacterSelectCoursePreviewPanel7(CharacterSelectCourseWidgetActor *ar
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel8.s")
+void drawCharacterSelectCoursePreviewPanel8(CharacterSelectCourseWidgetActor *arg0) {
+    s32 i;
+    for (i = 0; i < 16; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + ((i & 3) * 32),
+            arg0->y + ((i / 4) * 32),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].center[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    for (i = 0; i < 2; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + 0x80,
+            arg0->y + i * 0x40,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].right[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+        drawMenuSpriteTileClipped(
+            arg0->x + i * 0x40,
+            arg0->y + 0x80,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].bottom[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    drawMenuSpriteTileClipped(
+        arg0->x + 0x80,
+        arg0->y + 0x80,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].corner,
+        0,
+        0x100,
+        gMenuViewportWidth / 2,
+        gMenuViewportHeight / 2 - 0x2F
+    );
+}
 // clang-format on
 
 // clang-format off
@@ -1623,7 +1955,53 @@ void initCharacterSelectCoursePreviewPanel8(CharacterSelectCourseWidgetActor *ar
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePreviewPanel9.s")
+void drawCharacterSelectCoursePreviewPanel9(CharacterSelectCourseWidgetActor *arg0) {
+    s32 i;
+    for (i = 0; i < 16; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + ((i & 3) * 32),
+            arg0->y + ((i / 4) * 32),
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].center[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    for (i = 0; i < 2; i++) {
+        drawMenuSpriteTileClipped(
+            arg0->x + 0x80,
+            arg0->y + i * 0x40,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].right[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+        drawMenuSpriteTileClipped(
+            arg0->x + i * 0x40,
+            arg0->y + 0x80,
+            getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+            gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].bottom[i],
+            0,
+            0x100,
+            gMenuViewportWidth / 2,
+            gMenuViewportHeight / 2 - 0x2F
+        );
+    }
+    drawMenuSpriteTileClipped(
+        arg0->x + 0x80,
+        arg0->y + 0x80,
+        getRelocatableHeapBlockBase(gAssetHandles[0x21]),
+        gCharacterSelectCoursePreviewFrameTileMaps[(u16)arg0->sprite.index].corner,
+        0,
+        0x100,
+        gMenuViewportWidth / 2,
+        gMenuViewportHeight / 2 - 0x2F
+    );
+}
 // clang-format on
 
 // clang-format off
@@ -2172,7 +2550,32 @@ void initCharacterSelectCourseStatsBadge(CharacterSelectCourseWidgetActor *arg0)
 }
 
 // clang-format off
+// drawCharacterSelectCoursePlayerStatsPanel best match: 99.899%
 #pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCoursePlayerStatsPanel.s")
+
+#ifdef NON_MATCHING
+void drawCharacterSelectCoursePlayerStatsPanel(CharacterSelectCourseWidgetActor *arg0) {
+ s16 *characterIds;
+ s32 three;
+ s32 yOffset;
+ char buf[8];
+ s32 valueOffset;
+ characterIds=gCharacterSelectCourseMenuData.courseOptionsByUnlock[gHighestUnlockedCourse];
+ if (gPlayerCount==1) {
+ drawMenuSprite(arg0->x,arg0->y,getRelocatableHeapBlockBase(gAssetHandles[0x21]),0x21,0x20,0x20,0,0);
+ drawMenuSprite(arg0->x+0x30,arg0->y,getRelocatableHeapBlockBase(gAssetHandles[0x21]),0x22,0x20,0x20,0,0);
+ sprintf(buf,D_800DFEB4,(&gGameSaveDataBuffer[0].highScores[1])[characterIds[gRaceCourseIndex.signedValue]]);
+ drawMenuAsciiText(arg0->x+0x14,arg0->y+0x2A,(u8*)buf,0,0x100);
+ valueOffset=0;  yOffset=0;  three=3;  while(yOffset != 0x18) {  sprintf(buf,D_800DFEB8,D_800B5A7C[gRaceCourseIndex.signedValue * three + valueOffset]);  drawMenuAsciiText(arg0->x+0x28,arg0->y+yOffset+9,(u8*)buf,0,0x100);  yOffset += 8;  valueOffset++;  }  } else {
+ drawMenuSprite(arg0->x,arg0->y,getRelocatableHeapBlockBase(gAssetHandles[0x21]),0x26,0x20,0x20,0,0);
+ drawMenuSprite(arg0->x,arg0->y+0x10,getRelocatableHeapBlockBase(gAssetHandles[0x21]),0x27,0x20,0x20,0,0);
+ for(valueOffset=0,yOffset=0;valueOffset<4;valueOffset++,yOffset+=8) {
+ sprintf(buf,D_800DFEBC,gRacePlayers[valueOffset].unk18);
+ drawMenuAsciiText(arg0->x+0x40,arg0->y+yOffset+0x10,(u8*)buf,0,0x100);
+ }
+ }
+}
+#endif
 // clang-format on
 
 // clang-format off
@@ -2517,7 +2920,30 @@ void initCharacterSelectCourseNamePopup(CharacterSelectCourseWidgetActor *arg0) 
 }
 
 // clang-format off
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/menu/character_select/character_select_course_ui/drawCharacterSelectCourseDescriptionPopup.s")
+void drawCharacterSelectCourseDescriptionPopup(CharacterSelectCourseWidgetActor *arg0) {
+    MenuGlyphScript *text;
+    s32 threshold;
+    u16 idx;
+
+    if (gRaceTypeSelection < 2) {
+        threshold = 2;
+    } else {
+        threshold = 0;
+    }
+    if (threshold >= gRaceCourseIndex.signedValue) {
+        idx = (u16)gRaceCourseIndex.signedValue;
+        if (gRaceTypeSelection == 0) {
+            text = D_800B6088[idx];
+        } else if (gRaceTypeSelection == 1) {
+            text = D_800B61A8[idx];
+        } else {
+            text = D_800B62C8[idx];
+        }
+    } else {
+        text = D_800B63A8;
+    }
+    drawMenuGlyphScript(arg0->x, arg0->y, text, 1, arg0->sprite.index, 0);
+}
 // clang-format on
 
 // clang-format off
