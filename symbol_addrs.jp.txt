@@ -3410,3 +3410,10 @@ fadeOutCharacterSelectMenu = 0x80005438; // type:func rom:0x6038 size:0xD8
 gCharacterSelectUnrestrictedSelection = 0x8010A188; // size:0x1
 gCharacterSelectIdOrder = 0x800B2CF0; // rom:0xB38F0 size:0xC
 gCharacterSelectVoiceSoundIds = 0x800B2CFC; // rom:0xB38FC size:0x14
+
+updateMultiplayerCourseSelectMenu = 0x80007810; // type:func rom:0x8410 size:0xD0C
+fadeOutMultiplayerCourseSelectMenu = 0x8000851C; // type:func rom:0x911C size:0xC8
+D_800EBD05 = 0x800EBD05; // type:u8
+gCourseSelectColumnCounts = 0x8010A1E8; // type:u8 size:0x4
+gCourseSelectVerticalOffsets = 0x8010A1F8; // type:s32 size:0x10
+gCourseSelectColumnUnlocked = 0x8010A1D8; // type:s8 size:0xC
