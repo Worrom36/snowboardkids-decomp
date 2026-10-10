@@ -61,6 +61,8 @@ extern void (*D_800DE018[])(RacePlayer *);
 
 extern void (*D_800DE000[])(RacePlayer *);
 
+extern void (*D_800DE060[])(RacePlayer *);
+
 extern u16 gRacePlayerVoiceBaseSoundIds[];
 
 extern u16 gRacePlayerVoiceSplitSoundOffsets[];
@@ -4472,7 +4474,10 @@ void updateRacePlayerMode32Character5(RacePlayer *player) {
     }
 }
 
-#pragma GLOBAL_ASM("asm.jp/nonmatchings/race/player/race_player_update/func_800963D8.s")
+void func_800963D8(RacePlayer *player) {
+    updateRacePlayerLeanAngle(player, 0, 0);
+    D_800DE060[player->characterId](player);
+}
 
 void updateRacePlayerMode35Character0(RacePlayer *player) {
     if (player->updateTimer == 0) {
