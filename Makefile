@@ -64,6 +64,16 @@ TOOLS_DIR = tools
 
 find-command = $(shell which $(1) 2>/dev/null)
 
+# Prefer project-local MIPS toolchain + helper shims (tools/binutils/bin, tools/bin).
+LOCAL_MIPS_BIN := $(abspath $(TOOLS_DIR)/binutils/bin)
+LOCAL_TOOLS_BIN := $(abspath $(TOOLS_DIR)/bin)
+ifneq ($(wildcard $(LOCAL_MIPS_BIN)/mips64-elf-ld $(LOCAL_MIPS_BIN)/mips64-elf-ld.exe),)
+  export PATH := $(LOCAL_TOOLS_BIN):$(LOCAL_MIPS_BIN):$(PATH)
+  # Don't rely on `which` (missing under cmd.exe SHELL on Windows).
+  CROSS := mips64-elf-
+endif
+
+ifeq ($(CROSS),)
 ifneq      ($(call find-command,mips-linux-gnu-ld),)
   CROSS := mips-linux-gnu-
 else ifneq ($(call find-command,mips64-linux-gnu-ld),)
@@ -72,6 +82,7 @@ else ifneq ($(call find-command,mips64-elf-ld),)
   CROSS := mips64-elf-
 else
   $(error Unable to detect a suitable MIPS cross toolchain installed.)
+endif
 endif
 
 ifneq (,$(call find-command,$(CROSS)clang))
@@ -86,18 +97,57 @@ else
 endif
 
 AS      = $(CROSS)as
-IDO_PLATFORM := $(if $(filter Darwin,$(shell uname -s)),macos,linux)
+UNAME_S := $(shell uname -s 2>/dev/null)
+ifeq ($(OS),Windows_NT)
+  IDO_PLATFORM := windows
+else ifneq (,$(filter MINGW% MSYS% CYGWIN%,$(UNAME_S)))
+  IDO_PLATFORM := windows
+else ifeq ($(UNAME_S),Darwin)
+  IDO_PLATFORM := macos
+else
+  IDO_PLATFORM := linux
+endif
 IDO_DIR ?= $(abspath $(TOOLS_DIR)/ido-recomp/$(IDO_PLATFORM))
 export IDO_DIR
-CC      = $(IDO_DIR)/cc
-CC_CHECK = clang
+# Prevent Git Bash from rewriting paths passed to Win32 IDO tools.
+export MSYS_NO_PATHCONV := 1
+export MSYS2_ARG_CONV_EXCL := *
+ifeq ($(IDO_PLATFORM),windows)
+  # Python wrapper so asm-processor can CreateProcess the compiler on Windows.
+  CC      = $(PYTHON) $(TOOLS_DIR)/ido-cc.py
+  # Python port of ido-as.sh — avoids bash/cmd file-association dialogs on Windows.
+  IDO_AS  = $(PYTHON) $(TOOLS_DIR)/ido-as.py
+  # Windows IDO cfe has a ~32KiB translation-unit limit. Slim overlays keep
+  # audio TUs under that limit without changing matching struct layouts.
+  WIN_SLIM_GBI   := -I$(TOOLS_DIR)/windows/slim-gbi
+  WIN_SLIM_AUDIO := -I$(TOOLS_DIR)/windows/slim-audio $(WIN_SLIM_GBI)
+  # Keep asm-processor temps on the project drive (avoid full C: TEMP).
+  # IDO itself uses TMPDIR=/tmp -> <drive>:\tmp (created by ido-cc.py).
+  export TEMP := $(abspath tmp)
+  export TMP := $(abspath tmp)
+  export IDO_HOST_TMP := $(abspath tmp)
+  # Do not export TMPDIR=/tmp into Make/Python — that makes tempfile use D:\tmp
+  # with long asm_processor paths. ido-cc.py sets TMPDIR only for cc.exe.
+else
+  CC      = $(IDO_DIR)/cc
+  IDO_AS  = $(TOOLS_DIR)/ido-as.sh
+  WIN_SLIM_GBI   :=
+  WIN_SLIM_AUDIO :=
+endif
+# Syntax-check is optional; matching builds do not require host clang.
+ifneq ($(call find-command,clang),)
+  CC_CHECK = clang
+else
+  CC_CHECK = true
+endif
 CLANG_FORMAT ?= clang-format
 CLANG_TIDY ?= clang-tidy
 LLVM_MAJOR_VERSION := 20
 LD      = $(CROSS)ld
 OBJDUMP = $(CROSS)objdump
 OBJCOPY = $(CROSS)objcopy
-PYTHON  = python3
+# Prefer python3, fall back to python (Windows venvs / Store stubs).
+PYTHON  ?= $(shell which python3 2>/dev/null || which python 2>/dev/null || echo python3)
 SPLAT   = $(PYTHON) -m tools.split_rom split
 N64CRC  = $(TOOLS_DIR)/n64crc.py
 ASM_PROC = $(TOOLS_DIR)/asm-processor/build.py
@@ -159,6 +209,11 @@ $(BUILD_DIR)/$(SRC_DIR)/ultra/io/%.o: C_OPT = -O1
 $(BUILD_DIR)/$(SRC_DIR)/ultra/io/%.o: C_MIPS = -mips2
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/%.o: C_OPT = -O2
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/%.o: C_MIPS = -mips2
+ifneq ($(WIN_SLIM_GBI),)
+$(BUILD_DIR)/$(SRC_DIR)/ultra/audio/%.o: CFLAGS += $(WIN_SLIM_GBI)
+$(BUILD_DIR)/$(SRC_DIR)/audio/%.o: CFLAGS += $(WIN_SLIM_AUDIO)
+$(BUILD_DIR)/$(SRC_DIR)/libmus/%.o: CFLAGS += $(WIN_SLIM_AUDIO)
+endif
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/env.o: C_OPT = -O3
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/env.o: IDO_CC = $(IDO_DIRECT)
 $(BUILD_DIR)/$(SRC_DIR)/ultra/audio/drvrnew.o: C_OPT = -O3
@@ -291,7 +346,10 @@ TARGET = $(BUILD_DIR)/$(BASENAME)
 
 default: all
 
-all: $(if $(filter us,$(VERSION)),course-definitions) dirs $(TARGET).z64 $(if $(filter matching,$(BUILD_MODE)),verify)
+# On Windows, also wrap the ROM with a vendored Mupen64Plus play folder (dist/play).
+WRAP_ROM ?= $(if $(filter Windows_NT,$(OS)),1,0)
+
+all: $(if $(filter us,$(VERSION)),course-definitions) dirs $(TARGET).z64 $(if $(filter matching,$(BUILD_MODE)),verify) $(if $(filter 1,$(WRAP_ROM)),wrap)
 
 ifeq ($(BUILD_MODE),shiftable)
 $(LD_SCRIPT): $(BASENAME).ld $(TOOLS_DIR)/make_shiftable_linker.py assets/layout/bundles.mk
@@ -345,7 +403,7 @@ endif
 $(ULTRA_IDO_AS_O_FILES): $(BUILD_DIR)/%.o: %.s
 	@mkdir -p $(dir $@)
 	$(PRINTF) "[$(GREEN)   as   $(NO_COL)]  $<\n"
-	$(V)$(TOOLS_DIR)/ido-as.sh $< $@ $(ULTRA_AS_ISA) $(ULTRA_AS_OPT)
+	$(V)$(IDO_AS) $< $@ $(ULTRA_AS_ISA) $(ULTRA_AS_OPT)
 	$(V)$(ULTRA_AS_POST)
 	$(V)$(RM_MDEBUG)
 
@@ -482,10 +540,20 @@ $(TARGET).z64: $(TARGET).bin
 	$(V)cp $< $@
 	$(V)$(PYTHON) $(N64CRC) $@
 
-# SHA1 verification
+# SHA1 verification via Python so Windows CRLF sha1 files and missing shasum both work.
 verify: $(TARGET).z64
 	$(PRINTF) "[$(GREEN) verify $(NO_COL)]  Checking $(SHA1_FILE)\n"
-	$(V)shasum --check $(SHA1_FILE)
+	$(V)$(PYTHON) $(TOOLS_DIR)/verify-sha1.py $(SHA1_FILE)
+
+# Package ROM + light Mupen64Plus (~2.6 MB) into dist/play (Play.bat).
+wrap: $(TARGET).z64
+	$(PRINTF) "[$(CYAN)  wrap  $(NO_COL)]  dist/play (+ Mupen64Plus)\n"
+	$(V)$(PYTHON) $(TOOLS_DIR)/wrap-rom.py --rom $(TARGET).z64 --out dist/play
+
+# Build/wrap if needed, then launch the playable package.
+run: wrap
+	$(PRINTF) "[$(CYAN)  run   $(NO_COL)]  dist/play/Play.bat\n"
+	$(V)$(PYTHON) $(TOOLS_DIR)/wrap-rom.py --rom $(TARGET).z64 --out dist/play --run
 
 # Check baserom exists
 .PHONY: check
@@ -540,6 +608,6 @@ endif
 
 ### Settings
 .SECONDARY:
-.PHONY: all clean default extract nonmatching verify check course-definitions \
+.PHONY: all clean default extract nonmatching verify wrap run check course-definitions \
 	check-clang-format-version check-clang-tidy-version format format-check tidy \
 	decompilation-summary

@@ -1,2 +1,9 @@
 # Append-only changelog: keep both sides on conflict during rebase.
 DECOMPILATION_LEARNINGS.md merge=union
+
+# IDO (and multi-line macros in headers) require LF on Windows.
+*.c text eol=lf
+*.h text eol=lf
+*.s text eol=lf
+*.inc text eol=lf
+*.sh text eol=lf

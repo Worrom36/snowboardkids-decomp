@@ -206,7 +206,8 @@ def main(argv=None):
         if args.output == "-":
             sys.stdout.write(converted)
         else:
-            Path(args.output).write_text(converted)
+            # Always emit LF so IDO cfe does not see Windows CR (\015) as noise/errors.
+            Path(args.output).write_bytes(converted.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8"))
     except (OSError, TextConversionError) as error:
         print(f"textconv: {error}", file=sys.stderr)
         return 1

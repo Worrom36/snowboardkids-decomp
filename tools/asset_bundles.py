@@ -36,6 +36,15 @@ def dump(value):
     return yaml.dump(value, Dumper=getattr(yaml, 'CSafeDumper', yaml.SafeDumper), sort_keys=False).encode()
 
 
+def posix_path(value):
+    """Normalize relative asset paths to forward slashes (Windows Path str uses '\\')."""
+    return Path(value).as_posix()
+
+
+def rel_posix(path, start):
+    return posix_path(os.path.relpath(path, start))
+
+
 def safe_path(root, relative):
     path = (root / relative).resolve()
     if not path.is_relative_to(root.resolve()):
@@ -168,13 +177,14 @@ def migrate(root, if_absent=False):
 
     for s in rows:
         base = Path(owners[s['name']])
-        bundle = bundles.setdefault(str(base), dict(schema_version=1, id=str(base.relative_to('assets')),
+        base_key = posix_path(base)
+        bundle = bundles.setdefault(base_key, dict(schema_version=1, id=posix_path(base.relative_to('assets')),
                                                     sources=[], models=[], animations=[], previews=[]))
         staged = root / 'build/asset-staging' / Path(s['legacy']).relative_to('assets')
         legacy = staged if staged.exists() else root / s['legacy']
         target = base / ('geometry' if s['type'] == 'course_display_list' else 'sources') / legacy.name
         row = dict(name=s['name'], decoder=s['type'], rom_start=s['start'], rom_end=s['end'],
-                   legacy=s['legacy'], source=str(target), bundle=str(base / 'asset.yaml'))
+                   legacy=s['legacy'], source=posix_path(target), bundle=posix_path(base / 'asset.yaml'))
         if s['type'] == 'course_display_list':
             add(target, legacy.read_bytes())
         else:
@@ -194,7 +204,7 @@ def migrate(root, if_absent=False):
                     else:
                         dest = base / category / s['name'].lstrip('_') / Path(value)
                     new = copy_reference(old, dest)
-                    return os.path.relpath(new, target.parent)
+                    return rel_posix(new, target.parent)
                 return value
 
             m = rewrite(m)
@@ -205,16 +215,17 @@ def migrate(root, if_absent=False):
                     fields = 'vertices' if p['type'] == 'vertices' else 'values'
                     dest = base / ('geometry' if fields == 'vertices' else 'textures') / f"{s['name']}_{p['offset']:06X}.yaml"
                     add(dest, dump({fields: p.pop(fields)}))
-                    p['source'] = os.path.relpath(dest, target.parent)
+                    p['source'] = rel_posix(dest, target.parent)
             add(target, dump(m))
             if m['format'] in ('race_animation', 'scene_animation'):
-                bundle['animations'].append(os.path.relpath(target, base))
-        bundle['sources'].append(os.path.relpath(target, base))
+                bundle['animations'].append(rel_posix(target, base))
+        bundle['sources'].append(rel_posix(target, base))
         layout_rows.append(row)
 
     # The graphics address space is assembled from canonical sources, never ROM.
     for bank in resources:
         base = Path(owners[bank['name']])
+        base_key = posix_path(base)
         gfx = [s for s in rows if s['type'] == 'course_display_list' and
                bank['graphics_start'] <= s['start'] < bank['graphics_end']]
         common = dict(resource=bank['name'], graphics=[s['name'] for s in gfx],
@@ -222,7 +233,7 @@ def migrate(root, if_absent=False):
         if bank['name'] in CHAR_RESOURCES:
             roots = bank['root_offsets']
             for variant in range(2):
-                bundles[str(base)]['models'].append(dict(name='normal' if not variant else 'ghost',
+                bundles[base_key]['models'].append(dict(name='normal' if not variant else 'ghost',
                     roots=roots[variant*13:(variant+1)*13], character_index=CHAR_RESOURCES.index(bank['name']), **common))
         else:
             # Every stored list is indexed, including props not reachable from the
@@ -233,11 +244,11 @@ def migrate(root, if_absent=False):
                 starts = [0] + [p+8 for p in range(0, len(body)-8, 8) if body[p] == 0xB8]
                 for start in starts:
                     name = 'pan' if s['name'] == 'PAN_DISPLAY_LIST' else f"{s['name'].lstrip('_').lower()}_{start:04x}"
-                    dest = owners[s['name']] if bank['name'] == 'SHARED_RACE_MODEL_RESOURCES' else str(base)
+                    dest = posix_path(owners[s['name']] if bank['name'] == 'SHARED_RACE_MODEL_RESOURCES' else base)
                     bundles[dest]['models'].append(dict(name=name, roots=[s['start']-bank['graphics_start']+start], **common))
     for s in rows:
         if s['type'] == 'embedded_model':
-            base = owners[s['name']]
+            base = posix_path(owners[s['name']])
             for offset in s['root_offsets']:
                 bundles[base]['models'].append(dict(name=f'board_{offset:06x}', embedded=s['name'], roots=[offset]))
     for base, bundle in bundles.items():
@@ -665,7 +676,9 @@ def main():
         a.out.parent.mkdir(parents=True, exist_ok=True)
         a.out.write_bytes(data)
         if row['decoder'] in ('course_display_list', 'embedded_model'):
-            assembly = f'.section .data\n.balign 8\n.globl {a.name}\n{a.name}:\n.incbin "{a.out.resolve()}"\n'
+            # Assembler treats backslashes as escapes; always emit POSIX paths.
+            incbin = posix_path(a.out.resolve())
+            assembly = f'.section .data\n.balign 8\n.globl {a.name}\n{a.name}:\n.incbin "{incbin}"\n'
             if row['decoder'] == 'course_display_list':
                 from tools.course_relocations import command_ids
                 source = root/row['source']

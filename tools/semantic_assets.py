@@ -14,7 +14,10 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from tools.asset_bundles import ROOT, LAYOUT, CHARACTER_NAMES, ASSET_TYPES, dump, materialize, pack_segment, write_makefile
+from tools.asset_bundles import (
+    ROOT, LAYOUT, CHARACTER_NAMES, ASSET_TYPES, dump, materialize, pack_segment,
+    write_makefile, posix_path, rel_posix,
+)
 from tools.course_surface_data_common import load_yaml
 
 LEGACY_DIRS = ('course_display_lists','course_model_resources','course_sprite_tables','course_surface_data','readable')
@@ -175,7 +178,7 @@ def migrate_tree(original_root, root, layout, registry):
             new = old
         if old!=new:
             moves[old] = new
-        row['source'] = str(new)
+        row['source'] = posix_path(new)
     # Eliminate format/address directory nesting from course-owned files.
     for path,b in bundles.items():
         if not b['id'].startswith('courses/'):
@@ -185,12 +188,13 @@ def migrate_tree(original_root, root, layout, registry):
             rel = file.relative_to(root)
             if not file.is_file() or rel in moves or file.suffix=='.glb' or file.name=='asset.yaml':
                 continue
+            rel_posix_s = posix_path(rel)
             if file.suffix=='.png':
-                category = 'sprites' if 'SPRITE' in str(rel) or 'image_' in file.name else 'textures'
+                category = 'sprites' if 'SPRITE' in rel_posix_s or 'image_' in file.name else 'textures'
                 dest = base/category/file.name
-            elif file.suffix=='.yaml' and '/geometry/' in str(rel):
+            elif file.suffix=='.yaml' and '/geometry/' in rel_posix_s:
                 dest = base/'geometry'/('vertices_'+file.stem.rsplit('_',1)[-1]+'.yaml')
-            elif file.suffix=='.yaml' and '/textures/' in str(rel):
+            elif file.suffix=='.yaml' and '/textures/' in rel_posix_s:
                 dest = base/'textures'/('palette_'+file.stem.rsplit('_',1)[-1]+'.yaml')
             else:
                 continue
@@ -198,9 +202,9 @@ def migrate_tree(original_root, root, layout, registry):
                 moves[rel] = dest
     # Name every item first; the same image offset keeps exactly one owner even
     # when multiple item entries alias it or select alternative palettes.
-    sprite_manifests = {name:load_yaml(root/next(Path(k) for k,v in moves.items() if str(v)==row['source']))
+    sprite_manifests = {name:load_yaml(root/next(Path(k) for k,v in moves.items() if posix_path(v)==posix_path(row['source'])))
         for name,row in rows.items() if name in ('RACE_ITEM_SPRITES','SHARED_UI_SPRITES','RACE_EFFECT_SPRITES')}
-    sprite_sources = {name:next(Path(k) for k,v in moves.items() if str(v)==rows[name]['source']) for name in sprite_manifests}
+    sprite_sources = {name:next(Path(k) for k,v in moves.items() if posix_path(v)==posix_path(rows[name]['source'])) for name in sprite_manifests}
     uses = {}
     item_images = {}
     for name,item in registry['items'].items():
@@ -234,7 +238,7 @@ def migrate_tree(original_root, root, layout, registry):
                             moves[old] = new_base/old.relative_to(old_base)
     # Preflight names before touching even the staging copy.
     for row in rows.values():
-        row['source'] = str(moves.get(Path(row['source']),Path(row['source'])))
+        row['source'] = posix_path(moves.get(Path(row['source']),Path(row['source'])))
     reverse = {}
     for old,new in moves.items():
         if new in reverse and (root/old).read_bytes()!=(root/reverse[new]).read_bytes():
@@ -252,7 +256,7 @@ def migrate_tree(original_root, root, layout, registry):
             # Rewrite only references to actual files, not arbitrary strings.
             absolute = Path(os.path.normpath(old_base/value))
             if absolute in moves or (root/absolute).is_file():
-                return os.path.relpath(moves.get(absolute,absolute),new_base)
+                return rel_posix(moves.get(absolute,absolute),new_base)
         return value
     for file in (root/'assets').rglob('*.yaml'):
         rel = file.relative_to(root)
@@ -280,7 +284,7 @@ def migrate_tree(original_root, root, layout, registry):
         for dest,keys in ((mesh_path,('coordinates','faces')),(paths_path,('surfaces',))):
             (root/dest).parent.mkdir(parents=True,exist_ok=True)
             (root/dest).write_bytes(dump({k:m.pop(k) for k in keys}))
-        m['sections'] = [dict(source=os.path.relpath(p,record_path.relative_to(root).parent)) for p in (mesh_path,paths_path)]
+        m['sections'] = [dict(source=rel_posix(p,record_path.relative_to(root).parent)) for p in (mesh_path,paths_path)]
         record_path.write_bytes(dump(m))
     # Internal preview definitions retain address-space details; public manifests
     # describe assets and placements only.
@@ -306,10 +310,11 @@ def migrate_tree(original_root, root, layout, registry):
             if m.get('resource')=='SHARED_RACE_MODEL_RESOURCES' and m['roots'][0] in item.get('model_roots',[]):
                 path = Path('assets/items')/item_name/'asset.yaml'
                 name = item_name if len(item['model_roots'])==1 else ('front' if m['roots'][0]==item['model_roots'][0] else 'back')
-        b = final_bundles.setdefault(str(path),dict(schema_version=2,id=str(path.parent.relative_to('assets')),models=[],animations=[]))
+        path_key = posix_path(path)
+        b = final_bundles.setdefault(path_key,dict(schema_version=2,id=posix_path(path.parent.relative_to('assets')),models=[],animations=[]))
         new_key = b['id']+'/'+name
         m['name'] = name
-        final_defs[new_key] = dict(bundle=str(path),model=m)
+        final_defs[new_key] = dict(bundle=path_key,model=m)
         d['new_key'] = new_key
         b['models'].append(dict(name=name,preview=name+'.glb'))
         # Animation sources have moved into records; exporter reads layout refs.
@@ -320,11 +325,12 @@ def migrate_tree(original_root, root, layout, registry):
             return definitions[root_lookup[address]]['new_key']
         name = f'scenery_{address:06x}'
         path = Path('assets/models/scenery')/name/'asset.yaml'
+        path_key = posix_path(path)
         key = 'models/scenery/'+name+'/'+name
         m = copy.deepcopy(shared_model)
         m.update(name=name,roots=[address])
-        final_defs[key] = dict(bundle=str(path),model=m)
-        final_bundles[str(path)] = dict(schema_version=2,id='models/scenery/'+name,models=[dict(name=name,preview=name+'.glb')],animations=[])
+        final_defs[key] = dict(bundle=path_key,model=m)
+        final_bundles[path_key] = dict(schema_version=2,id='models/scenery/'+name,models=[dict(name=name,preview=name+'.glb')],animations=[])
         return key
     source = (original_root/'src.us/race/course/race_course_effects.c').read_text()
     from tools.course_relocations import pack_graphics_group
@@ -332,6 +338,7 @@ def migrate_tree(original_root, root, layout, registry):
     pointers = [value.strip() for value in initializer(source,'gRaceCourseObjectDisplayLists').split(',') if value.strip()]
     for course,spec in registry['courses'].items():
         base = Path('assets/courses')/course
+        bundle_key = posix_path(base/'asset.yaml')
         b = dict(schema_version=2,id='courses/'+course,models=[dict(name='preview',preview='preview.glb')],animations=[],
                  collision='collision/mesh.yaml',paths='paths/surfaces.yaml',scenery=[],effects=[])
         components = []
@@ -368,11 +375,12 @@ def migrate_tree(original_root, root, layout, registry):
             b['scenery'].append(placement)
             components.append(placement)
         b['scenery_source'] = dict(file='src.us/race/course/race_course_effects.c',symbol=spec['scenery'])
-        final_bundles[str(base/'asset.yaml')] = b
-        final_defs[b['id']+'/preview'] = dict(bundle=str(base/'asset.yaml'),model=dict(name='preview',components=components))
+        final_bundles[bundle_key] = b
+        final_defs[b['id']+'/preview'] = dict(bundle=bundle_key,model=dict(name='preview',components=components))
     for name,item in registry['items'].items():
         base = Path('assets/items')/name
-        b = final_bundles.setdefault(str(base/'asset.yaml'),dict(schema_version=2,id='items/'+name,models=[],animations=[]))
+        bundle_key = posix_path(base/'asset.yaml')
+        b = final_bundles.setdefault(bundle_key,dict(schema_version=2,id='items/'+name,models=[],animations=[]))
         b.update(runtime=dict(family=item['family'],id=item['runtime_id']),renderer=item['renderer'],icons=[],sprites=[],
                  representation='model' if b['models'] else 'procedural' if 'procedural' in item else 'sprites')
         if 'procedural' in item:
@@ -380,24 +388,25 @@ def migrate_tree(original_root, root, layout, registry):
         if 'animation_source' in item:
             b['animation_source'] = item['animation_source']
         for bank,index,old,palette in item_images[name]:
-            ref = dict(image=os.path.relpath(moves.get(old,old),base),palette=dict(bank=bank,index=palette),entry=index)
+            ref = dict(image=rel_posix(moves.get(old,old),base),palette=dict(bank=bank,index=palette),entry=index)
             b['icons' if bank=='SHARED_UI_SPRITES' else 'sprites'].append(ref)
         b['shared_effects'] = ['src.us/race/items/race_item_effects.c','src.us/race/player/race_player_pickup_effects.c']
     # Retain non-model family bundles with corrected file references, but hide
     # packing records from their public sources lists.
     for path,old in bundles.items():
-        if path in final_bundles or old.get('models') or old['id'].startswith('courses/'):
+        path_key = posix_path(path)
+        if path_key in final_bundles or old.get('models') or old['id'].startswith('courses/'):
             continue
         b = documents.get(Path(path),old)
         b['schema_version'] = 2
         b.pop('resources',None)
-        b['sources'] = [p for p in b.get('sources',[]) if '/layout/' not in str(Path(path).parent/p)]
-        final_bundles[path] = b
+        b['sources'] = [posix_path(p) for p in b.get('sources',[]) if '/layout/' not in posix_path(Path(path).parent/p)]
+        final_bundles[path_key] = b
     # Supply a precise local-file inventory instead of bank-format manifests.
     for path,b in final_bundles.items():
         base = Path(path).parent
-        b['files'] = [str(p.relative_to(root/base)) for p in sorted((root/base).rglob('*'))
-                      if p.is_file() and p.suffix!='.glb' and p.name!='asset.yaml' and '/sources/' not in str(p)]
+        b['files'] = [posix_path(p.relative_to(root/base)) for p in sorted((root/base).rglob('*'))
+                      if p.is_file() and p.suffix!='.glb' and p.name!='asset.yaml' and '/sources/' not in posix_path(p)]
         (root/path).parent.mkdir(parents=True,exist_ok=True)
         (root/path).write_bytes(dump(b))
     # Remove stale generated manifests/previews and empty containers only inside
@@ -405,7 +414,7 @@ def migrate_tree(original_root, root, layout, registry):
     retired = root/'retired'
     for file in list((root/'assets').rglob('asset.yaml'))+list((root/'assets').rglob('*.glb')):
         rel = file.relative_to(root)
-        if file.suffix=='.glb' or str(rel) not in final_bundles:
+        if file.suffix=='.glb' or posix_path(rel) not in final_bundles:
             dest = retired/rel
             dest.parent.mkdir(parents=True,exist_ok=True)
             shutil.move(file,dest)
@@ -420,7 +429,8 @@ def migrate_tree(original_root, root, layout, registry):
             path.rmdir()
     for row in rows.values():
         # Linker object identity stays internal and never points at a legacy input.
-        row['object'] = str(Path(row.pop('legacy')).with_suffix('.o'))
+        row['object'] = posix_path(Path(row.pop('legacy')).with_suffix('.o'))
+        row['bundle'] = posix_path(row['bundle'])
         if row['bundle'] not in final_bundles:
             owner = next((p for p in final_bundles if Path(row['source']).is_relative_to(Path(p).parent)),None)
             row['bundle'] = owner or 'assets/shared/asset.yaml'

@@ -15,6 +15,7 @@ snowboardkids.ld
 undefined_funcs_auto.txt
 undefined_syms_auto.txt
 build
+tmp/
 *.o
 tools/ido-recomp
 .decomp_dev_secret
@@ -49,3 +50,23 @@ tools/scratches.json
 
 # Temporary worktrees
 .claude/worktrees
+
+tools/binutils/
+_downloads/
+
+
+tools/bin/
+
+# Vendored playable wrapper (fetched on demand by tools/wrap-rom.py)
+tools/mupen64plus/
+dist/
+
+# Local Windows toolchain / IDO downloads (not part of the repo)
+tools/mingw64/
+tools/msys64/
+tools/ido-static-recomp/
+tools/_ido_check/
+tools/ido-*.tar.gz
+build_log.txt
+t2flat.c
+
