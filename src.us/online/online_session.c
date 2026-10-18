@@ -9,14 +9,17 @@
 #include "game/race/player/race_player_pickup_effects.h"
 #include "game/race/player/race_player_progress.h"
 #include "game/math/fixed_point_math.h"
+#include "game/engine/asset_manager.h"
 #include "game/engine/callback_task_scheduler.h"
 #include "game/engine/viewport_manager.h"
 #include "game/engine/game_task_scheduler.h"
 
 extern s16 gRaceLapCount;
 extern s8 gRacePlayerCount;
+extern s32 gMenuFlowState;
 extern Vec3s *gRaceCourseSurfaceCoords;
 extern RaceCourseSurface *gRaceCourseSurfaces;
+extern Vec3i gRacePlayerGroundProbeOffsets[];
 
 static u8 sOnlineSessionActive;
 static u8 sOnlineRemoteSeat[ONLINE_MAX_SEATS];
@@ -518,6 +521,80 @@ static void onlineSessionPoseRemoteRacer(RacePlayer *player) {
         interpolateRaceMotionJointAnimationFrame((RaceMotionState *)player, 0, groundLift, 0x100);
     }
     resolveRacePlayerCollisionVolumes(player);
+}
+
+/*
+ * Cosmetic snow spray for remotes: place board-edge markers and spawn the same
+ * spark bursts locals get in updateRacePlayerPostUpdate. Does not run surface
+ * contact / push (those fight networked pose).
+ */
+static void onlineRemoteSpawnBoardSparks(RacePlayer *player) {
+    Mat3x3 rotation;
+    s32 i;
+    s32 originX;
+    s32 originY;
+    s32 originZ;
+    unsigned long long random;
+
+    if (player == NULL) {
+        return;
+    }
+    if (gMenuFlowState & 1) {
+        return;
+    }
+    if (player->stateFlags & 0x41000) {
+        return;
+    }
+    if (player->soundDisabled != 0) {
+        return;
+    }
+    if (onlineRemoteSurfaceLocked(player->mode, player->updateState, player->stateFlags) == 0) {
+        return;
+    }
+
+    /* Preserve last frame's edges for streak length (local updateRacePlayer does this). */
+    player->groundMarkerSources[4] = player->groundMarkerSources[0];
+    player->groundMarkerSources[5] = player->groundMarkerSources[1];
+    player->groundMarkerSources[6] = player->groundMarkerSources[2];
+    player->groundMarkerSources[7] = player->groundMarkerSources[3];
+
+    makeFixedRotationZXY(rotation, player->pitchAngle, player->facingAngle, player->leanAngle);
+    originX = player->pos.x;
+    originY = player->pos.y - player->groundOffset + 0xA000;
+    originZ = player->pos.z;
+
+    for (i = 0; i < 4; i++) {
+        transformVec3iByFixedMatrix(
+            rotation,
+            &gRacePlayerGroundProbeOffsets[i + 9],
+            &player->groundMarkerSources[i]
+        );
+        player->groundMarkerSources[i].x += originX;
+        player->groundMarkerSources[i].y += originY;
+        player->groundMarkerSources[i].z += originZ;
+    }
+
+    player->unk330 = (s8)getRaceCourseSurfaceType(player->coursePathIndex, player->pos.x, player->pos.z);
+    player->groundContactMask = 0xF;
+
+    random = randomNextMain();
+    spawnRaceItemTrackSparkBurst(
+        &player->groundMarkerSources[0],
+        &player->groundMarkerSources[1],
+        &player->groundMarkerSources[4],
+        &player->groundMarkerSources[5],
+        random,
+        player->unk330
+    );
+    random = randomNextMain();
+    spawnRaceItemTrackSparkBurst(
+        &player->groundMarkerSources[2],
+        &player->groundMarkerSources[3],
+        &player->groundMarkerSources[6],
+        &player->groundMarkerSources[7],
+        random,
+        player->unk330
+    );
 }
 
 void onlineSessionReset(void) {
@@ -1069,6 +1146,10 @@ void onlineSessionApplyRemoteRacers(void) {
         player->groundOffset = motion->groundOffset;
         player->targetGroundOffset = motion->groundOffset;
         onlineSessionPoseRemoteRacer(player);
+        /* Once per frame: cosmetic board snow (skipped with remote post-update). */
+        if (shouldTick != 0) {
+            onlineRemoteSpawnBoardSparks(player);
+        }
     }
 }
 

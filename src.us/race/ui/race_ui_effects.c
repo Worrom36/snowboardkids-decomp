@@ -4175,6 +4175,10 @@ void updateGhostSlowdownDriftAway(RaceUiPodiumTrailActor *arg0) {
 void updateGhostSlowdownImpact(RaceUiPodiumTrailActor *arg0) {
     RacePlayer *player;
     s32 height;
+#ifdef ONLINE_BATTLE
+    s32 targetIndex;
+    s32 localSeat;
+#endif
 
     if (gRaceUpdatePaused == 0) {
         arg0->velocity += -0x10000;
@@ -4182,8 +4186,35 @@ void updateGhostSlowdownImpact(RaceUiPodiumTrailActor *arg0) {
         arg0->height = height;
         if ((height < 0x200000) && ((arg0->playImpactSound & 0xFF) != 0)) {
             enqueuePositionalSoundEffect(0xC, &gRacePlayers[arg0->targetPlayerIndex].pos, 0x7F, 0x32);
-            gRacePlayers[arg0->targetPlayerIndex].pendingItemHitFlags |= PLAYER_HITFLAG_GHOST_SLOWDOWN;
-            gRacePlayers[arg0->targetPlayerIndex].hitSourcePlayerIndex = arg0->playerIndex;
+#ifdef ONLINE_BATTLE
+            /*
+             * Remotes skip updateRacePlayer (no hit resolve). Pan does not go
+             * through tryApplyRacePlayerItemHit, so the caster must emit HIT.
+             * Viewers already apply to themselves via the synced ACTION_USE pan.
+             */
+            targetIndex = arg0->targetPlayerIndex;
+            if ((onlineSessionActive() != 0) && (targetIndex >= 0) && (targetIndex < ONLINE_MAX_SEATS)) {
+                localSeat = onlineSessionFocusPlayerIndex();
+                gRacePlayers[targetIndex].hitSourcePlayerIndex = arg0->playerIndex;
+                if (targetIndex == localSeat) {
+                    gRacePlayers[targetIndex].pendingItemHitFlags |= PLAYER_HITFLAG_GHOST_SLOWDOWN;
+                } else if ((arg0->playerIndex == localSeat) &&
+                           (onlinePlayerIsRemote(&gRacePlayers[targetIndex]) != 0)) {
+                    onlineSessionEnqueueEvent(
+                        ONLINE_EVENT_HIT,
+                        (u8)targetIndex,
+                        (u8)(PLAYER_HITFLAG_GHOST_SLOWDOWN & 0xFF),
+                        (u8)((PLAYER_HITFLAG_GHOST_SLOWDOWN >> 8) & 0xFF)
+                    );
+                } else if (onlinePlayerIsRemote(&gRacePlayers[targetIndex]) == 0) {
+                    gRacePlayers[targetIndex].pendingItemHitFlags |= PLAYER_HITFLAG_GHOST_SLOWDOWN;
+                }
+            } else
+#endif
+            {
+                gRacePlayers[arg0->targetPlayerIndex].pendingItemHitFlags |= PLAYER_HITFLAG_GHOST_SLOWDOWN;
+                gRacePlayers[arg0->targetPlayerIndex].hitSourcePlayerIndex = arg0->playerIndex;
+            }
             height = arg0->height;
             arg0->playImpactSound = 0;
         }
@@ -4258,13 +4289,20 @@ void initGhostSlowdownActor(RaceUiPodiumTrailActor *arg0) {
 void spawnGhostSlowdownTargets(s16 arg0) {
     s32 spawnIndex;
     s32 playerIndex;
+    s32 playerLimit;
     RaceUiPodiumTrailActor *actor;
 
     spawnIndex = 0;
     playerIndex = 0;
-    if (gRacePlayerCount > 0) {
+#ifdef ONLINE_BATTLE
+    /* Online actives may not match a dense 0..gRacePlayerCount-1 only scan. */
+    playerLimit = (onlineSessionActive() != 0) ? ONLINE_MAX_SEATS : gRacePlayerCount;
+#else
+    playerLimit = gRacePlayerCount;
+#endif
+    if (playerLimit > 0) {
         do {
-            if (arg0 != playerIndex) {
+            if ((arg0 != playerIndex) && (gRacePlayers[playerIndex].isActive != 0)) {
                 actor = createCallbackTaskPreservingArgs((CallbackTaskCallback)initGhostSlowdownActor, 0, 0x1E);
                 if (actor != NULL) {
                     actor->playerIndex = arg0;
@@ -4274,7 +4312,7 @@ void spawnGhostSlowdownTargets(s16 arg0) {
                 }
             }
             playerIndex += 1;
-        } while (playerIndex < gRacePlayerCount);
+        } while (playerIndex < playerLimit);
     }
 }
 
