@@ -116,12 +116,14 @@ make BUILD_MODE=shiftable ONLINE_BATTLE=1
 
 In-game: **GAME MENU → Online Battle** → lobby ready-up → host Start.
 
-Local 2P loopback (boots straight into the lobby):
+Local 2P loopback (then **GAME MENU → Online Battle** on each window):
 
 ```bash
-make BUILD_MODE=shiftable ONLINE_BATTLE=1 ONLINE_BATTLE_AUTOTEST=1
+make BUILD_MODE=shiftable ONLINE_BATTLE=1
 python tools/online_test_2p.py
 ```
+
+Optional: `ONLINE_BATTLE_AUTOTEST=1` boots straight into the lobby (dev only).
 
 See [tools/online/README.md](tools/online/README.md) for the dedicated lobby
 server, net client, Mupen process-memory bridge, and keyboard controls notes.

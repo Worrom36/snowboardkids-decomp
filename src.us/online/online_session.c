@@ -14,6 +14,13 @@ extern s8 gRacePlayerCount;
 static u8 sOnlineSessionActive;
 static u8 sOnlineRemoteSeat[ONLINE_MAX_SEATS];
 static s16 sRemoteAppliedAnim[ONLINE_MAX_SEATS];
+static u8 sRemoteYawFlipHold[ONLINE_MAX_SEATS];
+
+/* Local renderer bits — must not be wiped by authority snapshots or draws skip frames. */
+#define ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK 0x180
+/* Board yaw-flip; toggles at the start line and mirrors the mesh every frame if raw-synced. */
+#define ONLINE_REMOTE_STATEFLAGS_YAW_FLIP   0x400
+#define ONLINE_REMOTE_YAW_FLIP_HOLD_FRAMES  3
 
 /*
  * Remotes skip updateRacePlayer / surface contact (those fight the networked
@@ -101,6 +108,7 @@ void onlineSessionReset(void) {
     for (i = 0; i < ONLINE_MAX_SEATS; i++) {
         sOnlineRemoteSeat[i] = 0;
         sRemoteAppliedAnim[i] = -1;
+        sRemoteYawFlipHold[i] = 0;
     }
     onlineMailboxInit();
 }
@@ -318,7 +326,7 @@ void onlineSessionPublishLocalRacer(RacePlayer *player) {
     out->modelRotationX = player->modelRotationX;
     out->modelRotationY = player->modelRotationY;
     out->modelRotationZ = player->modelRotationZ;
-    out->stateFlags = player->stateFlags;
+    out->stateFlags = player->stateFlags & ~ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
     out->stateTimer = player->stateTimer;
     out->groundOffset = player->groundOffset;
     gOnlineMailbox.gameHeartbeat++;
@@ -345,6 +353,9 @@ void onlineSessionApplyRemoteInput(RacePlayer *player) {
 void onlineSessionApplyRemoteRacers(void) {
     RacePlayer *player;
     OnlineRacerSnapshot *snap;
+    u32 localBits;
+    u32 incoming;
+    u32 yawBit;
     s32 i;
 
     if (sOnlineSessionActive == 0) {
@@ -381,7 +392,23 @@ void onlineSessionApplyRemoteRacers(void) {
         player->modelRotationX = snap->modelRotationX;
         player->modelRotationY = snap->modelRotationY;
         player->modelRotationZ = snap->modelRotationZ;
-        player->stateFlags = snap->stateFlags;
+
+        localBits = player->stateFlags & ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
+        incoming = snap->stateFlags & ~ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
+        yawBit = incoming & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP;
+        if (yawBit != (player->stateFlags & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP)) {
+            if (sRemoteYawFlipHold[i] < ONLINE_REMOTE_YAW_FLIP_HOLD_FRAMES) {
+                sRemoteYawFlipHold[i]++;
+                incoming = (incoming & ~ONLINE_REMOTE_STATEFLAGS_YAW_FLIP) |
+                           (player->stateFlags & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP);
+            } else {
+                sRemoteYawFlipHold[i] = 0;
+            }
+        } else {
+            sRemoteYawFlipHold[i] = 0;
+        }
+        player->stateFlags = incoming | localBits;
+
         player->stateTimer = snap->stateTimer;
         player->groundOffset = snap->groundOffset;
         if (snap->groundOffset != 0) {

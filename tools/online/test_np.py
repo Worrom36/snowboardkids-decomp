@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Launch a local N-player Online Battle test stack.
 
-Prereq (autotest ROM that boots straight into the lobby):
+Prereq (normal Online Battle ROM — use the in-game Online Battle menu):
+  make BUILD_MODE=shiftable ONLINE_BATTLE=1
+
+Optional fast-boot (skips title/menus; not for shipping builds):
   make BUILD_MODE=shiftable ONLINE_BATTLE=1 ONLINE_BATTLE_AUTOTEST=1
 
 Then:
