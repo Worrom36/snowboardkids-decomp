@@ -38,6 +38,11 @@
 #define RACE_UI_SNOWBOARD_TRAIL_SCALE_Y 0x230000
 #define RACE_UI_SNOWBOARD_TRAIL_SCALE_Z 0
 #define RACE_UI_SNOWBOARD_TRAIL_TIMER 0xF
+#ifdef ONLINE_BATTLE
+#define RACE_UI_FOCUS_PLAYER_INDEX onlineSessionFocusPlayerIndex()
+#else
+#define RACE_UI_FOCUS_PLAYER_INDEX 0
+#endif
 #define RACE_UI_SNOWBOARD_TRAIL_INITIAL_VELOCITY_Y 0x20000
 #define RACE_UI_SINGLE_TRAIL_TIMER 0x3C
 #define RACE_UI_SINGLE_TRAIL_LOCAL_ROT_Y 0x800
@@ -1023,7 +1028,10 @@ void updateRaceUiPrizePayoutContinuePrompt(void *arg0) {
 }
 
 void drawRaceUiPrizePayoutRankPanel(RaceUiAlpha18Actor *arg0) {
-    if (gRacePlayers[0].rankIndex != 0) {
+    RacePlayer *focus;
+
+    focus = &gRacePlayers[RACE_UI_FOCUS_PLAYER_INDEX];
+    if (focus->rankIndex != 0) {
         if (arg0->alpha != 0xFF) {
             gDPPipeSync(gRegionAllocPtr++);
             gDPSetCombineMode(gRegionAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
@@ -1036,18 +1044,18 @@ void drawRaceUiPrizePayoutRankPanel(RaceUiAlpha18Actor *arg0) {
             }
         }
         drawAssetTableSprite(-0x68, -0x2C, getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)), 0x4D);
-        drawAssetTableSprite(-0x42, -0xC, getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)), gRacePlayers[0].rankIndex);
+        drawAssetTableSprite(-0x42, -0xC, getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)), focus->rankIndex);
         drawAssetTableSprite(
             -0x22,
             4,
             getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)),
-            gRacePlayers[0].rankIndex + 0x48
+            focus->rankIndex + 0x48
         );
         drawAssetTableSprite(
             -0x68,
             6,
             getRelocatableHeapBlockBase(ASSET_HANDLE(0x1F)),
-            gRacePlayers[0].characterId + 0x91
+            focus->characterId + 0x91
         );
         if (arg0->alpha != 0xFF) {
             gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
@@ -1097,9 +1105,9 @@ void drawRaceUiPrizePayoutCollectedCoins(void *arg0)
     i = 0;
     do
     {
-        sprintf(&buffer[i], gRaceUiCoinCounterFormat, gRacePlayers[0].score);
+        sprintf(&buffer[i], gRaceUiCoinCounterFormat, gRacePlayers[RACE_UI_FOCUS_PLAYER_INDEX].score);
         x = 0x20;
-        if (gRacePlayers[0].rankIndex == 3)
+        if (gRacePlayers[RACE_UI_FOCUS_PLAYER_INDEX].rankIndex == 3)
         {
             colorValue = 0xD; \
         } else { \
@@ -1129,7 +1137,7 @@ void drawRaceUiPrizePayoutCollectedCoins(void *arg0)
         drawAssetTableSpriteWithExplicitPalette((s16) x, -0xF, getRelocatableHeapBlockBase(assets[0x1F]), 0x37, color);
     }
     while (0);
-    if (gRacePlayers[0].rankIndex == 3)
+    if (gRacePlayers[RACE_UI_FOCUS_PLAYER_INDEX].rankIndex == 3)
     {
         drawAssetTableSprite(0x18, -0xB, getRelocatableHeapBlockBase(assets[0x1F]), 0x4E);
     }
@@ -1151,7 +1159,7 @@ void drawRaceUiPrizePayoutTotalMoney(void *arg0) {
     volatile s16 *handles;
     s32 space;
 
-    sprintf(buffer + -8, gRaceUiTotalMoneyCounterFormat, gRacePlayers[0].money);
+    sprintf(buffer + -8, gRaceUiTotalMoneyCounterFormat, gRacePlayers[RACE_UI_FOCUS_PLAYER_INDEX].money);
     x = 0x18;
     handles = gAssetHandles;
  ptr = (u8 *) (((s32) padding) - 0x10); if (!ptr) { } space = ' '; loop: if ((*ptr) != 0) {
@@ -1215,12 +1223,12 @@ void updateRaceUiPrizePayoutCountMoney(RaceUiAlpha18Actor *arg0) {
     if (value != 0) {
         shouldPlaySound = 1;
     }
-    player = (RacePlayer *)(s32)&gRacePlayers[0];
+    player = (RacePlayer *)(s32)&gRacePlayers[RACE_UI_FOCUS_PLAYER_INDEX];
     if (value >= 9) {
         player->money += 8;
         arg0->score -= 8;
     } else {
-        gRacePlayers[0].money = player->money + value;
+        player->money = player->money + value;
         arg0->score = 0;
     }
 
@@ -1239,7 +1247,7 @@ void updateRaceUiPrizePayoutCountMoney(RaceUiAlpha18Actor *arg0) {
     }
 
     if (gPlayerInputPressed[0] & A_BUTTON) {
-        gRacePlayers[0].money = player->money + arg0->score;
+        player->money = player->money + arg0->score;
         if (player->rankIndex != 3) {
             player->money += player->score;
             player->score = 0;
@@ -1341,8 +1349,9 @@ void updateRaceUiPrizePayoutFadeIn(RaceUiPrizePayoutActor *arg0) {
 
 void initRaceUiPrizePayout(RaceUiPrizePayoutActor *arg0) {
     arg0->alpha = 0;
-    arg0->prizeAmount =
-        gRacePrizeAmountsByCourseAndRank[0][gRacePlayers[0].rankIndex + gRaceCourseIndex.signedValue * 4];
+    arg0->prizeAmount = gRacePrizeAmountsByCourseAndRank[0]
+                                                     [gRacePlayers[RACE_UI_FOCUS_PLAYER_INDEX].rankIndex +
+                                                      gRaceCourseIndex.signedValue * 4];
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceUiPrizePayoutFadeIn);
 }
 

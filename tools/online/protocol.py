@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple
 
 MAGIC = 0x4F4E504B  # 'ONPK'
 VERSION = 2
-DEFAULT_PORT = 7777
+DEFAULT_PORT = 6464
 MAX_SEATS = 4
 
 
@@ -28,7 +28,7 @@ class Cmd(IntEnum):
     RACER_SNAPSHOT = 11
     EVENT = 12
     HEARTBEAT = 13
-    ACK = 14
+    CPU_PATH_SNAPSHOT = 14
 
 
 class Phase(IntEnum):
@@ -155,6 +155,7 @@ class RacerSnapshot:
     item_effect_type: int = 0
     item_effect_count: int = 0
     action_effect_type: int = 0
+    lap_digit: int = 0
     sequence: int = 0
     pos_x: int = 0
     pos_y: int = 0
@@ -180,7 +181,7 @@ class RacerSnapshot:
     state_timer: int = 0
     ground_offset: int = 0
 
-    _STRUCT = struct.Struct(">BBBBBxxxIiiiiiihhhhihhhhIhhhhIii")
+    _STRUCT = struct.Struct(">BBBBBBxxIiiiiiihhhhihhhhIhhhhIii")
 
     def pack(self) -> bytes:
         return self._STRUCT.pack(
@@ -189,6 +190,7 @@ class RacerSnapshot:
             self.item_effect_type,
             self.item_effect_count,
             self.action_effect_type,
+            self.lap_digit,
             self.sequence,
             self.pos_x,
             self.pos_y,
@@ -217,6 +219,54 @@ class RacerSnapshot:
 
     @classmethod
     def unpack(cls, data: bytes, offset: int = 0) -> Tuple["RacerSnapshot", int]:
+        values = cls._STRUCT.unpack_from(data, offset)
+        return cls(*values), offset + cls._STRUCT.size
+
+
+@dataclass
+class CpuPathSnapshot:
+    seat: int = 0
+    valid: int = 0
+    item_effect_type: int = 0
+    item_effect_count: int = 0
+    action_effect_type: int = 0
+    lap_digit: int = 0
+    sequence: int = 0
+    course_path_index: int = 0
+    facing_angle: int = 0
+    course_path_offset: int = 0
+    along_speed: int = 0
+    mode: int = 0
+    animation_id: int = 0
+    update_state: int = 0
+    state_flags: int = 0
+    ground_offset: int = 0
+
+    # Matches OnlineCpuPathSnapshot (0x28); pad1E is xx (2 bytes).
+    _STRUCT = struct.Struct(">BBBBBBxxIhhiihhhxxIi")
+
+    def pack(self) -> bytes:
+        return self._STRUCT.pack(
+            self.seat,
+            self.valid,
+            self.item_effect_type,
+            self.item_effect_count,
+            self.action_effect_type,
+            self.lap_digit,
+            self.sequence,
+            self.course_path_index,
+            self.facing_angle,
+            self.course_path_offset,
+            self.along_speed,
+            self.mode,
+            self.animation_id,
+            self.update_state,
+            self.state_flags,
+            self.ground_offset,
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, offset: int = 0) -> Tuple["CpuPathSnapshot", int]:
         values = cls._STRUCT.unpack_from(data, offset)
         return cls(*values), offset + cls._STRUCT.size
 

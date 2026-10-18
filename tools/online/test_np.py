@@ -100,7 +100,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Local N-player Online Battle quick test")
     parser.add_argument("--players", type=int, default=2, choices=range(1, MAX_PLAYERS + 1))
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=7777)
+    parser.add_argument("--port", type=int, default=6464)
     parser.add_argument(
         "--no-auto",
         action="store_true",
@@ -182,7 +182,7 @@ def main() -> None:
     print()
     print(f"{n}P stack is up.")
     print(f"  server pid={server.pid}  clients={[c.pid for c in clients]}")
-    print("  Autotest ROM boots straight into ONLINE LOBBY (Slash / course 0).")
+    print("  Autotest ROM boots straight into ONLINE LOBBY (random character / course 0).")
     if args.no_auto:
         print("  Manual: Enter to ready on each window, host Start to launch.")
     else:

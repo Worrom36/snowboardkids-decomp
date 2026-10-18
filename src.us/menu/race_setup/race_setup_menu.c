@@ -41,7 +41,11 @@ typedef struct {
     u16 tailPadding[2];
 } RaceSetupDefaultSaveData;
 
+#ifdef UNLOCK_ALL
+u8 gMainMenuSecretCodeUnlocked = 1;
+#else
 u8 gMainMenuSecretCodeUnlocked = 0;
+#endif
 u8 gMainMenuSecretCodeStep = 0;
 RaceSetupMenuPackedData gRaceSetupMenuPackedData = {
     0,
@@ -818,3 +822,20 @@ void initRaceSetupPlayerSaveData(s32 playerIndex) {
         gGameSaveDataBuffer[playerIndex].extraCourseUnlockFlags = 0x3F;
     }
 }
+
+#ifdef UNLOCK_ALL
+void applyUnlockAllSaveCheats(s32 playerIndex) {
+    s32 record;
+
+    for (record = 0; record < 11; record++) {
+        gGameSaveDataBuffer[playerIndex].cupPlacements[record] = 1;
+    }
+    for (record = 0; record < MULTIPLAYER_COURSE_SELECT_DEFAULT_COURSE_COUNT; record++) {
+        gGameSaveDataBuffer[playerIndex].courseUnlockStates[record] =
+            gMultiplayerCourseSelectDefaultCourseIds[record];
+    }
+    gGameSaveDataBuffer[playerIndex].characterFlags = 1;
+    gGameSaveDataBuffer[playerIndex].progressionLevel = 3;
+    gGameSaveDataBuffer[playerIndex].extraCourseUnlockFlags = 0x3F;
+}
+#endif

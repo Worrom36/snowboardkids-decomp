@@ -21,20 +21,23 @@ typedef struct OnlineMailbox {
     /* 0x00B */ u8 pad0B;
     /* 0x00C */ OnlineLobbySnapshot lobby;
     /* 0x048 */ OnlineLoadout pendingLoadout;
-    /* 0x050 */ OnlineRacerSnapshot localOut;
-    /* 0x0A0 */ OnlineRacerSnapshot remoteIn[ONLINE_MAX_SEATS];
-    /* 0x1E0 */ u8 eventOutCount;
-    /* 0x1E1 */ u8 eventInCount;
-    /* 0x1E2 */ u8 pad1E2[2];
-    /* 0x1E4 */ OnlineRaceEvent eventOut[ONLINE_EVENT_QUEUE_SIZE];
-    /* 0x224 */ OnlineRaceEvent eventIn[ONLINE_EVENT_QUEUE_SIZE];
-    /* 0x264 */ u32 bridgeHeartbeat;
-    /* 0x268 */ u32 gameHeartbeat;
+    /* 0x050 */ OnlineRacerSnapshot authorityOut[ONLINE_MAX_SEATS]; /* local + host-sim CPUs */
+    /* 0x190 */ OnlineRacerSnapshot remoteIn[ONLINE_MAX_SEATS];
+    /* 0x2D0 */ OnlineCpuPathSnapshot cpuPathOut[ONLINE_MAX_SEATS];
+    /* 0x370 */ OnlineCpuPathSnapshot cpuPathIn[ONLINE_MAX_SEATS];
+    /* 0x410 */ u8 eventOutCount;
+    /* 0x411 */ u8 eventInCount;
+    /* 0x412 */ u8 pad412[2];
+    /* 0x414 */ OnlineRaceEvent eventOut[ONLINE_EVENT_QUEUE_SIZE];
+    /* 0x454 */ OnlineRaceEvent eventIn[ONLINE_EVENT_QUEUE_SIZE];
+    /* 0x494 */ u32 bridgeHeartbeat;
+    /* 0x498 */ u32 gameHeartbeat;
 } OnlineMailbox;
 
 typedef char OnlineMailboxLobbyOffsetCheck[(sizeof(OnlineLobbySnapshot) == 0x3C) ? 1 : -1];
 typedef char OnlineMailboxRacerOffsetCheck[(sizeof(OnlineRacerSnapshot) == 0x50) ? 1 : -1];
-typedef char OnlineMailboxSizeCheck[(sizeof(OnlineMailbox) == 0x26C) ? 1 : -1];
+typedef char OnlineMailboxCpuPathOffsetCheck[(sizeof(OnlineCpuPathSnapshot) == 0x28) ? 1 : -1];
+typedef char OnlineMailboxSizeCheck[(sizeof(OnlineMailbox) == 0x49C) ? 1 : -1];
 
 extern OnlineMailbox gOnlineMailbox;
 

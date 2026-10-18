@@ -528,6 +528,23 @@ void initRacePlayer(RacePlayer *player) {
     if ((gRaceDemoPlaybackEnabled == 0) && (gRaceSplitscreenMode == 0)) {
         createCallbackTaskWithUserId((CallbackTaskCallback)waitForRaceStartPlayerEffect, 0, 1, player->playerIndex);
     }
+
+#ifdef ONLINE_BATTLE
+    /*
+     * initRacePlayer zeroes from pos through the end of the struct, which
+     * includes autopilotEnabled. Re-apply after that wipe. isCpu / input source
+     * live before pos and survive the clear.
+     */
+#ifdef AUTOPILOT_DEFAULT_ON
+    if ((player->isCpu == 0) && (player->replayInputSource == RACE_PLAYER_INPUT_LIVE)) {
+        player->autopilotEnabled = 1;
+    } else {
+        player->autopilotEnabled = 0;
+    }
+#else
+    player->autopilotEnabled = 0;
+#endif
+#endif
 }
 
 void updateRacePlayers(void) {
@@ -687,7 +704,11 @@ void updateRacePlayer(RacePlayer *player) {
     player->speedLimit += speedDelta;
     player->stateFlags &= ~0x800;
 
+#ifdef ONLINE_BATTLE
+    if (racePlayerAiControls(player)) {
+#else
     if (player->isCpu != 0) {
+#endif
         updateRacePlayerCheckpointEvents(player);
     }
 
@@ -867,7 +888,11 @@ void updateRacePlayerMode00Grounded(RacePlayer *player) {
         speed = -0x4000;
     }
 
+#ifdef ONLINE_BATTLE
+    if (racePlayerAiControls(player)) {
+#else
     if (player->isCpu != 0) {
+#endif
         getRaceCourseTargetPositionAhead(
             player->coursePathIndex,
             player->pos.x,
@@ -1023,7 +1048,11 @@ void updateRacePlayerMode00Grounded(RacePlayer *player) {
             stepRaceMotionJointAnimationUntilEnd(player);
         }
 
+#ifdef ONLINE_BATTLE
+        if (!racePlayerAiControls(player)) {
+#else
         if (player->isCpu == 0) {
+#endif
             steerAngle = 0;
             bankRate = (-turn * 0x10 * player->unk268) / 0x100;
             interpolated = (((player->unk270 - player->unk26C) * (0x3F - player->leanScale)) / 0x20) + player->unk26C;
@@ -1080,7 +1109,11 @@ void updateRacePlayerMode00Grounded(RacePlayer *player) {
         updateRacePlayerLocalVelocity(player, 0, rotation, player->unk274, player->unk278, player->unk27C);
 
         if (player->unk57A == 0) {
+#ifdef ONLINE_BATTLE
+            if (!racePlayerAiControls(player)) {
+#else
             if (player->isCpu == 0) {
+#endif
                 if (player->inputFlags & 0x8000) {
                     player->mode = 2;
                     player->updateState = 0;
@@ -1189,7 +1222,11 @@ void updateRacePlayerMode01JumpStart(RacePlayer *player) {
 
     if (player->subState == 0) {
         updateRacePlayerItemEffectUse(player);
+#ifdef ONLINE_BATTLE
+        if (!racePlayerAiControls(player)) {
+#else
         if (player->isCpu == 0) {
+#endif
             if (player->stickX > 0) {
                 player->facingAngle -= 0x18;
             }
@@ -1255,7 +1292,11 @@ void updateRacePlayerMode22Airborne(RacePlayer *player) {
 
     if (player->subState == 0) {
         updateRacePlayerItemEffectUse(player);
+#ifdef ONLINE_BATTLE
+        if (!racePlayerAiControls(player)) {
+#else
         if (player->isCpu == 0) {
+#endif
             if (player->stickX > 0) {
                 player->facingAngle -= 0x18;
             }
@@ -1382,7 +1423,11 @@ void updateRacePlayerAirborneLaunch(RacePlayer *player) {
         player->updateState++;
     }
 
+#ifdef ONLINE_BATTLE
+    if (!racePlayerAiControls(player) && !(player->inputFlags & 0x8000)) {
+#else
     if ((player->isCpu == 0) && !(player->inputFlags & 0x8000)) {
+#endif
         player->stateFlags &= ~0x10;
     }
 
@@ -1464,7 +1509,11 @@ void updateRacePlayerAirborneCruise(RacePlayer *player) {
     }
 
     if (player->stateFlags & 0x10) {
+#ifdef ONLINE_BATTLE
+        if (!racePlayerAiControls(player)) {
+#else
         if (player->isCpu == 0) {
+#endif
             if (!(player->inputFlags & 0x8000)) {
                 player->stateFlags &= ~0x10;
             }

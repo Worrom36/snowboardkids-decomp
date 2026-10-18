@@ -67,6 +67,19 @@ endif
 ifeq ($(ONLINE_BATTLE_AUTOTEST):$(ONLINE_BATTLE),1:0)
   $(error ONLINE_BATTLE_AUTOTEST=1 requires ONLINE_BATTLE=1)
 endif
+# Debug: local LIVE humans start with autopilot on. Independent of AUTOTEST. Requires ONLINE_BATTLE=1.
+AUTOPILOT_DEFAULT_ON ?= 0
+ifeq ($(filter $(AUTOPILOT_DEFAULT_ON),0 1),)
+  $(error AUTOPILOT_DEFAULT_ON must be 0 or 1)
+endif
+ifeq ($(AUTOPILOT_DEFAULT_ON):$(ONLINE_BATTLE),1:0)
+  $(error AUTOPILOT_DEFAULT_ON=1 requires ONLINE_BATTLE=1)
+endif
+# Debug: force the main-menu unlock cheat (all courses, Shinobin, progression). Non-matching.
+UNLOCK_ALL ?= 0
+ifeq ($(filter $(UNLOCK_ALL),0 1),)
+  $(error UNLOCK_ALL must be 0 or 1)
+endif
 ASM_DIRS  = asm$(VERSION_SUFFIX) asm$(VERSION_SUFFIX)/data
 BIN_DIRS  = assets$(VERSION_SUFFIX)
 SRC_DIR = src.$(VERSION)
@@ -182,7 +195,9 @@ ULTRA_AS_POST =
 C_DEFINES    = $(VERSION_DEFINE) -DLANGUAGE_C -D_LANGUAGE_C -D_MIPS_SZLONG=32 -DNDEBUG \
                -DCOMPILING_LIBULTRA -DBUILD_VERSION=VERSION_I -DF3DEX_GBI \
                $(if $(filter 1,$(ONLINE_BATTLE)),-DONLINE_BATTLE=1,) \
-               $(if $(filter 1,$(ONLINE_BATTLE_AUTOTEST)),-DONLINE_BATTLE_AUTOTEST=1,)
+               $(if $(filter 1,$(ONLINE_BATTLE_AUTOTEST)),-DONLINE_BATTLE_AUTOTEST=1,) \
+               $(if $(filter 1,$(AUTOPILOT_DEFAULT_ON)),-DAUTOPILOT_DEFAULT_ON=1,) \
+               $(if $(filter 1,$(UNLOCK_ALL)),-DUNLOCK_ALL=1,)
 CC_CHECK_MIPS_DEFINES = -DMIPSEB -D_MIPS_FPSET=16 -D_MIPS_ISA_MIPS2=2 \
                         -D_MIPS_ISA=_MIPS_ISA_MIPS2 -D_ABIO32=1 \
                         -D_MIPS_SIM=_ABIO32 -D_MIPS_SZINT=32 \
@@ -589,6 +604,29 @@ run: wrap
 	$(PRINTF) "[$(CYAN)  run   $(NO_COL)]  dist/play/Play.bat\n"
 	$(V)$(PYTHON) $(TOOLS_DIR)/wrap-rom.py --rom $(TARGET).z64 --out dist/play --run
 
+# Self-contained Online Battle kit (ROM + Mupen + embeddable Python + bats).
+# Force-rebuild flag-sensitive objects so a leftover AUTOTEST ROM cannot ship.
+PACKAGE_ONLINE_BUILD_DIR = build/shiftable
+PACKAGE_ONLINE_FLAG_OBJS = \
+	$(PACKAGE_ONLINE_BUILD_DIR)/src.us/online/online_lobby_menu.o \
+	$(PACKAGE_ONLINE_BUILD_DIR)/src.us/online/online_session.o \
+	$(PACKAGE_ONLINE_BUILD_DIR)/src.us/race/flow/race_flow.o \
+	$(PACKAGE_ONLINE_BUILD_DIR)/src.us/race/player/race_player_update.o \
+	$(PACKAGE_ONLINE_BUILD_DIR)/src.us/menu/main_menu/controller_main_menu_flow.o \
+	$(PACKAGE_ONLINE_BUILD_DIR)/src.us/menu/race_setup/race_setup_menu.o
+
+package-online:
+	$(PRINTF) "[$(CYAN) package$(NO_COL)]  Online Battle win64 play kit\n"
+	$(V)rm -f $(PACKAGE_ONLINE_FLAG_OBJS) \
+		$(PACKAGE_ONLINE_BUILD_DIR)/snowboardkids.elf \
+		$(PACKAGE_ONLINE_BUILD_DIR)/snowboardkids.bin \
+		$(PACKAGE_ONLINE_BUILD_DIR)/snowboardkids.z64 \
+		$(PACKAGE_ONLINE_BUILD_DIR)/snowboardkids.map
+	$(MAKE) BUILD_MODE=shiftable ONLINE_BATTLE=1 UNLOCK_ALL=1 \
+		ONLINE_BATTLE_AUTOTEST=0 AUTOPILOT_DEFAULT_ON=0 WRAP_ROM=0
+	$(V)$(PYTHON) $(TOOLS_DIR)/package-online.py \
+		--rom build/shiftable/snowboardkids.z64 --out dist/online --zip
+
 # Check baserom exists
 .PHONY: check
 check:
@@ -642,6 +680,6 @@ endif
 
 ### Settings
 .SECONDARY:
-.PHONY: all clean default extract nonmatching verify wrap run check course-definitions \
+.PHONY: all clean default extract nonmatching verify wrap run package-online check course-definitions \
 	check-clang-format-version check-clang-tidy-version format format-check tidy \
 	decompilation-summary

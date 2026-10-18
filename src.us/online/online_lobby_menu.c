@@ -1,6 +1,7 @@
 #include "game/online/online_lobby_menu.h"
 #include "assets.h"
 #include "common.h"
+#include <PR/os_reg.h>
 #include "game/audio/sound_manager.h"
 #include "game/engine/callback_task_scheduler.h"
 #include "game/engine/controller_input.h"
@@ -134,16 +135,20 @@ void openOnlineBattleConnectFlow(void) {
 
 #ifdef ONLINE_BATTLE_AUTOTEST
 /*
- * Fast boot for local 2P testing: skip title/menus and open the online lobby
- * with a fixed default loadout (course 0 / Slash / board 0 / 3 laps).
+ * Fast boot for local N-P testing: skip title/menus and open the online lobby
+ * with course 0 / random character / board 0 / 3 laps.
  * Build with: make BUILD_MODE=shiftable ONLINE_BATTLE=1 ONLINE_BATTLE_AUTOTEST=1
  */
 void bootOnlineBattleAutotest(void) {
+    u8 characterId;
+
+    /* 6 roster ids (0..5). osGetCount varies across staggered Mupen boots. */
+    characterId = (u8)(osGetCount() % 6);
     gRaceCourseIndex.signedValue = 0;
     gRaceSplitscreenMode = 0;
     gPlayerCount = 1;
-    gRacePlayers[0].selectedCharacterId = 0;
-    gRacePlayers[0].characterId = 0;
+    gRacePlayers[0].selectedCharacterId = characterId;
+    gRacePlayers[0].characterId = characterId;
     gRacePlayers[0].menuSelection = 0;
     gRacePlayers[0].characterVariant = 0;
     gRacePlayers[0].selectionUnlockState = 0;

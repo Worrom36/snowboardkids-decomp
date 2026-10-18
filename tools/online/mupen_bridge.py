@@ -20,6 +20,8 @@ from tools.online.mailbox_file import (
     MAILBOX_SIZE,
     OFF_BRIDGE_CMD,
     OFF_BRIDGE_HEARTBEAT,
+    OFF_CPU_PATH_IN,
+    OFF_CPU_PATH_OUT,
     OFF_ERROR,
     OFF_EVENT_IN,
     OFF_EVENT_IN_COUNT,
@@ -414,6 +416,7 @@ class MupenBridge:
         # Continuous game-owned fields -> file
         host[OFF_PENDING_LOADOUT : OFF_PENDING_LOADOUT + 8] = rdram[OFF_PENDING_LOADOUT : OFF_PENDING_LOADOUT + 8]
         host[OFF_LOCAL_OUT : OFF_REMOTE_IN] = rdram[OFF_LOCAL_OUT : OFF_REMOTE_IN]
+        host[OFF_CPU_PATH_OUT:OFF_CPU_PATH_IN] = rdram[OFF_CPU_PATH_OUT:OFF_CPU_PATH_IN]
         # One-shot eventOut: copy then clear RDRAM so events are not re-sent every frame.
         if rdram[OFF_EVENT_OUT_COUNT] != 0:
             host[OFF_EVENT_OUT_COUNT] = rdram[OFF_EVENT_OUT_COUNT]
@@ -440,7 +443,8 @@ class MupenBridge:
 
         # Continuous bridge-owned fields -> RDRAM
         rdram[OFF_ERROR] = host[OFF_ERROR]
-        rdram[OFF_REMOTE_IN:OFF_EVENT_OUT_COUNT] = host[OFF_REMOTE_IN:OFF_EVENT_OUT_COUNT]
+        rdram[OFF_REMOTE_IN:OFF_CPU_PATH_OUT] = host[OFF_REMOTE_IN:OFF_CPU_PATH_OUT]
+        rdram[OFF_CPU_PATH_IN:OFF_EVENT_OUT_COUNT] = host[OFF_CPU_PATH_IN:OFF_EVENT_OUT_COUNT]
         # One-shot eventIn: deliver when the game has drained the previous batch.
         if rdram[OFF_EVENT_IN_COUNT] == 0 and host[OFF_EVENT_IN_COUNT] != 0:
             rdram[OFF_EVENT_IN_COUNT] = host[OFF_EVENT_IN_COUNT]

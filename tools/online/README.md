@@ -6,13 +6,13 @@ Single-lobby dedicated server and net client for Snowboard Kids Online Battle.
 
 ```bash
 # Terminal 1 — host the lobby
-python tools/online_server.py --host 0.0.0.0 --port 7777
+python tools/online_server.py --host 0.0.0.0 --port 6464
 
 # Terminal 2 / 3 — each player
-python tools/online_client.py --host <SERVER_IP> --port 7777 --mailbox tmp/online_mailbox.bin
+python tools/online_client.py --host <SERVER_IP> --port 6464 --mailbox tmp/online_mailbox.bin
 ```
 
-Server address defaults come from `tools/online-client/config.ini` (`127.0.0.1:7777`).
+Server address defaults come from `tools/online-client/config.ini` (`127.0.0.1:6464`).
 
 ## Fast local 2P / 4P test
 
@@ -34,6 +34,21 @@ Use `--no-auto` if you want to ready/start with the pad yourself.
 ```bash
 python tools/online/test_loopback.py
 ```
+
+## Windows play package
+
+Ship a self-contained kit (ROM + Mupen + embeddable Python + `.bat` launchers)
+with no system Python required on recipient PCs:
+
+```bash
+make package-online
+```
+
+Output: `dist/online/` and `dist/SnowboardKids-OnlineBattle-win64.zip`.
+
+Ship flags: `ONLINE_BATTLE=1` `UNLOCK_ALL=1`, with `ONLINE_BATTLE_AUTOTEST=0`
+and `AUTOPILOT_DEFAULT_ON=0`. Lobby ready/start stay manual (no `--auto-ready` /
+`--auto-start` in packaged bats). Default UDP port is **6464**.
 
 ## ROM build
 

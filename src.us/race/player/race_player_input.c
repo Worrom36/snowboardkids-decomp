@@ -255,10 +255,21 @@ void updateRacePlayerInput(RacePlayer *player) {
             if ((onlineSessionActive() != 0) && ((u8)player->playerIndex == onlineSessionLocalSeat())) {
                 index = 0;
             }
+            if ((player->isCpu == 0) && (gPlayerInputPressed[index] & R_TRIG)) {
+                player->autopilotEnabled ^= 1;
+            }
 #endif
             player->inputFlags = gPlayerInputHeld[index];
             player->stickX = gPlayerStickX[index];
             player->stickY = gPlayerStickY[index];
+#ifdef ONLINE_BATTLE
+            if (player->autopilotEnabled != 0) {
+                player->stickX = 0;
+                player->stickY = 0;
+                /* Clear jump/item/action so CPU-style branches own those. */
+                player->inputFlags &= ~(A_BUTTON | B_BUTTON | Z_TRIG);
+            }
+#endif
             if (player->unk15 != 0) {
                 recordRaceInputHistoryFrame(player);
             }

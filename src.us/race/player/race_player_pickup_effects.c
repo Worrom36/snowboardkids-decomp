@@ -128,7 +128,11 @@ void updateRacePlayerItemEffectUse(RacePlayer *player) {
 #endif
 
     trigger = 0;
+#ifdef ONLINE_BATTLE
+    if (!racePlayerAiControls(player)) {
+#else
     if (player->isCpu == 0) {
+#endif
         if (player->currentInputFlags & 0x2000) {
             trigger = 1;
         }
@@ -271,7 +275,11 @@ void updateRacePlayerActionEffectUse(RacePlayer *player) {
 #endif
 
     trigger = 0;
+#ifdef ONLINE_BATTLE
+    if (!racePlayerAiControls(player)) {
+#else
     if (player->isCpu == 0) {
+#endif
         if (player->currentInputFlags & 0x4000) {
             trigger = 1;
         }

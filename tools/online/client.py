@@ -103,8 +103,16 @@ class OnlineClient:
 
         if cmd == Cmd.RACER_SNAPSHOT:
             snap, _ = RacerSnapshot.unpack(payload)
-            self.mailbox.write_remote_snapshot(snap)
-            self.mailbox.bump_bridge_heartbeat()
+            if self.mailbox.write_remote_snapshot(snap):
+                self.mailbox.bump_bridge_heartbeat()
+            return
+
+        if cmd == Cmd.CPU_PATH_SNAPSHOT:
+            from tools.online.protocol import CpuPathSnapshot
+
+            snap, _ = CpuPathSnapshot.unpack(payload)
+            if self.mailbox.write_cpu_path_snapshot(snap):
+                self.mailbox.bump_bridge_heartbeat()
             return
 
         if cmd == Cmd.EVENT:
@@ -194,10 +202,10 @@ class OnlineClient:
             lobby_phase = self.mailbox.read_phase()
             if lobby_phase not in (Phase.RACING, Phase.COUNTDOWN):
                 return
-        snap = self.mailbox.read_local_snapshot()
-        if snap is None or not snap.valid:
-            return
-        self.send(Cmd.RACER_SNAPSHOT, snap.pack())
+        for snap in self.mailbox.read_authority_snapshots():
+            self.send(Cmd.RACER_SNAPSHOT, snap.pack())
+        for snap in self.mailbox.read_cpu_path_out_snapshots():
+            self.send(Cmd.CPU_PATH_SNAPSHOT, snap.pack())
         for event in self.mailbox.drain_events_out():
             self.send(Cmd.EVENT, event.pack())
 

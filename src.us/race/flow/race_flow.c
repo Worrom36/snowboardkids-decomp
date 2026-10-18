@@ -664,6 +664,16 @@ void initRaceSceneFlow(void) {
     for (i = 0; i < gPlayerCount; i++) {
         gRacePlayers[i].isCpu = 0;
     }
+#ifdef ONLINE_BATTLE
+    for (i = 0; i < RACE_PLAYER_COUNT; i++) {
+        gRacePlayers[i].autopilotEnabled = 0;
+    }
+#ifdef AUTOPILOT_DEFAULT_ON
+    for (i = 0; i < gPlayerCount; i++) {
+        gRacePlayers[i].autopilotEnabled = 1;
+    }
+#endif
+#endif
     gRacePlayers[0].characterId = gRacePlayers[0].selectedCharacterId;
     gRacePlayers[1].characterId = gRacePlayers[1].selectedCharacterId;
     gRacePlayers[2].characterId = gRacePlayers[2].selectedCharacterId;

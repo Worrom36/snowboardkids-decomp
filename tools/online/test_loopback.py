@@ -93,7 +93,9 @@ async def run_test() -> None:
         remote = MailboxFile(client_b.mailbox.path)
         got = remote._read()
         # remote seat slot for A
-        offset = 0x0A0 + client_a.local_seat * RacerSnapshot._STRUCT.size
+        from tools.online.mailbox_file import OFF_REMOTE_IN
+
+        offset = OFF_REMOTE_IN + client_a.local_seat * RacerSnapshot._STRUCT.size
         assert got[offset + 1] == 1  # valid
         assert int.from_bytes(got[offset + 0x0C : offset + 0x10], "big", signed=True) == 12345
 

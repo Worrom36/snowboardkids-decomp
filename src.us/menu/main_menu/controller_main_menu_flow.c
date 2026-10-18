@@ -7,6 +7,7 @@
 #include "game/engine/system_runtime.h"
 #include "game/engine/game_task_scheduler.h"
 #include "game/menu/main_menu/controller_main_menu_flow.h"
+#include "game/menu/race_setup/race_setup_menu.h"
 #include "game/menu/controller_pak/controller_pak_menu.h"
 #include "game/menu/renderer/menu_screen_effects.h"
 #include "game/menu/main_menu/main_menu_panel_ui.h"
@@ -344,6 +345,9 @@ void readControllerPakSave(u16 controllerIndex) {
         if (checksumFailed == 0) {
             if (validateControllerPakSave(controllerIndex) == 0) {
                 gControllerPakRetryCounts[controllerIndex] = 0;
+#ifdef UNLOCK_ALL
+                applyUnlockAllSaveCheats(controllerIndex);
+#endif
             }
             cursor = &gControllerPakRetryCounts[controllerIndex];
         } else {
@@ -746,7 +750,11 @@ void enterMainMenuFromRace(void) {
 }
 
 void initMainMenu(void) {
+#ifdef UNLOCK_ALL
+    gMainMenuSecretCodeUnlocked = 1;
+#else
     gMainMenuSecretCodeUnlocked = 0;
+#endif
     gMainMenuSecretCodeStep = 0;
     resetAllViewports();
     configureMenuViewport(0, 0xA0, 0x78, 0x120, 0xD0, 0x140, 0xF0, 1.3333334f);

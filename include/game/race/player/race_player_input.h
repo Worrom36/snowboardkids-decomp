@@ -236,7 +236,11 @@ typedef struct RacePlayer {
     /* 0x604 */ s16 rumbleTimer;
     /* 0x606 */ s16 rumblePatternIndex;
     /* 0x608 */ s8 rumblePatternId;
+#ifdef ONLINE_BATTLE
+    /* 0x609 */ u8 autopilotEnabled; /* Hands-off path-follow (not isCpu). */
+#else
     /* 0x609 */ char pad609[1];
+#endif
     /* 0x60A */ s16 replayFrame;
 } RacePlayer;
 
@@ -248,6 +252,14 @@ extern RacePlayerOrder gRaceOrderPlayerIds;
 extern u8 gPlayerCount;
 
 #define gRacePlayersEnd (&gRacePlayers[RACE_PLAYER_COUNT])
+
+#ifdef ONLINE_BATTLE
+#define racePlayerUsesAutopilot(p) ((p)->autopilotEnabled)
+#define racePlayerAiControls(p) (((p)->isCpu != 0) || ((p)->autopilotEnabled != 0))
+#else
+#define racePlayerUsesAutopilot(p) (0)
+#define racePlayerAiControls(p) ((p)->isCpu != 0)
+#endif
 
 void recordRaceReplayInputFrame(RacePlayer *player);
 void playRaceReplayInputFrame(RacePlayer *player);

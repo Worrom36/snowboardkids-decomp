@@ -59,6 +59,7 @@ tools/bin/
 
 # Vendored playable wrapper (fetched on demand by tools/wrap-rom.py)
 tools/mupen64plus/
+# Play wrappers + Online Battle kit (dist/play, dist/online, *.zip)
 dist/
 
 # Local Windows toolchain / IDO downloads (not part of the repo)

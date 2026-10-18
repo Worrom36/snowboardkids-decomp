@@ -20,10 +20,15 @@ void onlineMailboxInit(void) {
     for (i = 0; i < ONLINE_MAX_SEATS; i++) {
         gOnlineMailbox.lobby.seats[i].kind = ONLINE_SEAT_EMPTY;
         gOnlineMailbox.lobby.seats[i].ready = 0;
+        gOnlineMailbox.authorityOut[i].valid = 0;
+        gOnlineMailbox.authorityOut[i].seat = (u8)i;
         gOnlineMailbox.remoteIn[i].valid = 0;
         gOnlineMailbox.remoteIn[i].seat = (u8)i;
+        gOnlineMailbox.cpuPathOut[i].valid = 0;
+        gOnlineMailbox.cpuPathOut[i].seat = (u8)i;
+        gOnlineMailbox.cpuPathIn[i].valid = 0;
+        gOnlineMailbox.cpuPathIn[i].seat = (u8)i;
     }
-    gOnlineMailbox.localOut.valid = 0;
     gOnlineMailbox.eventOutCount = 0;
     gOnlineMailbox.eventInCount = 0;
     gOnlineMailbox.bridgeHeartbeat = 0;

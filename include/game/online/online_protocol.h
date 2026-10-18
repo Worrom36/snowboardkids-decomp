@@ -5,7 +5,7 @@
 
 #define ONLINE_PROTOCOL_VERSION 2
 #define ONLINE_MAX_SEATS        4
-#define ONLINE_DEFAULT_PORT     7777
+#define ONLINE_DEFAULT_PORT     6464
 
 /* Wire / mailbox command ids (shared with Python tools). */
 typedef enum OnlineCmd {
@@ -22,7 +22,8 @@ typedef enum OnlineCmd {
     ONLINE_CMD_ERROR = 10,
     ONLINE_CMD_RACER_SNAPSHOT = 11,
     ONLINE_CMD_EVENT = 12,
-    ONLINE_CMD_HEARTBEAT = 13
+    ONLINE_CMD_HEARTBEAT = 13,
+    ONLINE_CMD_CPU_PATH_SNAPSHOT = 14
 } OnlineCmd;
 
 typedef enum OnlinePhase {
@@ -92,7 +93,8 @@ typedef struct OnlineRacerSnapshot {
     /* 0x02 */ u8 itemEffectType;
     /* 0x03 */ u8 itemEffectCount;
     /* 0x04 */ u8 actionEffectType;
-    /* 0x05 */ u8 pad05[3];
+    /* 0x05 */ u8 lapDigit; /* Remotes skip updateRacePlayer; must sync for HUD rank. */
+    /* 0x06 */ u8 pad06[2];
     /* 0x08 */ u32 sequence;
     /* 0x0C */ s32 posX;
     /* 0x10 */ s32 posY;
@@ -118,6 +120,31 @@ typedef struct OnlineRacerSnapshot {
     /* 0x48 */ s32 stateTimer;
     /* 0x4C */ s32 groundOffset;
 } OnlineRacerSnapshot;
+
+/*
+ * Compact grounded-CPU sync: remotes place from course path instead of XYZ soft-correct.
+ * Size 0x28; host publishes this while surface-locked, full OnlineRacerSnapshot in air/hit.
+ */
+typedef struct OnlineCpuPathSnapshot {
+    /* 0x00 */ u8 seat;
+    /* 0x01 */ u8 valid;
+    /* 0x02 */ u8 itemEffectType;
+    /* 0x03 */ u8 itemEffectCount;
+    /* 0x04 */ u8 actionEffectType;
+    /* 0x05 */ u8 lapDigit;
+    /* 0x06 */ u8 pad06[2];
+    /* 0x08 */ u32 sequence;
+    /* 0x0C */ s16 coursePathIndex;
+    /* 0x0E */ s16 facingAngle;
+    /* 0x10 */ s32 coursePathOffset;
+    /* 0x14 */ s32 alongSpeed;
+    /* 0x18 */ s16 mode;
+    /* 0x1A */ s16 animationId;
+    /* 0x1C */ s16 updateState;
+    /* 0x1E */ s16 pad1E;
+    /* 0x20 */ u32 stateFlags;
+    /* 0x24 */ s32 groundOffset;
+} OnlineCpuPathSnapshot;
 
 typedef struct OnlineRaceEvent {
     /* 0x00 */ u8 type; /* OnlineRaceEventType */

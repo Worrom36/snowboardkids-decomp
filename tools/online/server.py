@@ -15,6 +15,7 @@ from tools.online.protocol import (
     DEFAULT_PORT,
     MAX_SEATS,
     Cmd,
+    CpuPathSnapshot,
     ErrorCode,
     Loadout,
     LobbySeat,
@@ -105,7 +106,16 @@ class LobbyServer:
         for i in range(MAX_SEATS):
             client = self.seats.get(i)
             if client is None:
-                seats.append(LobbySeat(kind=SeatKind.EMPTY if self.phase == Phase.LOBBY else SeatKind.CPU))
+                if self.phase == Phase.LOBBY:
+                    seats.append(LobbySeat(kind=SeatKind.EMPTY))
+                else:
+                    # Host-sim CPU filler: stable character per seat so all clients match.
+                    seats.append(
+                        LobbySeat(
+                            kind=SeatKind.CPU,
+                            loadout=Loadout(character_id=(i % 6), lap_count=3),
+                        )
+                    )
             else:
                 seats.append(
                     LobbySeat(
@@ -269,21 +279,45 @@ class LobbyServer:
                 log(f"  -> START to seat={client_i.seat} {fmt_addr(addr_i)}")
             return
 
-        if cmd == Cmd.RACER_SNAPSHOT and self.phase == Phase.RACING:
-            snap, _ = RacerSnapshot.unpack(payload)
-            snap.seat = client.seat
+        if cmd in (Cmd.RACER_SNAPSHOT, Cmd.CPU_PATH_SNAPSHOT) and self.phase == Phase.RACING:
+            if cmd == Cmd.RACER_SNAPSHOT:
+                snap, _ = RacerSnapshot.unpack(payload)
+            else:
+                snap, _ = CpuPathSnapshot.unpack(payload)
+            claimed = int(snap.seat) & 0xFF
+            # Humans publish their own seat. Host may also publish CPU filler seats
+            # (no human client occupying that index) so remotes share one CPU pose.
+            allowed = claimed == client.seat
+            if (
+                not allowed
+                and client.seat == self.host_seat
+                and claimed < MAX_SEATS
+                and claimed not in self.seats
+            ):
+                allowed = True
+            if not allowed:
+                claimed = client.seat
+            snap.seat = claimed
             snap.valid = 1
-            client.last_snapshot = snap
+            if cmd == Cmd.RACER_SNAPSHOT:
+                client.last_snapshot = snap
             client.snapshot_count += 1
             now = time.time()
             if self.verbose_snapshots or (now - client.last_snapshot_log) >= 1.0:
                 client.last_snapshot_log = now
-                log(
-                    f"SNAPSHOT seat={client.seat} seq={snap.sequence} "
-                    f"pos=({snap.pos_x},{snap.pos_y},{snap.pos_z}) "
-                    f"count={client.snapshot_count}"
-                )
-            self.broadcast(Cmd.RACER_SNAPSHOT, snap.pack(), exclude=addr)
+                if cmd == Cmd.RACER_SNAPSHOT:
+                    log(
+                        f"SNAPSHOT seat={claimed} from={client.seat} seq={snap.sequence} "
+                        f"pos=({snap.pos_x},{snap.pos_y},{snap.pos_z}) "
+                        f"count={client.snapshot_count}"
+                    )
+                else:
+                    log(
+                        f"CPU_PATH seat={claimed} from={client.seat} seq={snap.sequence} "
+                        f"path={snap.course_path_index}/{snap.course_path_offset} "
+                        f"count={client.snapshot_count}"
+                    )
+            self.broadcast(cmd, snap.pack(), exclude=addr)
             return
 
         if cmd == Cmd.EVENT and self.phase == Phase.RACING:

@@ -50,5 +50,8 @@ void updateRaceSetupSaveMenu(void);
 void raceSetupMenuNoop(void);
 void updateRaceSetupRumblePrompt(void);
 void initRaceSetupPlayerSaveData(s32 arg0);
+#ifdef UNLOCK_ALL
+void applyUnlockAllSaveCheats(s32 playerIndex);
+#endif
 
 #endif
