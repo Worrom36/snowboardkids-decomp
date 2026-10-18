@@ -29,6 +29,7 @@
 #include "game/race/race_state.h"
 #include "game/race/race_replay.h"
 #include "game/race/player/race_player_update.h"
+#include "game/race/player/race_player_movement.h"
 #include "game/race/scene/race_scene_setup.h"
 #include "game/race/effects/race_start_transition.h"
 #include "game/race/ui/race_hud.h"
@@ -840,6 +841,7 @@ void initRaceSceneFlow(void) {
         gViewportStates[0].overlayActive = 0;
         gViewportStates[0].overlayAlpha = 0;
         onlineSessionBindLocalView();
+        updateRacePlayerProjectedPosition(&gRacePlayers[gRaceCameras[0].playerIndex & 3]);
         setRaceCameraMode(0, 1);
         gRaceCameras[0].initialized.value = 1;
         createCallbackTask((CallbackTaskCallback)initRaceCountdownPrompt, 6, 0x64);

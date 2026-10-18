@@ -18,7 +18,8 @@
 static uint8_t *g_rdram;
 static uint32_t g_mailbox_rdram_offset; /* byte offset of gOnlineMailbox in RDRAM */
 
-#define ONLINE_MAILBOX_SIZE 0x208
+#define ONLINE_MAILBOX_SIZE 0x26C
+#define ONLINE_RACER_SIZE   0x50
 
 void online_bridge_set_rdram(uint8_t *rdram, uint32_t mailbox_offset) {
     g_rdram = rdram;
@@ -41,9 +42,9 @@ int online_bridge_sync(const uint8_t *host_inbound, uint8_t *host_outbound) {
     mailbox[0x009] = host_inbound[0x009]; /* bridgeToGameCmd */
     mailbox[0x00A] = host_inbound[0x00A]; /* errorCode */
     memcpy(mailbox + 0x00C, host_inbound + 0x00C, 0x3C); /* lobby */
-    memcpy(mailbox + 0x08C, host_inbound + 0x08C, 0x3C * 4); /* remoteIn */
-    mailbox[0x17D] = host_inbound[0x17D];
-    memcpy(mailbox + 0x1C0, host_inbound + 0x1C0, 8 * 8); /* eventIn */
-    memcpy(mailbox + 0x200, host_inbound + 0x200, 4); /* bridgeHeartbeat */
+    memcpy(mailbox + 0x0A0, host_inbound + 0x0A0, ONLINE_RACER_SIZE * 4); /* remoteIn */
+    mailbox[0x1E1] = host_inbound[0x1E1];
+    memcpy(mailbox + 0x224, host_inbound + 0x224, 8 * 8); /* eventIn */
+    memcpy(mailbox + 0x264, host_inbound + 0x264, 4); /* bridgeHeartbeat */
     return 0;
 }

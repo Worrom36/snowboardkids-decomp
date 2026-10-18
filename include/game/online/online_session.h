@@ -26,5 +26,9 @@ void onlineSessionSetLoadout(u8 courseId, u8 characterId, u8 characterVariant, u
 OnlineLobbySnapshot *onlineSessionLobby(void);
 u8 onlineSessionLocalSeat(void);
 u8 onlineSessionPhase(void);
+/* Player index for single-screen HUD / local-only collectibles (localSeat online). */
+s32 onlineSessionFocusPlayerIndex(void);
+/* Viewport/camera slot for a player: local seat always maps to 0 online. */
+s32 onlineSessionViewIndex(s32 playerIndex);
 
 #endif

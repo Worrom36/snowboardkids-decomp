@@ -29,6 +29,13 @@
 #include "game/race/effects/snowboard_trail_effects.h"
 #include "game/engine/viewport_manager.h"
 
+#ifdef ONLINE_BATTLE
+/* Fall/respawn waits on overlayAlpha; local seat always uses viewport 0 online. */
+#define RACE_PLAYER_OVERLAY_VIEWPORT(player) onlineSessionViewIndex((player)->playerIndex)
+#else
+#define RACE_PLAYER_OVERLAY_VIEWPORT(player) ((s32)(u16)(player)->playerIndex)
+#endif
+
 #define RACE_MOTION_STATE(player) ((RaceMotionState *)(player))
 #define setRaceMotionAnimation(player, animIndex) setRaceMotionAnimation(RACE_MOTION_STATE(player), (animIndex))
 #define interpolateRaceMotionJointAnimationFrame(player, animIndex, frameTimer, frameTimerReset) \
@@ -705,8 +712,8 @@ void updateRacePlayer(RacePlayer *player) {
         s32 overlayViewport = player->playerIndex;
 #ifdef ONLINE_BATTLE
         /* Online is always single-screen on viewport 0, even when localSeat != 0. */
-        if ((onlineSessionActive() != 0) && (player->playerIndex == (s32)onlineSessionLocalSeat())) {
-            overlayViewport = 0;
+        if (onlineSessionActive() != 0) {
+            overlayViewport = onlineSessionViewIndex(player->playerIndex);
         }
 #endif
         if (player->stateFlags & 0x80000) {
@@ -4034,7 +4041,7 @@ void updateRacePlayerMode06TerrainFall(RacePlayer *player) {
                 setRaceMotionAnimation(player, 0x21);
             }
             player->stateFlags |= 0x80000;
-            if (gViewportStates[(u16)player->playerIndex].overlayAlpha == 0xFF) {
+            if (gViewportStates[RACE_PLAYER_OVERLAY_VIEWPORT(player)].overlayAlpha == 0xFF) {
                 player->updateTimer++;
                 player->verticalVelocityLimit = 0;
                 player->coursePathIndex = player->unk2E8;
@@ -4068,7 +4075,7 @@ void updateRacePlayerMode06TerrainFall(RacePlayer *player) {
             break;
         case 2:
             player->stateFlags &= 0xFFF7FFFF;
-            if (gViewportStates[(u16)player->playerIndex].overlayAlpha == 0) {
+            if (gViewportStates[RACE_PLAYER_OVERLAY_VIEWPORT(player)].overlayAlpha == 0) {
                 player->mode = 0;
                 player->updateState = 0;
                 player->updateTimer = 0;
@@ -4147,7 +4154,7 @@ void updateRacePlayerMode28TerrainFallWithItemEffect(RacePlayer *player) {
                 setRaceMotionAnimation(player, 0x21);
             }
             player->stateFlags |= 0x80000;
-            if (gViewportStates[(u16)player->playerIndex].overlayAlpha == 0xFF) {
+            if (gViewportStates[RACE_PLAYER_OVERLAY_VIEWPORT(player)].overlayAlpha == 0xFF) {
                 player->updateState++;
                 player->coursePathIndex = player->unk2E8;
             loop:
@@ -4178,7 +4185,7 @@ void updateRacePlayerMode28TerrainFallWithItemEffect(RacePlayer *player) {
             break;
         case 5:
             player->stateFlags &= 0xFFF7FFFF;
-            if (gViewportStates[(u16)player->playerIndex].overlayAlpha == 0) {
+            if (gViewportStates[RACE_PLAYER_OVERLAY_VIEWPORT(player)].overlayAlpha == 0) {
                 player->mode = 0;
                 player->updateState = 0;
                 player->updateTimer = 0;
@@ -4256,7 +4263,7 @@ void updateRacePlayerMode09TerrainCrash(RacePlayer *player) {
                 setRaceMotionAnimation(player, 0x21);
             }
             player->stateFlags |= 0x80000;
-            if (gViewportStates[(u16)player->playerIndex].overlayAlpha == 0xFF) {
+            if (gViewportStates[RACE_PLAYER_OVERLAY_VIEWPORT(player)].overlayAlpha == 0xFF) {
                 player->updateState++;
                 player->coursePathIndex = player->unk2E8;
                 getRaceCourseSurfaceSpawnTransform(
@@ -4287,7 +4294,7 @@ void updateRacePlayerMode09TerrainCrash(RacePlayer *player) {
             break;
         case 5:
             player->stateFlags &= 0xFFF7FFFF;
-            if (gViewportStates[(u16)player->playerIndex].overlayAlpha == 0) {
+            if (gViewportStates[RACE_PLAYER_OVERLAY_VIEWPORT(player)].overlayAlpha == 0) {
                 player->mode = 0;
                 player->updateState = 0;
                 player->updateTimer = 0;

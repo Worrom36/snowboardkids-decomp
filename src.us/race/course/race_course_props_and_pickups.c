@@ -17,6 +17,9 @@
 #include "game/math/fixed_point_math.h"
 #include "game/race/motion/race_motion.h"
 #include <PR/os_cache.h>
+#ifdef ONLINE_BATTLE
+#include "game/online/online_session.h"
+#endif
 
 #define RACE_MODEL_BUFFER_HANDLE gAssetHandles[0x24]
 #define RACE_PICKUP_G_TRI2 0xB1
@@ -947,24 +950,49 @@ loop:
     if (isPositionNearAnyRaceViewportFocus(pos) != 0) {
         if (entry->enabled != 0) {
             if (isRacePlayerInsideCylinder(pos, xzSize, ySize, 0) != 0) {
+#ifdef ONLINE_BATTLE
+                /* Remotes already scored on their machine; only despawn here. */
+                if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(&gRacePlayers[0]) != 0)) {
+                    entry->enabled = 0;
+                    goto next;
+                }
+#endif
                 addRacePlayerScore(&gRacePlayers[0], 0x64);
                 entry->enabled = 0;
                 enqueuePositionalSoundEffect(0x1A, pos, 0x7F, 0x32);
                 goto next;
             }
             if (isRacePlayerInsideCylinder(pos, xzSize, ySize, one) != 0) {
+#ifdef ONLINE_BATTLE
+                if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(&gRacePlayers[1]) != 0)) {
+                    entry->enabled = 0;
+                    goto next;
+                }
+#endif
                 addRacePlayerScore(&gRacePlayers[1], 0x64);
                 entry->enabled = 0;
                 enqueuePositionalSoundEffect(0x1A, pos, 0x7F, 0x32);
                 goto next;
             }
             if (isRacePlayerInsideCylinder(pos, xzSize, ySize, 2) != 0) {
+#ifdef ONLINE_BATTLE
+                if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(&gRacePlayers[2]) != 0)) {
+                    entry->enabled = 0;
+                    goto next;
+                }
+#endif
                 addRacePlayerScore(&gRacePlayers[2], 0x64);
                 entry->enabled = 0;
                 enqueuePositionalSoundEffect(0x1A, pos, 0x7F, 0x32);
                 goto next;
             }
             if (isRacePlayerInsideCylinder(pos, xzSize, ySize, 3) != 0) {
+#ifdef ONLINE_BATTLE
+                if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(&gRacePlayers[3]) != 0)) {
+                    entry->enabled = 0;
+                    goto next;
+                }
+#endif
                 addRacePlayerScore(&gRacePlayers[3], 0x64);
                 entry->enabled = 0;
                 enqueuePositionalSoundEffect(0x1A, pos, 0x7F, 0x32);
@@ -1575,6 +1603,27 @@ void updateRacePickupIdle(RacePickupActor *arg0) {
 
             player = &gRacePlayers[i];
             playerInsideCylinder = 1;
+
+#ifdef ONLINE_BATTLE
+            /*
+             * Remotes already rolled/spent on their machine; item state arrives via
+             * snapshot. Only play the break FX and despawn so both clients align.
+             */
+            if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(player) != 0)) {
+                arg0->velY = 0x60000;
+                setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRacePickupCollected);
+                spawnPickupShardParticle(arg0->pos.x, arg0->pos.y, arg0->pos.z, arg0->rotation, 0);
+                spawnPickupShardParticle(arg0->pos.x, arg0->pos.y, arg0->pos.z, arg0->rotation, 1);
+                spawnPickupShardParticle(arg0->pos.x, arg0->pos.y, arg0->pos.z, arg0->rotation, 2);
+                spawnPickupShardParticle(arg0->pos.x, arg0->pos.y, arg0->pos.z, arg0->rotation, 3);
+                spawnPickupShardParticle(arg0->pos.x, arg0->pos.y, arg0->pos.z, arg0->rotation, 4);
+                spawnPickupShardParticle(arg0->pos.x, arg0->pos.y, arg0->pos.z, arg0->rotation, 5);
+                spawnPickupShardParticle(arg0->pos.x, arg0->pos.y, arg0->pos.z, arg0->rotation, 6);
+                spawnPickupShardParticle(arg0->pos.x, arg0->pos.y, arg0->pos.z, arg0->rotation, 7);
+                enqueuePositionalSoundEffect(0x1F, &arg0->pos, 0x7F, 0x32);
+                goto done;
+            }
+#endif
 
             if ((player->score < 0x64) && (player->isCpu == 0)) {
                 continue;

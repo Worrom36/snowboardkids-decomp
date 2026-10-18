@@ -16,12 +16,110 @@
 
 typedef void (*EffectCallback)(void *);
 
+#ifdef ONLINE_BATTLE
+static s32 spawnRacePlayerItemProjectile(RacePlayer *player, s32 itemType) {
+    void *task;
+
+    task = NULL;
+    if (itemType == RACE_ITEM_SLAPSTICK) {
+        task = createCallbackTaskWithUserIdPreservingArgs(
+            initWideHomingItemProjectile,
+            (u16)(player->playerIndex + 1),
+            0x3C,
+            player->playerIndex
+        );
+    } else if (itemType == RACE_ITEM_PARACHUTE) {
+        task = createCallbackTaskWithUserIdPreservingArgs(
+            initLongRangeHomingItemProjectile,
+            (u16)(player->playerIndex + 1),
+            0x3C,
+            player->playerIndex
+        );
+    } else if (itemType == RACE_ITEM_FREEZE_SHOT) {
+        task = createCallbackTaskWithUserIdPreservingArgs(
+            initCloseRangeHomingItemProjectile,
+            (u16)(player->playerIndex + 1),
+            0x3C,
+            player->playerIndex
+        );
+    } else if (itemType == RACE_ITEM_SNOWMAN) {
+        task = createCallbackTaskWithUserIdPreservingArgs(
+            initBouncingItemProjectile,
+            (u16)(player->playerIndex + 1),
+            0x3C,
+            player->playerIndex
+        );
+    } else if (itemType == RACE_ITEM_BOMB) {
+        task = createCallbackTaskWithUserIdPreservingArgs(
+            initAreaBlastItemProjectile,
+            (u16)(player->playerIndex + 1),
+            0x3C,
+            player->playerIndex
+        );
+    }
+
+    if (task == NULL) {
+        return 0;
+    }
+    createCallbackTaskWithUserIdPreservingArgs(initRacePlayerShockEffect, 5, 4, player->playerIndex);
+    return 1;
+}
+
+static void applyRacePlayerActionEffect(RacePlayer *player, s32 type) {
+    if (type == RACE_ACTION_SPEED_FAN) {
+        if (player->trailEffectTimer == 0) {
+            startSpeedFanEffect(player);
+        }
+    } else if (type == RACE_ACTION_GHOST) {
+        spawnRacePlayerSparkleEffect(player->playerIndex);
+    } else if (type == RACE_ACTION_PAN) {
+        spawnGhostSlowdownTargets(player->playerIndex);
+    } else if (type == RACE_ACTION_ROCK) {
+        createCallbackTaskWithUserIdPreservingArgs(
+            initFallingActionProjectile,
+            0,
+            0x3C,
+            (u16)player->playerIndex
+        );
+    } else if (type == RACE_ACTION_RAT_FACE) {
+        createCallbackTaskWithUserIdPreservingArgs(
+            initForwardActionProjectileEffect,
+            0,
+            3,
+            (u16)player->playerIndex
+        );
+    } else if (type == RACE_ACTION_INVISIBLE) {
+        if (player->actionSoundTimer == 0) {
+            player->actionSoundTimer = 0xB4;
+            enqueuePositionalSoundEffect(0x10, &player->pos, 0x7F, 0x32);
+        }
+    }
+}
+
+void applyOnlineRemoteItemUse(RacePlayer *player, s32 itemType) {
+    if ((player == NULL) || (itemType == RACE_ITEM_NONE)) {
+        return;
+    }
+    spawnRacePlayerItemProjectile(player, itemType);
+}
+
+void applyOnlineRemoteActionUse(RacePlayer *player, s32 actionType) {
+    if ((player == NULL) || (actionType == RACE_ACTION_NONE)) {
+        return;
+    }
+    applyRacePlayerActionEffect(player, actionType);
+}
+#endif
+
 void updateRacePlayerItemEffectUse(RacePlayer *player) {
     s32 trigger;
     s32 deltaX;
     s32 deltaZ;
     s32 angle;
     register s32 i;
+#ifdef ONLINE_BATTLE
+    s32 firedType;
+#endif
 
 #ifdef ONLINE_BATTLE
     if (onlinePlayerIsRemote(player) != 0) {
@@ -73,6 +171,20 @@ void updateRacePlayerItemEffectUse(RacePlayer *player) {
 
     if (trigger != 0) {
         if (player->itemEffectCount != 0) {
+#ifdef ONLINE_BATTLE
+            firedType = player->itemEffectType;
+            if (spawnRacePlayerItemProjectile(player, firedType) != 0) {
+                player->itemEffectCount--;
+                if (onlineSessionActive() != 0) {
+                    onlineSessionEnqueueEvent(
+                        ONLINE_EVENT_ITEM_USE,
+                        (u8)player->playerIndex,
+                        (u8)firedType,
+                        0
+                    );
+                }
+            }
+#else
             if (player->itemEffectType == RACE_ITEM_SLAPSTICK) {
                 if (createCallbackTaskWithUserIdPreservingArgs(
                         initWideHomingItemProjectile,
@@ -128,6 +240,7 @@ void updateRacePlayerItemEffectUse(RacePlayer *player) {
                     player->itemEffectCount--;
                 }
             }
+#endif
             if (player->itemEffectCount == 0) {
                 player->itemEffectType = RACE_ITEM_NONE;
             }
@@ -188,18 +301,48 @@ void updateRacePlayerActionEffectUse(RacePlayer *player) {
             if ((type == RACE_ACTION_SPEED_FAN) && (player->trailEffectTimer == 0)) {
                 startSpeedFanEffect(player);
                 player->actionEffectType = RACE_ACTION_NONE;
+#ifdef ONLINE_BATTLE
+                if (onlineSessionActive() != 0) {
+                    onlineSessionEnqueueEvent(
+                        ONLINE_EVENT_ACTION_USE,
+                        (u8)player->playerIndex,
+                        (u8)RACE_ACTION_SPEED_FAN,
+                        0
+                    );
+                }
+#endif
                 type = player->actionEffectType;
             }
 
             if (type == RACE_ACTION_GHOST) {
                 spawnRacePlayerSparkleEffect(player->playerIndex);
                 player->actionEffectType = RACE_ACTION_NONE;
+#ifdef ONLINE_BATTLE
+                if (onlineSessionActive() != 0) {
+                    onlineSessionEnqueueEvent(
+                        ONLINE_EVENT_ACTION_USE,
+                        (u8)player->playerIndex,
+                        (u8)RACE_ACTION_GHOST,
+                        0
+                    );
+                }
+#endif
                 type = player->actionEffectType;
             }
 
             if (type == RACE_ACTION_PAN) {
                 spawnGhostSlowdownTargets(player->playerIndex);
                 player->actionEffectType = RACE_ACTION_NONE;
+#ifdef ONLINE_BATTLE
+                if (onlineSessionActive() != 0) {
+                    onlineSessionEnqueueEvent(
+                        ONLINE_EVENT_ACTION_USE,
+                        (u8)player->playerIndex,
+                        (u8)RACE_ACTION_PAN,
+                        0
+                    );
+                }
+#endif
                 type = player->actionEffectType;
             }
 
@@ -211,6 +354,16 @@ void updateRacePlayerActionEffectUse(RacePlayer *player) {
                     (u16)player->playerIndex
                 );
                 player->actionEffectType = RACE_ACTION_NONE;
+#ifdef ONLINE_BATTLE
+                if (onlineSessionActive() != 0) {
+                    onlineSessionEnqueueEvent(
+                        ONLINE_EVENT_ACTION_USE,
+                        (u8)player->playerIndex,
+                        (u8)RACE_ACTION_ROCK,
+                        0
+                    );
+                }
+#endif
                 type = player->actionEffectType;
             }
 
@@ -222,6 +375,16 @@ void updateRacePlayerActionEffectUse(RacePlayer *player) {
                         3,
                         (u16)player->playerIndex
                     );
+#ifdef ONLINE_BATTLE
+                    if (onlineSessionActive() != 0) {
+                        onlineSessionEnqueueEvent(
+                            ONLINE_EVENT_ACTION_USE,
+                            (u8)player->playerIndex,
+                            (u8)RACE_ACTION_RAT_FACE,
+                            0
+                        );
+                    }
+#endif
                 }
                 player->actionEffectType = RACE_ACTION_NONE;
                 type = player->actionEffectType;
@@ -231,6 +394,16 @@ void updateRacePlayerActionEffectUse(RacePlayer *player) {
                 player->actionSoundTimer = 0xB4;
                 player->actionEffectType = RACE_ACTION_NONE;
                 enqueuePositionalSoundEffect(0x10, &player->pos, 0x7F, 0x32);
+#ifdef ONLINE_BATTLE
+                if (onlineSessionActive() != 0) {
+                    onlineSessionEnqueueEvent(
+                        ONLINE_EVENT_ACTION_USE,
+                        (u8)player->playerIndex,
+                        (u8)RACE_ACTION_INVISIBLE,
+                        0
+                    );
+                }
+#endif
             }
         }
     }

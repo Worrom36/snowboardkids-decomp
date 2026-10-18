@@ -6,4 +6,9 @@
 void updateRacePlayerItemEffectUse(RacePlayer *player);
 void updateRacePlayerActionEffectUse(RacePlayer *player);
 
+#ifdef ONLINE_BATTLE
+void applyOnlineRemoteItemUse(RacePlayer *player, s32 itemType);
+void applyOnlineRemoteActionUse(RacePlayer *player, s32 actionType);
+#endif
+
 #endif
