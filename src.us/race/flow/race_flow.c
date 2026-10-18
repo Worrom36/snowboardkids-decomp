@@ -38,6 +38,10 @@
 #include "game/menu/race_setup/race_setup_ui.h"
 #include "game/engine/viewport_manager.h"
 #include "game/race/player/race_player_input.h"
+#ifdef ONLINE_BATTLE
+#include "game/online/online_lobby_menu.h"
+#include "game/online/online_session.h"
+#endif
 
 #define COURSE_GRID_ENTRY_FREE -1
 #define COURSE_GRID_ENTRY_END -2
@@ -243,7 +247,11 @@ extern u8 gRaceUpdatePaused;
 void initStartupControllerPakFlow(void) {
     LOAD_ASSET(_2427D0, 6);
     initCallbackTaskScheduler(0);
+#if defined(ONLINE_BATTLE) && defined(ONLINE_BATTLE_AUTOTEST)
+    gCurrentGameTask->callbackData0 = 2;
+#else
     gCurrentGameTask->callbackData0 = 0xA;
+#endif
     setCurrentGameTaskCallback(&waitStartupRumbleInit, 0);
 }
 
@@ -259,11 +267,15 @@ void waitStartupRumbleInit(void) {
 }
 
 void routeStartupControllerPakFlow(void) {
+#if defined(ONLINE_BATTLE) && defined(ONLINE_BATTLE_AUTOTEST)
+    setCurrentGameTaskCallback(&bootOnlineBattleAutotest, 0);
+#else
     if (gPlayerInputHeld[0] & START_BUTTON) {
         setCurrentGameTaskCallback(&openStartupControllerPakFileDeleteFlow, 0);
     } else {
         setCurrentGameTaskCallback(&openStartupReplaySaveMessageFlow, 0);
     }
+#endif
 }
 
 void openStartupControllerPakFileDeleteFlow(void) {
@@ -475,6 +487,17 @@ void handleRaceSplitscreenSelectFlow(void) {
     if (gMenuFlowState == 1) {
         gMenuFlowState = 0;
         setCurrentGameTaskCallback(&openRaceCharacterSelectMenuFlow, 0);
+        return;
+    }
+    /* Online Battle: connect → lobby ready-up → synchronized race start. */
+    if (gMenuFlowState == 2) {
+        gMenuFlowState = 0;
+#ifdef ONLINE_BATTLE
+        setCurrentGameTaskCallback(&openOnlineBattleConnectFlow, 0);
+#else
+        gRaceSplitscreenMode = GAME_MENU_CURSOR_ONLINE_REOPEN;
+        setCurrentGameTaskCallback(&openRaceSplitscreenSelectFlow, 0);
+#endif
         return;
     }
     switch (gRaceSplitscreenMode) {
@@ -694,6 +717,11 @@ void initRaceSceneFlow(void) {
         gRacePlayers[i].replayInputSource = RACE_PLAYER_INPUT_LIVE;
         gRacePlayers[i].soundDisabled = 0;
     }
+#ifdef ONLINE_BATTLE
+    if (onlineSessionActive() != 0) {
+        onlineSessionConfigureRacePlayers();
+    }
+#endif
 
     if (gRaceSplitscreenMode == 2) {
         clearRaceReplayCourseGrid();
@@ -774,6 +802,11 @@ void initRaceSceneFlow(void) {
     loadRaceCharacterAssets();
     gMenuFlowState = 1;
     resetRaceCameras();
+#ifdef ONLINE_BATTLE
+    if (onlineSessionActive() != 0) {
+        onlineSessionBindLocalView();
+    }
+#endif
     resetAllViewports();
 
     if (gRaceCourseIndex.signedValue != 6) {
@@ -791,6 +824,29 @@ void initRaceSceneFlow(void) {
         resetSecondaryRng();
     }
     gRaceRumbleEnabled = 1;
+#ifdef ONLINE_BATTLE
+    /*
+     * Splitscreen mode 0 normally runs the SP "pass award" intro, which forces
+     * viewport 0 overlayAlpha=0xFF every frame. Online P2 is seat 1, so that
+     * overlay never clears (only seat 0's player update clears VP0) — HUD
+     * flashes on a permanently black 3D view. Use the normal race-start path.
+     */
+    if (onlineSessionActive() != 0) {
+        /*
+         * Skip fadeInRaceGameplayViewports (SP pass-award path). Still need the
+         * follow-cam + initialized flag that path normally installs, or VP0 stays
+         * in noop camera mode at the origin — solid black on both seats.
+         */
+        gViewportStates[0].overlayActive = 0;
+        gViewportStates[0].overlayAlpha = 0;
+        onlineSessionBindLocalView();
+        setRaceCameraMode(0, 1);
+        gRaceCameras[0].initialized.value = 1;
+        createCallbackTask((CallbackTaskCallback)initRaceCountdownPrompt, 6, 0x64);
+        createCallbackTask((CallbackTaskCallback)initRaceStartOverlay, 6, 0x64);
+        setCurrentGameTaskCallback(startRaceGameplayFlow, 0);
+    } else
+#endif
     if (gRaceSplitscreenMode == 0) {
         gCurrentGameTask->callbackData0 = 0;
         gCurrentGameTask->callbackData1 = 0;
@@ -845,6 +901,12 @@ void fadeInRaceGameplayViewports(void) {
                         configureRaceViewport(0, 0xA0, 0x78, 0x120, 0xD0, 0x140, 0xF0, 1.3333334f);
                     }
                     gRaceCameras[0].initialized.value = 1;
+#ifdef ONLINE_BATTLE
+                    if (onlineSessionActive() != 0) {
+                        onlineSessionBindLocalView();
+                        gRaceCameras[0].initialized.value = 1;
+                    }
+#endif
                     gFramebufferRenderInterval.value = 0;
                     break;
                 case 2:
@@ -2366,6 +2428,12 @@ void updateRaceFlowFrameWithCourseEffects(void) {
     updateRacePlayers();
     updateCallbackTasksWithMinPriority(0x63);
     updateRacePlayersPostUpdate();
+#ifdef ONLINE_BATTLE
+    /* Re-apply after post-update so local physics cannot drift remote poses. */
+    if (onlineSessionActive() != 0) {
+        onlineSessionApplyRemoteRacers();
+    }
+#endif
     updateRemainingCallbackTasks();
     updateRaceCameras();
     updateRaceHud();
@@ -2375,6 +2443,11 @@ void updateRaceFlowFrame(void) {
     updateRacePlayers();
     updateCallbackTasksWithMinPriority(0x63);
     updateRacePlayersPostUpdate();
+#ifdef ONLINE_BATTLE
+    if (onlineSessionActive() != 0) {
+        onlineSessionApplyRemoteRacers();
+    }
+#endif
     updateRemainingCallbackTasks();
     updateRaceCameras();
 }

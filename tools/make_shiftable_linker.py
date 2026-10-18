@@ -42,25 +42,58 @@ def runtime_index_inputs(source, build_dir, *, palettes=True, snowboards=False):
     return source
 
 
+ONLINE_OBJECTS = (
+    "online/online_mailbox",
+    "online/online_session",
+    "online/online_lobby_menu",
+)
+
+
+def inject_online_objects(source: str, build_dir: str) -> str:
+    """Append Online Battle objects after race_flow for shiftable/mod builds."""
+    anchor = f"{build_dir}/src.us/race/flow/race_flow.o"
+    for section in (".text", ".data", ".rodata", ".bss"):
+        needle = f"{anchor}({section});"
+        if needle not in source:
+            raise ValueError(f"missing race_flow {section} linker input")
+        injection = needle + "\n"
+        for name in ONLINE_OBJECTS:
+            injection += f"        {build_dir}/src.us/{name}.o({section});\n"
+        # Keep trailing content; replace only the first section occurrence.
+        source = source.replace(needle, injection.rstrip("\n"), 1)
+    return source
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--runtime-indices", action="store_true")
     parser.add_argument("--runtime-snowboards", action="store_true")
+    parser.add_argument("--online-battle", action="store_true")
+    parser.add_argument(
+        "--online-only",
+        action="store_true",
+        help="Only inject Online Battle objects (no shiftable layout rewrites).",
+    )
     parser.add_argument("--build-dir", default="build/shiftable")
     args = parser.parse_args()
 
     build_dir = args.build_dir.rstrip("/")
     source = args.input.read_text().replace("build/", build_dir + "/")
-    source = graphics_layout(source)
-    if args.runtime_indices or args.runtime_snowboards:
-        source = runtime_index_inputs(source, build_dir,
-                                      palettes=args.runtime_indices, snowboards=args.runtime_snowboards)
-    source, count = re.subn(r"\.buffers_bss 0x[0-9A-Fa-f]+ \(NOLOAD\)",
-                            ".buffers_bss ALIGN(main_BSS_END, 64) (NOLOAD)", source)
-    if count != 1:
-        parser.error("expected one runtime buffer section")
+    if args.online_only:
+        source = inject_online_objects(source, build_dir)
+    else:
+        source = graphics_layout(source)
+        if args.runtime_indices or args.runtime_snowboards:
+            source = runtime_index_inputs(source, build_dir,
+                                          palettes=args.runtime_indices, snowboards=args.runtime_snowboards)
+        if args.online_battle:
+            source = inject_online_objects(source, build_dir)
+        source, count = re.subn(r"\.buffers_bss 0x[0-9A-Fa-f]+ \(NOLOAD\)",
+                                ".buffers_bss ALIGN(main_BSS_END, 64) (NOLOAD)", source)
+        if count != 1:
+            parser.error("expected one runtime buffer section")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(source)
 

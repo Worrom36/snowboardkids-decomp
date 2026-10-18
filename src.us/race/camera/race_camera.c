@@ -6,6 +6,9 @@
 #include "game/race/camera/race_camera.h"
 #include "game/race/player/race_player_input.h"
 #include "game/menu/renderer/menu_render_utils.h"
+#ifdef ONLINE_BATTLE
+#include "game/online/online_session.h"
+#endif
 
 #define RACE_CAMERA_COUNT 4
 #define RACE_CAMERA_STATE_SIZE 0xB0
@@ -908,6 +911,11 @@ void updateRaceCameraStaticFollow(void) {
 /* Mode 0x1E: capture a fixed focus for the continuous race-start flyby. */
 void initRaceCameraIntroPan(void) {
     RacePlayer *player = &gRacePlayers[0];
+#ifdef ONLINE_BATTLE
+    if (onlineSessionActive() != 0) {
+        player = &gRacePlayers[gRaceCameras[0].playerIndex & 3];
+    }
+#endif
 
     D_801124A0->pos.x = 0;
     D_801124A0->pos.y = 0;

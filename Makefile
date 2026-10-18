@@ -54,6 +54,19 @@ ifeq ($(VERSION):$(BUILD_MODE),jp:shiftable)
   $(error BUILD_MODE=shiftable currently supports VERSION=us only)
 endif
 BUILD_DIR = $(if $(filter shiftable,$(BUILD_MODE)),build/shiftable,$(MATCHING_BUILD_DIR))
+# Online Battle objects + hooks (default on for shiftable/mod builds).
+ONLINE_BATTLE ?= $(if $(filter shiftable,$(BUILD_MODE)),1,0)
+ifeq ($(filter $(ONLINE_BATTLE),0 1),)
+  $(error ONLINE_BATTLE must be 0 or 1)
+endif
+# Boot straight into Online Battle lobby (skip title/menus). Requires ONLINE_BATTLE=1.
+ONLINE_BATTLE_AUTOTEST ?= 0
+ifeq ($(filter $(ONLINE_BATTLE_AUTOTEST),0 1),)
+  $(error ONLINE_BATTLE_AUTOTEST must be 0 or 1)
+endif
+ifeq ($(ONLINE_BATTLE_AUTOTEST):$(ONLINE_BATTLE),1:0)
+  $(error ONLINE_BATTLE_AUTOTEST=1 requires ONLINE_BATTLE=1)
+endif
 ASM_DIRS  = asm$(VERSION_SUFFIX) asm$(VERSION_SUFFIX)/data
 BIN_DIRS  = assets$(VERSION_SUFFIX)
 SRC_DIR = src.$(VERSION)
@@ -167,7 +180,9 @@ ULTRA_AS_ISA = mips2
 ULTRA_AS_OPT = -O1
 ULTRA_AS_POST =
 C_DEFINES    = $(VERSION_DEFINE) -DLANGUAGE_C -D_LANGUAGE_C -D_MIPS_SZLONG=32 -DNDEBUG \
-               -DCOMPILING_LIBULTRA -DBUILD_VERSION=VERSION_I -DF3DEX_GBI
+               -DCOMPILING_LIBULTRA -DBUILD_VERSION=VERSION_I -DF3DEX_GBI \
+               $(if $(filter 1,$(ONLINE_BATTLE)),-DONLINE_BATTLE=1,) \
+               $(if $(filter 1,$(ONLINE_BATTLE_AUTOTEST)),-DONLINE_BATTLE_AUTOTEST=1,)
 CC_CHECK_MIPS_DEFINES = -DMIPSEB -D_MIPS_FPSET=16 -D_MIPS_ISA_MIPS2=2 \
                         -D_MIPS_ISA=_MIPS_ISA_MIPS2 -D_ABIO32=1 \
                         -D_MIPS_SIM=_ABIO32 -D_MIPS_SZINT=32 \
@@ -273,8 +288,12 @@ $(BUILD_DIR)/src.us/menu/race_setup/race_setup_menu.o: C_OBJ_POSTPROCESS = \
 		--undefine-symbol gControllerPakRumbleCheckPromptState
 
 LD_SCRIPT      = $(if $(filter shiftable,$(BUILD_MODE)),$(BUILD_DIR)/$(BASENAME).ld,$(BASE_LD_SCRIPT))
+ifeq ($(ONLINE_BATTLE):$(BUILD_MODE),1:matching)
+LD_SCRIPT      = $(BUILD_DIR)/$(BASENAME)-online.ld
+endif
+GAME_SYMS_LD = $(if $(filter 1,$(ONLINE_BATTLE)),linker_scripts/game_syms_online.ld,linker_scripts/game_syms.ld)
 LINKER_SCRIPTS = linker_scripts/hardware_regs.ld linker_scripts/n64_os_syms.ld linker_scripts/libultra_syms.ld \
-                 linker_scripts/game_syms.ld \
+                 $(GAME_SYMS_LD) \
                  linker_scripts/race_setup_menu_syms.ld \
                  linker_scripts/controller_subsystem_syms.ld \
                  linker_scripts/race_motion_syms.ld \
@@ -353,7 +372,22 @@ all: $(if $(filter us,$(VERSION)),course-definitions) dirs $(TARGET).z64 $(if $(
 
 ifeq ($(BUILD_MODE),shiftable)
 $(LD_SCRIPT): $(BASENAME).ld $(TOOLS_DIR)/make_shiftable_linker.py assets/layout/bundles.mk
-	$(V)$(PYTHON) $(TOOLS_DIR)/make_shiftable_linker.py $< $@ --build-dir $(BUILD_DIR) $(if $(filter 1,$(ASSET_RUNTIME_INDEX_REMAP)),--runtime-indices,) $(if $(filter 1,$(ASSET_RUNTIME_SNOWBOARD_SIZE)),--runtime-snowboards,)
+	$(V)$(PYTHON) $(TOOLS_DIR)/make_shiftable_linker.py $< $@ --build-dir $(BUILD_DIR) $(if $(filter 1,$(ASSET_RUNTIME_INDEX_REMAP)),--runtime-indices,) $(if $(filter 1,$(ASSET_RUNTIME_SNOWBOARD_SIZE)),--runtime-snowboards,) $(if $(filter 1,$(ONLINE_BATTLE)),--online-battle,)
+endif
+
+ifeq ($(ONLINE_BATTLE):$(BUILD_MODE),1:matching)
+$(LD_SCRIPT): $(BASE_LD_SCRIPT) $(TOOLS_DIR)/make_shiftable_linker.py
+	@mkdir -p $(dir $@)
+	$(V)$(PYTHON) $(TOOLS_DIR)/make_shiftable_linker.py $< $@ --build-dir $(BUILD_DIR) --online-only
+endif
+
+# Matching builds can also link Online Battle when ONLINE_BATTLE=1 (non-SHA1).
+ONLINE_O_FILES :=
+ifeq ($(ONLINE_BATTLE),1)
+ONLINE_O_FILES := \
+	$(BUILD_DIR)/$(SRC_DIR)/online/online_mailbox.o \
+	$(BUILD_DIR)/$(SRC_DIR)/online/online_session.o \
+	$(BUILD_DIR)/$(SRC_DIR)/online/online_lobby_menu.o
 endif
 
 course-definitions:
@@ -525,7 +559,7 @@ $(TARGET).elf: $(if $(filter 1,$(ASSET_RUNTIME_SNOWBOARD_SIZE)),$(BUILD_DIR)/run
 endif
 
 # *.o -> *.elf
-$(TARGET).elf: $(LD_SCRIPT) $(LINKER_SCRIPTS) $(O_FILES)
+$(TARGET).elf: $(LD_SCRIPT) $(LINKER_SCRIPTS) $(O_FILES) $(ONLINE_O_FILES)
 	$(PRINTF) "[$(PINK) linker $(NO_COL)]  Linking $(TARGET).elf\n"
 	$(V)$(LD) $(LDFLAGS) -o $@
 

@@ -21,7 +21,8 @@ typedef enum RacePlayerInputSource {
     RACE_PLAYER_INPUT_LIVE = 0,
     RACE_PLAYER_INPUT_HISTORY_07 = 1, /* History buffer in asset slot 0x07. */
     RACE_PLAYER_INPUT_HISTORY_2B = 2, /* History buffer in asset slot 0x2B. */
-    RACE_PLAYER_INPUT_REPLAY = 5 /* Delegates to playRaceReplayInputFrame. */
+    RACE_PLAYER_INPUT_REPLAY = 5,     /* Delegates to playRaceReplayInputFrame. */
+    RACE_PLAYER_INPUT_REMOTE = 6      /* Online Battle remote puppet (see online_session.h). */
 } RacePlayerInputSource;
 
 typedef struct RaceScoreAttackRingTrigger {

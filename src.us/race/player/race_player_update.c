@@ -14,6 +14,9 @@
 #include "game/math/fixed_point_math.h"
 #include "game/math/spatial_math.h"
 #include "game/race/player/race_player_input.h"
+#ifdef ONLINE_BATTLE
+#include "game/online/online_session.h"
+#endif
 #include "game/race/items/race_item_effects.h"
 #include "game/race/player/race_player_pickup_effects.h"
 #include "game/menu/renderer/menu_screen_effects.h"
@@ -534,9 +537,22 @@ void updateRacePlayers(void) {
         updateRacePlayerInput(&gRacePlayers[3]);
         updateRacePlayerRankDisplay();
         for (i = 0; i < gRacePlayerCount; i++) {
+#ifdef ONLINE_BATTLE
+            if (onlinePlayerIsRemote(&gRacePlayers[i]) != 0) {
+                continue;
+            }
+#endif
             updateRacePlayer(&gRacePlayers[i]);
+#ifdef ONLINE_BATTLE
+            onlineSessionPublishLocalRacer(&gRacePlayers[i]);
+#endif
         }
         resolveRacePlayerBodyCollisions();
+#ifdef ONLINE_BATTLE
+        /* Apply after collisions so local physics cannot shove remote puppets. */
+        onlineSessionApplyRemoteRacers();
+        onlineSessionDrainInboundEvents();
+#endif
         updateRacePlayerRankings();
     }
 }
@@ -685,15 +701,24 @@ void updateRacePlayer(RacePlayer *player) {
         player->modelRotationZ = 0;
     }
 
-    if (player->stateFlags & 0x80000) {
-        gViewportStates[player->playerIndex].overlayAlpha += 0x10;
-        if (gViewportStates[player->playerIndex].overlayAlpha > 0xFF) {
-            gViewportStates[player->playerIndex].overlayAlpha = 0xFF;
+    {
+        s32 overlayViewport = player->playerIndex;
+#ifdef ONLINE_BATTLE
+        /* Online is always single-screen on viewport 0, even when localSeat != 0. */
+        if ((onlineSessionActive() != 0) && (player->playerIndex == (s32)onlineSessionLocalSeat())) {
+            overlayViewport = 0;
         }
-    } else {
-        gViewportStates[player->playerIndex].overlayAlpha -= 0x10;
-        if (gViewportStates[player->playerIndex].overlayAlpha < 0) {
-            gViewportStates[player->playerIndex].overlayAlpha = 0;
+#endif
+        if (player->stateFlags & 0x80000) {
+            gViewportStates[overlayViewport].overlayAlpha += 0x10;
+            if (gViewportStates[overlayViewport].overlayAlpha > 0xFF) {
+                gViewportStates[overlayViewport].overlayAlpha = 0xFF;
+            }
+        } else {
+            gViewportStates[overlayViewport].overlayAlpha -= 0x10;
+            if (gViewportStates[overlayViewport].overlayAlpha < 0) {
+                gViewportStates[overlayViewport].overlayAlpha = 0;
+            }
         }
     }
 
@@ -5628,9 +5653,15 @@ void updateRacePlayersPostUpdate(void) {
         i = 0;
         if (gRacePlayerCount > 0) {
             do {
-                do {
-                    updateRacePlayerPostUpdate(&gRacePlayers[i]);
-                } while (0);
+#ifdef ONLINE_BATTLE
+                /* Remotes are pose-driven; post-update physics desyncs puppets. */
+                if (onlinePlayerIsRemote(&gRacePlayers[i]) == 0)
+#endif
+                {
+                    do {
+                        updateRacePlayerPostUpdate(&gRacePlayers[i]);
+                    } while (0);
+                }
                 i++;
             } while (i < gRacePlayerCount);
         }
@@ -5639,7 +5670,12 @@ void updateRacePlayersPostUpdate(void) {
     i = 0;
     if (gRacePlayerCount > 0) {
         do {
-            updateSpeedFanEffect(&gRacePlayers[i]);
+#ifdef ONLINE_BATTLE
+            if (onlinePlayerIsRemote(&gRacePlayers[i]) == 0)
+#endif
+            {
+                updateSpeedFanEffect(&gRacePlayers[i]);
+            }
             i++;
         } while (i < gRacePlayerCount);
         i = 0;

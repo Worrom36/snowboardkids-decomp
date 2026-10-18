@@ -3,6 +3,9 @@
 #include "game/engine/relocatable_heap.h"
 #include "game/engine/asset_manager.h"
 #include "game/race/player/race_player_input.h"
+#ifdef ONLINE_BATTLE
+#include "game/online/online_session.h"
+#endif
 #include "game/race/race_replay.h"
 
 #define INPUT_MASK_HARD_STEER_X 0xF0000
@@ -238,7 +241,21 @@ void updateRacePlayerInput(RacePlayer *player) {
         index = player->playerIndex;
         player->disabledInputFlags = gRacePlayers[index].inputFlags;
 
+#ifdef ONLINE_BATTLE
+        if (player->replayInputSource == RACE_PLAYER_INPUT_REMOTE) {
+            onlineSessionApplyRemoteInput(player);
+        } else
+#endif
         if (player->replayInputSource == RACE_PLAYER_INPUT_LIVE) {
+#ifdef ONLINE_BATTLE
+            /*
+             * Online is always one local pad. Seat 1+ still need controller 0
+             * (Mupen keyboard), not gPlayerInputHeld[playerIndex].
+             */
+            if ((onlineSessionActive() != 0) && ((u8)player->playerIndex == onlineSessionLocalSeat())) {
+                index = 0;
+            }
+#endif
             player->inputFlags = gPlayerInputHeld[index];
             player->stickX = gPlayerStickX[index];
             player->stickY = gPlayerStickY[index];

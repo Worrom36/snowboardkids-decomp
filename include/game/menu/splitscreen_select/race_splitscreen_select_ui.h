@@ -4,6 +4,7 @@
 #include "common.h"
 #include "game/engine/callback_task_scheduler.h"
 #include "game/menu/renderer/menu_renderer.h"
+#include "game/menu/splitscreen_select/race_splitscreen_select_menu.h"
 
 typedef struct RaceSplitscreenSelectMenuState {
     /* 0x00 */ u8 state;
@@ -14,11 +15,11 @@ typedef struct RaceSplitscreenSelectMenuState {
 
 typedef struct RaceSplitscreenSelectOptionIconActor {
     /* 0x00 */ CallbackTaskHeader task;
-    /* 0x18 */ s16 x[5];
-    /* 0x22 */ s16 y;
-    /* 0x24 */ u8 state;
-    /* 0x25 */ u8 spawnTimer;
-    /* 0x26 */ u8 visibleCount;
+    /* 0x18 */ s16 x[6];
+    /* 0x24 */ s16 y;
+    /* 0x26 */ u8 state;
+    /* 0x27 */ u8 spawnTimer;
+    /* 0x28 */ u8 visibleCount;
 } RaceSplitscreenSelectOptionIconActor;
 
 typedef struct RaceSplitscreenSelectCornerSpriteActor {
@@ -68,14 +69,14 @@ typedef struct RaceSplitscreenSelectFrameTiles {
 typedef MenuGlyphScript RaceSplitscreenSelectDescription[0x46];
 
 typedef struct RaceSplitscreenSelectDescriptionScriptTable {
-    /* 0x000 */ RaceSplitscreenSelectDescription descriptions[6];
-    /* 0x348 */ MenuGlyphScript title[10];
+    /* 0x000 */ RaceSplitscreenSelectDescription descriptions[7];
+    /* 0x3F4 */ MenuGlyphScript title[10];
 } RaceSplitscreenSelectDescriptionScriptTable;
 
 /* 16x8 I4 backdrop artwork (64 bytes). */
 extern u32 gMenuPanelBackdropTexture[16];
 extern RaceSplitscreenSelectMenuState gRaceSplitscreenSelectCursorTarget;
-extern RaceSplitscreenSelectFrameTiles gRaceSplitscreenSelectFrameTiles[5];
+extern RaceSplitscreenSelectFrameTiles gRaceSplitscreenSelectFrameTiles[6];
 extern RaceSplitscreenSelectDescriptionScriptTable gRaceSplitscreenSelectDescriptionScripts;
 
 void drawRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIconActor *arg0);
@@ -99,6 +100,9 @@ void initRaceSplitscreenSelectOption3Frame(RaceSplitscreenSelectOptionFrameActor
 void drawRaceSplitscreenSelectOption4Frame(RaceSplitscreenSelectOptionFrameActor *arg0);
 void updateRaceSplitscreenSelectOption4Frame(RaceSplitscreenSelectOptionFrameActor *arg0);
 void initRaceSplitscreenSelectOption4Frame(RaceSplitscreenSelectOptionFrameActor *arg0);
+void drawRaceSplitscreenSelectOption5Frame(RaceSplitscreenSelectOptionFrameActor *arg0);
+void updateRaceSplitscreenSelectOption5Frame(RaceSplitscreenSelectOptionFrameActor *arg0);
+void initRaceSplitscreenSelectOption5Frame(RaceSplitscreenSelectOptionFrameActor *arg0);
 void drawRaceSplitscreenSelectCursor(RaceSplitscreenSelectAnimatedWidgetActor *arg0);
 void updateRaceSplitscreenSelectCursor(RaceSplitscreenSelectAnimatedWidgetActor *arg0);
 void initRaceSplitscreenSelectCursor(RaceSplitscreenSelectAnimatedWidgetActor *arg0);

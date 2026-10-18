@@ -25,6 +25,19 @@ extern s16 gMenuFadeAlpha;
 extern u8 gPendingFramebufferSwapCount;
 extern u8 gFramebufferSwapHold;
 
+/**
+ * While the GAME MENU is open, gRaceSplitscreenMode holds the cursor index
+ * (0 = Online Battle … 5 = Exit/Save). Race/gameplay code still uses modes
+ * 0–4. Convert at menu open / confirm boundaries.
+ */
+void gameMenuApplyRaceModeToCursor(void) {
+    if (gRaceSplitscreenMode == GAME_MENU_CURSOR_ONLINE_REOPEN) {
+        gRaceSplitscreenMode = GAME_MENU_CURSOR_ONLINE_BATTLE;
+    } else if (gRaceSplitscreenMode <= 4) {
+        gRaceSplitscreenMode = gRaceSplitscreenMode + 1;
+    }
+}
+
 void returnToRaceSplitscreenSelectMenu(void) {
     gCurrentGameTask->callbackData0 = 1;
     requestMusicSequenceBank(1);
@@ -36,6 +49,7 @@ void returnToRaceSplitscreenSelectMenu(void) {
     gMenuExitSelection = 0;
     gCourseSelectFromRaceTypeMenu = 0;
     gMenuInputRepeatTimers[0] = 0;
+    gameMenuApplyRaceModeToCursor();
     gMenuFadeAlpha = gCurrentGameTask->callbackData0;
     setCurrentGameTaskCallback(updateRaceSplitscreenSelectMenu, 0);
     gRaceSplitscreenSelectCursorTarget.state = 0;
@@ -65,6 +79,7 @@ void initRaceSplitscreenSelectMenu(void) {
     gCurrentGameTask->callbackData1 = 0;
     gMenuExitSelection = 0;
     gMenuInputRepeatTimers[0] = 0;
+    gameMenuApplyRaceModeToCursor();
     gMenuFadeAlpha = gCurrentGameTask->callbackData0;
     setCurrentGameTaskCallback(updateRaceSplitscreenSelectMenu, 0);
     gRaceSplitscreenSelectCursorTarget.state = 0;
@@ -109,7 +124,7 @@ void updateRaceSplitscreenSelectMenu(void) {
                             if (!gMenuInputRepeatTimers[0]) {
                                 gMenuInputRepeatTimers[0] = gMenuInputRepeatTimers[0] + 1;
                             }
-                            if (gRaceSplitscreenMode < 4) {
+                            if (gRaceSplitscreenMode < (GAME_MENU_CURSOR_COUNT - 1)) {
                                 gRaceSplitscreenMode++;
                             }
                         }
@@ -124,8 +139,9 @@ void updateRaceSplitscreenSelectMenu(void) {
                         enqueueSoundEffect(0x19, 0x32);
                         pressed = gPlayerInputPressed[0];
                     }
-                    if ((pressed & 0x1000) || ((pressed & 0x8000) && (gMenuFlowState == 5))) {
-                        if ((gRaceSplitscreenMode == 3) && (gRacePlayers[0].selectedCharacterId == 5)) {
+                    if ((pressed & 0x1000) || ((pressed & 0x8000) && (gMenuFlowState == GAME_MENU_CURSOR_COUNT))) {
+                        /* Board Shop is cursor 4 (= race mode 3). */
+                        if ((gRaceSplitscreenMode == 4) && (gRacePlayers[0].selectedCharacterId == 5)) {
                             enqueueSoundEffect(0x46, 0x32);
                         } else {
                             enqueueSoundEffect(0x18, 0x32);
@@ -142,7 +158,8 @@ void updateRaceSplitscreenSelectMenu(void) {
         }
 
         confirmTimer = gMenuSelectionConfirmTimer;
-        if (((gPlayerInputPressed[0] & 0x4000) && (gMenuFlowState == 5)) && (confirmTimer == 0)) {
+        if (((gPlayerInputPressed[0] & 0x4000) && (gMenuFlowState == GAME_MENU_CURSOR_COUNT)) &&
+            (confirmTimer == 0)) {
             enqueueSoundEffect(1, 0x32);
             gMenuSelectionConfirmTimer = 1;
             gRaceSplitscreenSelectCursorTarget.state = 2;
@@ -167,14 +184,25 @@ void updateRaceSplitscreenSelectMenu(void) {
 }
 
 void handleRaceSplitscreenSelectMenuSelection(void) {
-    u8 v0;
+    u8 cursor;
 
-    v0 = gRaceSplitscreenMode;
-    if ((v0 == 0 || v0 == 2) && gMenuExitSelection == 0) {
-        setCurrentGameTaskCallback(initCharacterSelectCourseMenuFromPlayerSelect, 0);
-        gMenuFlowState = 0;
-    } else {
+    cursor = gRaceSplitscreenMode;
+    if (gMenuExitSelection != 0) {
+        /* B cancel: cursor is still a menu index; flow only checks exit flag. */
         setCurrentGameTaskCallback(fadeOutRaceSplitscreenSelectMenu, 0);
+    } else if (cursor == GAME_MENU_CURSOR_ONLINE_BATTLE) {
+        /* Online Battle: fade out, then open connect / lobby ready-up flow. */
+        gMenuFlowState = 2;
+        setCurrentGameTaskCallback(fadeOutRaceSplitscreenSelectMenu, 0);
+    } else {
+        /* Cursor 1–5 → race modes 0–4. */
+        gRaceSplitscreenMode = cursor - 1;
+        if ((gRaceSplitscreenMode == 0 || gRaceSplitscreenMode == 2)) {
+            setCurrentGameTaskCallback(initCharacterSelectCourseMenuFromPlayerSelect, 0);
+            gMenuFlowState = 0;
+        } else {
+            setCurrentGameTaskCallback(fadeOutRaceSplitscreenSelectMenu, 0);
+        }
     }
     updateCallbackTasks();
 }
@@ -194,7 +222,7 @@ void fadeOutRaceSplitscreenSelectMenu(void) {
             gFramebufferRenderInterval.value = 0;
             if (gMenuExitSelection == 1) {
                 gMenuFlowState = 1;
-            } else {
+            } else if (gMenuFlowState != 2) {
                 gMenuFlowState = 0;
             }
             resumeGameTask(2);

@@ -22,7 +22,8 @@ extern s16 gMenuViewportCenterX;
 extern s16 gMenuViewportCenterY;
 extern s32 gMenuFlowState;
 
-RaceSplitscreenSelectFrameTiles gRaceSplitscreenSelectFrameTiles[5] = {
+RaceSplitscreenSelectFrameTiles gRaceSplitscreenSelectFrameTiles[6] = {
+    /* Online Battle — reuse Battle Race panel art until custom tiles exist. */
     { { 0x003B,
         0x003C,
         0x003D,
@@ -42,6 +43,27 @@ RaceSplitscreenSelectFrameTiles gRaceSplitscreenSelectFrameTiles[5] = {
      { 0x003F, 0x0048 },
      { 0x004D, 0x004E },
      0x004F },
+    /* Battle Race */
+    { { 0x003B,
+        0x003C,
+        0x003D,
+        0x003E,
+        0x0040,
+        0x0041,
+        0x0042,
+        0x0043,
+        0x0044,
+        0x0045,
+        0x0046,
+        0x0047,
+        0x0049,
+        0x004A,
+        0x004B,
+        0x004C },
+     { 0x003F, 0x0048 },
+     { 0x004D, 0x004E },
+     0x004F },
+    /* Skill Game */
     { { 0x0050,
         0x0051,
         0x0052,
@@ -125,6 +147,9 @@ RaceSplitscreenSelectDescriptionScriptTable gRaceSplitscreenSelectDescriptionScr
      {
             // textconv requires these _() invocations to retain their original line layout.
             // clang-format off
+            _("{COLOR:6}ONLINE\nBATTLE{COLOR:7}.\nJOIN A\nLOBBY."),
+        },
+        {
             _("{COLOR:6}HEAD FOR THE\nGOAL{COLOR:7}, WHILE\nCOLLECTING\nITEMS."),
         },
         {
@@ -155,6 +180,7 @@ u32 gMenuPanelBackdropTexture[16] = {
 };
 
 const char gRaceSplitscreenSelectEntryFeeFormat[] = "%6dG";
+const char gGameMenuOnlineBattleLabel[] = "ONLINE BATTLE";
 
 // IDO code generation for this function is sensitive to source line layout.
 // clang-format off
@@ -182,11 +208,23 @@ void drawRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIconAc
                 (gMenuSelectionConfirmTimer & 1)) {
                 blinkAlpha = 0xFF;
             }
-            tileIndex = iconIndex + 8;
-            drawMenuSprite(icons->x[iconIndex], (s16)(icons->y + yOffset),
-                           getRelocatableHeapBlockBase(RACE_SPLITSCREEN_SELECT_TEXTURE_HANDLE),
-                           tileIndex, 0x20, 0x20, 0, blinkAlpha);
-            yOffset += 0x14; iconIndex++;
+            if (iconIndex == GAME_MENU_CURSOR_ONLINE_BATTLE) {
+                /*
+                 * Do not reuse the Battle Race name sprite (tile 8) — its baked
+                 * text bleeds through. Dark panel + ASCII matches the row chrome.
+                 */
+                drawMenuPanelBackdrop(icons->x[iconIndex], (s16)(icons->y + yOffset), 0x7000, 0x2800);
+                if (blinkAlpha == 0) {
+                    drawMenuAsciiText((s16)(icons->x[iconIndex] + 4), (s16)(icons->y + yOffset + 4),
+                                      (u8 *)gGameMenuOnlineBattleLabel, 0, 0x100);
+                }
+            } else {
+                tileIndex = (iconIndex - 1) + 8;
+                drawMenuSprite(icons->x[iconIndex], (s16)(icons->y + yOffset),
+                               getRelocatableHeapBlockBase(RACE_SPLITSCREEN_SELECT_TEXTURE_HANDLE),
+                               tileIndex, 0x20, 0x20, 0, blinkAlpha);
+            }
+            yOffset += GAME_MENU_ROW_PITCH; iconIndex++;
             if (icons->visibleCount) {}
         } while (iconIndex < ((s32) savedIcons->visibleCount)); } while (0);
     }
@@ -221,7 +259,7 @@ void updateRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIcon
 
             row->spawnTimer++;
             if (!(row->spawnTimer & 1)) {
-                if (row->visibleCount < 5) {
+                if (row->visibleCount < GAME_MENU_CURSOR_COUNT) {
                     row->visibleCount++;
                 }
             }
@@ -234,6 +272,7 @@ void updateRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIcon
                 createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectOption2Frame, 0, 0x61);
                 createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectOption3Frame, 0, 0x62);
                 createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectOption4Frame, 0, 0x63);
+                createCallbackTask((CallbackTaskCallback)initRaceSplitscreenSelectOption5Frame, 0, 0x64);
                 state++;
                 state--;
             }
@@ -245,7 +284,7 @@ void updateRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIcon
             }
             break;
         case 2:
-            for (i = 0; i < 5; i++) {
+            for (i = 0; i < GAME_MENU_CURSOR_COUNT; i++) {
                 arg0->x[i] -= 0x20;
             }
             if (arg0->x[0] < -0x103) {
@@ -268,9 +307,9 @@ void updateRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIcon
 void initRaceSplitscreenSelectPlayerCountIcons(RaceSplitscreenSelectOptionIconActor *arg0) {
     s32 i;
 
-    for (i = 0; i < 5; i++) { arg0->x[i] = -0x104; }
+    for (i = 0; i < GAME_MENU_CURSOR_COUNT; i++) { arg0->x[i] = -0x104; }
 
-    arg0->y = -0x60;
+    arg0->y = GAME_MENU_LIST_BASE_Y;
     arg0->spawnTimer = 0;
     arg0->visibleCount = 1;
     arg0->state = 0;
@@ -1044,7 +1083,6 @@ void drawRaceSplitscreenSelectOption4Frame(RaceSplitscreenSelectOptionFrameActor
 void updateRaceSplitscreenSelectOption4Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
     int state;
 
-    gMenuFlowState = 0;
     if ((gRaceSplitscreenMode >= (u16)arg0->optionIndex) && (arg0->y != -0x48)) {
         state = arg0->state = 2;
     } else if ((gRaceSplitscreenMode < (u16)arg0->optionIndex) && (arg0->y != -0x140)) {
@@ -1112,10 +1150,147 @@ void initRaceSplitscreenSelectOption4Frame(RaceSplitscreenSelectOptionFrameActor
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSplitscreenSelectOption4Frame);
 }
 
+void drawRaceSplitscreenSelectOption5Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
+    s32 shouldDraw;
+    s32 i;
+    s32 tileIndex;
+    s32 offset;
+
+    tileIndex = 0;
+    shouldDraw = 1;
+    for (i = 0; i < 16; i++, tileIndex++) {
+        drawMenuSpriteTileClipped(
+            (s16)(arg0->x + ((i & 3) << 5)),
+            (s16)(arg0->y + ((i / 4) << 5)),
+            getRelocatableHeapBlockBase(RACE_SPLITSCREEN_SELECT_TEXTURE_HANDLE),
+            gRaceSplitscreenSelectFrameTiles[(u16)arg0->optionIndex].centerTiles[tileIndex],
+            0,
+            0x100,
+            0xA0,
+            0x49
+        );
+    }
+
+    if (shouldDraw) {
+        tileIndex = 0;
+        i = 0x80;
+    }
+    offset = 0;
+    do {
+        drawMenuSpriteTileClipped(
+            (s16)(arg0->x + 0x80),
+            (s16)(arg0->y + offset),
+            getRelocatableHeapBlockBase(RACE_SPLITSCREEN_SELECT_TEXTURE_HANDLE),
+            gRaceSplitscreenSelectFrameTiles[(u16)arg0->optionIndex].rightEdgeTiles[tileIndex],
+            0,
+            0x100,
+            0xA0,
+            0x49
+        );
+        drawMenuSpriteTileClipped(
+            (s16)(arg0->x + offset),
+            (s16)(arg0->y + 0x80),
+            getRelocatableHeapBlockBase(RACE_SPLITSCREEN_SELECT_TEXTURE_HANDLE),
+            gRaceSplitscreenSelectFrameTiles[(u16)arg0->optionIndex].bottomEdgeTiles[tileIndex],
+            0,
+            0x100,
+            0xA0,
+            0x49
+        );
+        i = 0x80;
+        offset += 0x40;
+        tileIndex++;
+    } while (offset != i);
+    i++;
+    i--;
+
+    drawMenuSpriteTileClipped(
+        (s16)(arg0->x + 0x80),
+        (s16)(arg0->y + 0x80),
+        getRelocatableHeapBlockBase(RACE_SPLITSCREEN_SELECT_TEXTURE_HANDLE),
+        gRaceSplitscreenSelectFrameTiles[(u16)arg0->optionIndex].cornerTile,
+        0,
+        0x100,
+        0xA0,
+        0x49
+    );
+}
+
+void updateRaceSplitscreenSelectOption5Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
+    int state;
+
+    gMenuFlowState = 0;
+    if ((gRaceSplitscreenMode >= (u16)arg0->optionIndex) && (arg0->y != -0x48)) {
+        state = arg0->state = 2;
+    } else if ((gRaceSplitscreenMode < (u16)arg0->optionIndex) && (arg0->y != -0x140)) {
+        state = arg0->state = 1;
+    } else {
+        state = arg0->state;
+        if (state < 4) {
+            state = arg0->state = 3;
+        }
+    }
+
+    switch (state) {
+        case 0:
+        case 5:
+            break;
+        case 1:
+            arg0->y -= 0x24;
+            if (arg0->y < -0x13F) {
+                arg0->y = -0x140;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 2:
+            arg0->y += 0x24;
+            if (arg0->y >= -0x48) {
+                arg0->y = -0x48;
+                arg0->state = 3;
+            }
+            state = arg0->state;
+            break;
+        case 3:
+            gMenuFlowState += 1;
+            if (gRacePlayers[0].menuState == 1) {
+                if (arg0->y == -0x140) {
+                    arg0->state = 5;
+                } else {
+                    arg0->state = 4;
+                }
+            }
+            state = arg0->state;
+            break;
+        case 4:
+            arg0->x += 0x20;
+            if (arg0->x >= 0xA0) {
+                arg0->state = 5;
+            }
+            state = arg0->state;
+            break;
+    }
+
+    if (state == 5) {
+        removeCallbackTask(arg0);
+        return;
+    }
+    addRenderCallback(&gMenuRenderCallbackList, (RenderCallback)drawRaceSplitscreenSelectOption5Frame, arg0);
+}
+
+void initRaceSplitscreenSelectOption5Frame(RaceSplitscreenSelectOptionFrameActor *arg0) {
+    arg0->x = -8;
+    arg0->y = -0x140;
+    arg0->optionIndex = 5;
+    arg0->unusedTimer = 0;
+    arg0->state = 0;
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSplitscreenSelectOption5Frame);
+}
+
 void drawRaceSplitscreenSelectCursor(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
     drawMenuSpriteWithAlpha(
         arg0->x,
-        (s16)(arg0->y + (gRaceSplitscreenMode * 0x14)),
+        (s16)(arg0->y + (gRaceSplitscreenMode * GAME_MENU_ROW_PITCH)),
         getRelocatableHeapBlockBase(ASSET_HANDLE(33)),
         7,
         0x20,
@@ -1186,7 +1361,7 @@ void updateRaceSplitscreenSelectCursor(RaceSplitscreenSelectAnimatedWidgetActor 
 
 void initRaceSplitscreenSelectCursor(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
     arg0->x = -0x7C;
-    arg0->y = -0x60;
+    arg0->y = GAME_MENU_LIST_BASE_Y;
     arg0->alpha = 0;
     arg0->state = 0;
     arg0->animationTimer = 0;
@@ -1196,10 +1371,11 @@ void initRaceSplitscreenSelectCursor(RaceSplitscreenSelectAnimatedWidgetActor *a
 void drawRaceSplitscreenSelectPortrait(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
     s32 portraitIndex;
 
-    if (gRaceSplitscreenMode == 3) {
+    /* Board Shop is cursor 4; Shinobin block text is description index 6. */
+    if (gRaceSplitscreenMode == 4) {
         portraitIndex = gRaceSplitscreenMode & 0xFF;
         if (gRacePlayers[0].selectedCharacterId == 5) {
-            portraitIndex = 5;
+            portraitIndex = 6;
         }
     } else {
         portraitIndex = gRaceSplitscreenMode & 0xFF;
@@ -1249,7 +1425,8 @@ void updateRaceSplitscreenSelectPortrait(RaceSplitscreenSelectAnimatedWidgetActo
 
 void initRaceSplitscreenSelectPortrait(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
     arg0->x = -0x84;
-    arg0->y = 0xC;
+    /* Nudge description panel down so the sixth option does not collide. */
+    arg0->y = 0x14;
     arg0->alpha = 0;
     arg0->state = 0;
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSplitscreenSelectPortrait);
@@ -1305,7 +1482,7 @@ void updateRaceSplitscreenSelectArrowPrompt(RaceSplitscreenSelectAnimatedWidgetA
 
 void initRaceSplitscreenSelectArrowPrompt(RaceSplitscreenSelectAnimatedWidgetActor *arg0) {
     arg0->x = -8;
-    arg0->y = -0x5C;
+    arg0->y = (s16)(GAME_MENU_LIST_BASE_Y + 4);
     arg0->alpha = 0;
     arg0->state = 0;
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceSplitscreenSelectArrowPrompt);

@@ -1,0 +1,238 @@
+"""Binary wire protocol shared by the Online Battle server and clients."""
+
+from __future__ import annotations
+
+import struct
+from dataclasses import dataclass, field
+from enum import IntEnum
+from typing import List, Optional, Tuple
+
+MAGIC = 0x4F4E504B  # 'ONPK'
+VERSION = 1
+DEFAULT_PORT = 7777
+MAX_SEATS = 4
+
+
+class Cmd(IntEnum):
+    NONE = 0
+    CONNECT = 1
+    DISCONNECT = 2
+    READY = 3
+    UNREADY = 4
+    REQUEST_START = 5
+    SET_LOADOUT = 6
+    JOINED = 7
+    LOBBY_SNAPSHOT = 8
+    START = 9
+    ERROR = 10
+    RACER_SNAPSHOT = 11
+    EVENT = 12
+    HEARTBEAT = 13
+    ACK = 14
+
+
+class Phase(IntEnum):
+    IDLE = 0
+    CONNECTING = 1
+    LOBBY = 2
+    COUNTDOWN = 3
+    RACING = 4
+    ERROR = 5
+
+
+class SeatKind(IntEnum):
+    EMPTY = 0
+    HUMAN = 1
+    CPU = 2
+
+
+class ErrorCode(IntEnum):
+    NONE = 0
+    FULL = 1
+    REJECTED = 2
+    TIMEOUT = 3
+    PROTOCOL = 4
+    DISCONNECTED = 5
+
+
+HEADER_STRUCT = struct.Struct(">IHBBI")  # magic, size, version, cmd, seq
+# size is total packet length including header
+
+
+@dataclass
+class Loadout:
+    course_id: int = 0
+    character_id: int = 0
+    character_variant: int = 0
+    snowboard_texture_index: int = 0
+    lap_count: int = 3
+
+    _STRUCT = struct.Struct(">BBBBBxxx")
+
+    def pack(self) -> bytes:
+        return self._STRUCT.pack(
+            self.course_id,
+            self.character_id,
+            self.character_variant,
+            self.snowboard_texture_index,
+            self.lap_count,
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, offset: int = 0) -> Tuple["Loadout", int]:
+        values = cls._STRUCT.unpack_from(data, offset)
+        return cls(*values), offset + cls._STRUCT.size
+
+
+@dataclass
+class LobbySeat:
+    kind: int = SeatKind.EMPTY
+    ready: int = 0
+    loadout: Loadout = field(default_factory=Loadout)
+
+    def pack(self) -> bytes:
+        return struct.pack(">BBxx", self.kind, self.ready) + self.loadout.pack()
+
+    @classmethod
+    def unpack(cls, data: bytes, offset: int = 0) -> Tuple["LobbySeat", int]:
+        kind, ready = struct.unpack_from(">BBxx", data, offset)
+        loadout, next_off = Loadout.unpack(data, offset + 4)
+        return cls(kind=kind, ready=ready, loadout=loadout), next_off
+
+
+@dataclass
+class LobbySnapshot:
+    phase: int = Phase.IDLE
+    local_seat: int = 0xFF
+    host_seat: int = 0
+    human_count: int = 0
+    race_seed: int = 0
+    start_frame: int = 0
+    seats: List[LobbySeat] = field(default_factory=lambda: [LobbySeat() for _ in range(MAX_SEATS)])
+
+    def pack(self) -> bytes:
+        body = struct.pack(
+            ">BBBBII",
+            self.phase,
+            self.local_seat,
+            self.host_seat,
+            self.human_count,
+            self.race_seed,
+            self.start_frame,
+        )
+        for seat in self.seats:
+            body += seat.pack()
+        return body
+
+    @classmethod
+    def unpack(cls, data: bytes, offset: int = 0) -> Tuple["LobbySnapshot", int]:
+        phase, local_seat, host_seat, human_count, race_seed, start_frame = struct.unpack_from(
+            ">BBBBII", data, offset
+        )
+        offset += 12
+        seats: List[LobbySeat] = []
+        for _ in range(MAX_SEATS):
+            seat, offset = LobbySeat.unpack(data, offset)
+            seats.append(seat)
+        return (
+            cls(
+                phase=phase,
+                local_seat=local_seat,
+                host_seat=host_seat,
+                human_count=human_count,
+                race_seed=race_seed,
+                start_frame=start_frame,
+                seats=seats,
+            ),
+            offset,
+        )
+
+
+@dataclass
+class RacerSnapshot:
+    seat: int = 0
+    valid: int = 0
+    item_effect_type: int = 0
+    item_effect_count: int = 0
+    action_effect_type: int = 0
+    sequence: int = 0
+    pos_x: int = 0
+    pos_y: int = 0
+    pos_z: int = 0
+    vel_x: int = 0
+    vel_y: int = 0
+    vel_z: int = 0
+    facing_angle: int = 0
+    pitch_angle: int = 0
+    lean_angle: int = 0
+    course_path_index: int = 0
+    course_path_offset: int = 0
+    mode: int = 0
+    stick_x: int = 0
+    stick_y: int = 0
+    input_flags: int = 0
+
+    _STRUCT = struct.Struct(">BBBBBxxxIiiiiiihhhhihhhxxI")
+
+    def pack(self) -> bytes:
+        return self._STRUCT.pack(
+            self.seat,
+            self.valid,
+            self.item_effect_type,
+            self.item_effect_count,
+            self.action_effect_type,
+            self.sequence,
+            self.pos_x,
+            self.pos_y,
+            self.pos_z,
+            self.vel_x,
+            self.vel_y,
+            self.vel_z,
+            self.facing_angle,
+            self.pitch_angle,
+            self.lean_angle,
+            self.course_path_index,
+            self.course_path_offset,
+            self.mode,
+            self.stick_x,
+            self.stick_y,
+            self.input_flags,
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, offset: int = 0) -> Tuple["RacerSnapshot", int]:
+        values = cls._STRUCT.unpack_from(data, offset)
+        return cls(*values), offset + cls._STRUCT.size
+
+
+@dataclass
+class RaceEvent:
+    type: int = 0
+    seat: int = 0
+    arg0: int = 0
+    arg1: int = 0
+    sequence: int = 0
+
+    _STRUCT = struct.Struct(">BBBBI")
+
+    def pack(self) -> bytes:
+        return self._STRUCT.pack(self.type, self.seat, self.arg0, self.arg1, self.sequence)
+
+    @classmethod
+    def unpack(cls, data: bytes, offset: int = 0) -> Tuple["RaceEvent", int]:
+        values = cls._STRUCT.unpack_from(data, offset)
+        return cls(*values), offset + cls._STRUCT.size
+
+
+def pack_packet(cmd: int, seq: int, payload: bytes = b"") -> bytes:
+    size = HEADER_STRUCT.size + len(payload)
+    return HEADER_STRUCT.pack(MAGIC, size, VERSION, int(cmd), seq) + payload
+
+
+def unpack_packet(data: bytes) -> Optional[Tuple[int, int, bytes]]:
+    if len(data) < HEADER_STRUCT.size:
+        return None
+    magic, size, version, cmd, seq = HEADER_STRUCT.unpack_from(data)
+    if magic != MAGIC or version != VERSION or size > len(data) or size < HEADER_STRUCT.size:
+        return None
+    return cmd, seq, data[HEADER_STRUCT.size : size]

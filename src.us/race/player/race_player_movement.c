@@ -10,6 +10,9 @@
 #include "game/race/player/race_player_movement.h"
 #include "game/math/fixed_point_math.h"
 #include "game/math/spatial_math.h"
+#ifdef ONLINE_BATTLE
+#include "game/online/online_session.h"
+#endif
 
 #define FIXED_PRODUCT(a, b) ((s64)(a) * (b) / 0x1000)
 #define COLLISION_POINT(x, y, z, sizeX, sizeY, sizeZ) \
@@ -322,6 +325,13 @@ void resolveRacePlayerBodyCollisions(void) {
             do {
                 if (playerA->isActive != 0) {
                     playerB = &gRacePlayers[j];
+#ifdef ONLINE_BATTLE
+                    /* Remote puppets are pose-driven; do not let body collision yeet them. */
+                    if ((onlinePlayerIsRemote(playerA) != 0) || (onlinePlayerIsRemote(playerB) != 0)) {
+                        j++;
+                        continue;
+                    }
+#endif
                     if ((playerB->isActive != 0) && (playerA->soundDisabled == 0) && (playerB->soundDisabled == 0) &&
                         !(playerA->stateFlags & RACE_PLAYER_COLLISION_SQUASHED) && !(playerB->stateFlags & RACE_PLAYER_COLLISION_SQUASHED)) {
                         temp = playerA->collisionBottomY - playerB->collisionBottomY;

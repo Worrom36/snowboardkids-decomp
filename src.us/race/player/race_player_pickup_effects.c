@@ -10,6 +10,9 @@
 #include "game/race/player/race_player_pickup_effects.h"
 #include "game/race/effects/snowboard_trail_effects.h"
 #include "game/race/ui/race_ui_effects.h"
+#ifdef ONLINE_BATTLE
+#include "game/online/online_session.h"
+#endif
 
 typedef void (*EffectCallback)(void *);
 
@@ -19,6 +22,12 @@ void updateRacePlayerItemEffectUse(RacePlayer *player) {
     s32 deltaZ;
     s32 angle;
     register s32 i;
+
+#ifdef ONLINE_BATTLE
+    if (onlinePlayerIsRemote(player) != 0) {
+        return;
+    }
+#endif
 
     trigger = 0;
     if (player->isCpu == 0) {
@@ -141,6 +150,12 @@ void updateRacePlayerItemEffectUse(RacePlayer *player) {
 void updateRacePlayerActionEffectUse(RacePlayer *player) {
     s32 trigger;
     s32 type;
+
+#ifdef ONLINE_BATTLE
+    if (onlinePlayerIsRemote(player) != 0) {
+        return;
+    }
+#endif
 
     trigger = 0;
     if (player->isCpu == 0) {
