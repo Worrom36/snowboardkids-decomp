@@ -102,6 +102,30 @@ JP currently builds from extracted assembly; C decompilation is in progress
 for US. Readable asset tools, progress reporting, and `--mode shiftable` support
 US only.
 
+## Online Battle (WIP)
+
+Experimental **shiftable** Online Battle work lives on
+[`feature/online-battle-menu`](https://github.com/Worrom36/snowboardkids-decomp/tree/feature/online-battle-menu).
+It is **not** part of the matching ROM build (`ONLINE_BATTLE=0` for SHA1-matching).
+
+Build a mod ROM (needs **8 MB RDRAM** / Expansion Pak):
+
+```bash
+make BUILD_MODE=shiftable ONLINE_BATTLE=1
+```
+
+In-game: **GAME MENU → Online Battle** → lobby ready-up → host Start.
+
+Local 2P loopback (boots straight into the lobby):
+
+```bash
+make BUILD_MODE=shiftable ONLINE_BATTLE=1 ONLINE_BATTLE_AUTOTEST=1
+python tools/online_test_2p.py
+```
+
+See [tools/online/README.md](tools/online/README.md) for the dedicated lobby
+server, net client, Mupen process-memory bridge, and keyboard controls notes.
+
 ## Reverse-engineering notes
 
 - [Multi-version development](docs/versions.md) covers version-specific paths,
