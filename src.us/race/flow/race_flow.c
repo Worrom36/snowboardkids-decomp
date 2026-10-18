@@ -1796,6 +1796,16 @@ void prepareRaceResultsFlow(void) {
         case 0:
             gRaceResultState = 1;
             i = 0;
+#ifdef ONLINE_BATTLE
+            if (onlineSessionActive() != 0) {
+                /* gPlayerCount is 1 online; scan every active seat for the winner. */
+                for (i = 0; i < ONLINE_MAX_SEATS; i++) {
+                    if ((gRacePlayers[i].isActive != 0) && (gRacePlayers[i].rankIndex == 0)) {
+                        D_80121B60 = i + 1;
+                    }
+                }
+            } else
+#endif
             if (gPlayerCount > 0) {
                 player = gRacePlayers;
                 do {
@@ -1929,6 +1939,16 @@ void updateRaceResultsFlow(void) {
     gPendingEndingCreditsFlow = 0;
     gFramebufferRenderInterval.value = 0;
     ready.value = 1;
+#ifdef ONLINE_BATTLE
+    if (onlineSessionActive() != 0) {
+        /* Remotes never run finish celebrations locally; only wait on local seat. */
+        recordIndex = onlineSessionFocusPlayerIndex();
+        if ((recordIndex < 0) || (recordIndex >= ONLINE_MAX_SEATS) ||
+            !(gRacePlayers[recordIndex].stateFlags & 0x08000000)) {
+            ready.value = 0;
+        }
+    } else
+#endif
     if ((s32)gPlayerCount > 0) {
         recordIndex = 0;
         do {
@@ -1957,6 +1977,32 @@ void updateRaceResultsFlow(void) {
 
         switch (gRaceSplitscreenMode) {
         case 0:
+#ifdef ONLINE_BATTLE
+            /*
+             * Online uses gPlayerCount==1 for the viewport, but multi-human races
+             * need the VS results banner (placements for every seat).
+             */
+            if ((onlineSessionActive() != 0) && (onlineSessionLobby()->humanCount > 1)) {
+                resultActor =
+                    createCallbackTask((CallbackTaskCallback)initRaceUiResultsBanner, 6, 0x64);
+                if (resultActor != NULL) {
+                    recordIndex = 0;
+                    do {
+                        if ((gRacePlayers[recordIndex].isActive != 0) &&
+                            (gRacePlayers[recordIndex].rankIndex == 0)) {
+                            gRacePlayers[recordIndex].unk18++;
+                            if (gRacePlayers[recordIndex].unk18 >= 0x64) {
+                                gRacePlayers[recordIndex].unk18 = 0x63;
+                            }
+                        }
+                        recordIndex++;
+                    } while (recordIndex < ONLINE_MAX_SEATS);
+
+                    gCurrentGameTask->callbackData0 = 0xA;
+                    setCurrentGameTaskCallback(updateRaceResultsMusicFlow, 0);
+                }
+            } else
+#endif
             if (gPlayerCount == 1) {
                 resultActor =
                     createCallbackTask((CallbackTaskCallback)initRaceUiPrizePayout, ready.value, 0x64);
@@ -2475,11 +2521,35 @@ void updateRaceReplayFrame(void) {
 s32 areRacePlayersFinished(void) {
     s32 var_v0;
     RacePlayer *player;
+#ifdef ONLINE_BATTLE
+    s32 i;
+    s32 waiting;
+#endif
 
     if (gRaceSplitscreenMode == 1) {
         if (!(gRacePlayers[0].stateFlags & 0x40)) {
             return 0;
         }
+#ifdef ONLINE_BATTLE
+    } else if (onlineSessionActive() != 0) {
+        /*
+         * Online keeps gPlayerCount==1 for the single viewport, but every human
+         * seat must cross the finish (flag synced via racer snapshots).
+         */
+        waiting = 0;
+        for (i = 0; i < ONLINE_MAX_SEATS; i++) {
+            if (gRacePlayers[i].isActive == 0) {
+                continue;
+            }
+            waiting = 1;
+            if (!(gRacePlayers[i].stateFlags & RACE_PLAYER_READY_FLAG)) {
+                return 0;
+            }
+        }
+        if (waiting == 0) {
+            return 0;
+        }
+#endif
     } else {
         var_v0 = 0;
         if ((s32)gPlayerCount > 0) {

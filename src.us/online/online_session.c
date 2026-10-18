@@ -28,6 +28,8 @@ static u8 sRemoteYawFlipHold[ONLINE_MAX_SEATS];
 /* Board yaw-flip; toggles at the start line and mirrors the mesh every frame if raw-synced. */
 #define ONLINE_REMOTE_STATEFLAGS_YAW_FLIP   0x400
 #define ONLINE_REMOTE_YAW_FLIP_HOLD_FRAMES  3
+/* Finished race — once seen, keep it so stale snaps cannot drop remotes from results. */
+#define ONLINE_REMOTE_STATEFLAGS_FINISHED   0x40
 
 /* Dead reckoning: coast on last velocity, soft-correct toward authority snaps. */
 #define ONLINE_REMOTE_CORRECT_FRAMES   6
@@ -964,6 +966,9 @@ void onlineSessionApplyRemoteRacers(void) {
 
             localBits = player->stateFlags & ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
             incoming = motion->stateFlags & ~ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
+            if (player->stateFlags & ONLINE_REMOTE_STATEFLAGS_FINISHED) {
+                incoming |= ONLINE_REMOTE_STATEFLAGS_FINISHED;
+            }
             yawBit = incoming & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP;
             if (yawBit != (player->stateFlags & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP)) {
                 if (sRemoteYawFlipHold[i] < ONLINE_REMOTE_YAW_FLIP_HOLD_FRAMES) {
@@ -1011,6 +1016,9 @@ void onlineSessionApplyRemoteRacers(void) {
 
                 localBits = player->stateFlags & ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
                 incoming = snap->stateFlags & ~ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
+                if (player->stateFlags & ONLINE_REMOTE_STATEFLAGS_FINISHED) {
+                    incoming |= ONLINE_REMOTE_STATEFLAGS_FINISHED;
+                }
                 yawBit = incoming & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP;
                 if (yawBit != (player->stateFlags & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP)) {
                     if (sRemoteYawFlipHold[i] < ONLINE_REMOTE_YAW_FLIP_HOLD_FRAMES) {

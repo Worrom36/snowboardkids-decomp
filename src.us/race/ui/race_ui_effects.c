@@ -1529,6 +1529,18 @@ void sortRaceUiResultsBannerPlayers(RaceUiResultsBannerActor *arg0) {
 
     i = 0;
     do {
+#ifdef ONLINE_BATTLE
+        /*
+         * Online remotes may lag the finish bit; still show every active human
+         * by rankIndex so the VS banner lists all placements.
+         */
+        if (onlineSessionActive() != 0) {
+            if ((actor->playerIndices[i] < 0) ||
+                (gRacePlayers[actor->playerIndices[i]].isActive == 0)) {
+                actor->playerIndices[i] = -1;
+            }
+        } else
+#endif
         if (!(gRacePlayers[actor->playerIndices[i]].stateFlags & 0x40)) {
             actor->playerIndices[i] = -1;
         }
