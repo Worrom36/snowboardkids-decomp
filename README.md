@@ -104,9 +104,14 @@ US only.
 
 ## Online Battle (WIP)
 
-Experimental **shiftable** Online Battle work lives on
-[`feature/online-battle-menu`](https://github.com/Worrom36/snowboardkids-decomp/tree/feature/online-battle-menu).
-It is **not** part of the matching ROM build (`ONLINE_BATTLE=0` for SHA1-matching).
+Experimental **shiftable** Online Battle lives on
+[`Worrom36/snowboardkids-decomp`](https://github.com/Worrom36/snowboardkids-decomp)
+(`main`). It is **not** part of the matching ROM build (`ONLINE_BATTLE=0` for
+SHA1-matching).
+
+Current WIP covers a dedicated lobby server, Mupen process-memory bridge, remote
+racer pose/anim sync, pickups/shots/hits, and local 2–4P loopback. Needs polish
+before any wider merge.
 
 Build a mod ROM (needs **8 MB RDRAM** / Expansion Pak):
 
@@ -116,14 +121,16 @@ make BUILD_MODE=shiftable ONLINE_BATTLE=1
 
 In-game: **GAME MENU → Online Battle** → lobby ready-up → host Start.
 
-Local 2P loopback (then **GAME MENU → Online Battle** on each window):
+Local 2P / 4P loopback (enter Online Battle on each window after launch):
 
 ```bash
 make BUILD_MODE=shiftable ONLINE_BATTLE=1
 python tools/online_test_2p.py
+# or: python tools/online_test_4p.py
 ```
 
-Optional: `ONLINE_BATTLE_AUTOTEST=1` boots straight into the lobby (dev only).
+Optional: `ONLINE_BATTLE_AUTOTEST=1` boots straight into the lobby (dev iteration
+only; leave off for normal play).
 
 See [tools/online/README.md](tools/online/README.md) for the dedicated lobby
 server, net client, Mupen process-memory bridge, and keyboard controls notes.
