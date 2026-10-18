@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-#define ONLINE_PROTOCOL_VERSION 1
+#define ONLINE_PROTOCOL_VERSION 2
 #define ONLINE_MAX_SEATS        4
 #define ONLINE_DEFAULT_PORT     7777
 
@@ -54,7 +54,9 @@ typedef enum OnlineRaceEventType {
     ONLINE_EVENT_ITEM_USE = 1,
     ONLINE_EVENT_ACTION_USE = 2,
     ONLINE_EVENT_FINISH = 3,
-    ONLINE_EVENT_DISCONNECT = 4
+    ONLINE_EVENT_DISCONNECT = 4,
+    /* seat=victim, arg0=flags lo, arg1=flags hi — victim applies locally. */
+    ONLINE_EVENT_HIT = 5
 } OnlineRaceEventType;
 
 typedef struct OnlineLoadout {
@@ -106,8 +108,15 @@ typedef struct OnlineRacerSnapshot {
     /* 0x30 */ s16 mode;
     /* 0x32 */ s16 stickX;
     /* 0x34 */ s16 stickY;
-    /* 0x36 */ u16 pad36;
+    /* 0x36 */ s16 animationId;
     /* 0x38 */ u32 inputFlags;
+    /* 0x3C */ s16 updateState;
+    /* 0x3E */ s16 modelRotationX;
+    /* 0x40 */ s16 modelRotationY;
+    /* 0x42 */ s16 modelRotationZ;
+    /* 0x44 */ u32 stateFlags;
+    /* 0x48 */ s32 stateTimer;
+    /* 0x4C */ s32 groundOffset;
 } OnlineRacerSnapshot;
 
 typedef struct OnlineRaceEvent {

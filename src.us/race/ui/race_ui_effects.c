@@ -27,6 +27,10 @@
 #include "game/race/camera/race_camera.h"
 #include "game/race/ui/race_hud.h"
 #include <PR/os_cache.h>
+#ifdef ONLINE_BATTLE
+#include "game/online/online_session.h"
+#include "game/online/online_protocol.h"
+#endif
 
 #define RACE_UI_TRAIL_GFX_ALLOC_PTR (*(RaceUiDisplayCommand **)&gRegionAllocPtr)
 #define ASSET_HANDLE(index) (gAssetHandles[(index)])
@@ -5811,9 +5815,11 @@ void updateRaceCourseCoinMarkers(RaceUiGfxCommandActor *arg0) {
     RaceUiGfxCommandScriptEntry *entry;
     Vec3i *pos;
     RaceUiGfxCommandActor *actor;
+    RacePlayer *collector;
     register s32 xzSize;
     register s32 ySize;
     register s32 sentinel;
+    register s32 collectorIndex;
 
     entry = D_800D693C[gRaceCourseIndex.signedValue];
     actor = arg0;
@@ -5831,21 +5837,42 @@ void updateRaceCourseCoinMarkers(RaceUiGfxCommandActor *arg0) {
     }
     xzSize = 0x70000;
     pos = &entry->position;
+#ifdef ONLINE_BATTLE
+    collectorIndex = onlineSessionFocusPlayerIndex();
+#else
+    collectorIndex = 0;
+#endif
+    collector = &gRacePlayers[collectorIndex];
 
 loop:
     if (entry->active != 0) {
         if (isPositionNearAnyRaceViewportFocus(pos) != 0) {
-            if (isRacePlayerInsideCylinder(pos, xzSize, ySize, 0) != 0) {
+            if (isRacePlayerInsideCylinder(pos, xzSize, ySize, collectorIndex) != 0) {
                 entry->active = 0;
                 enqueuePositionalSoundEffect(0x18, pos, 0x7F, 0x32);
-                gRacePlayers[0].collectedCourseCoinMarkerCount++;
-                if (gRacePlayers[0].trailEffectTimer != 0) {
-                    gRacePlayers[0].trailEffectTimer = 0xF0;
+                collector->collectedCourseCoinMarkerCount++;
+                if (collector->trailEffectTimer != 0) {
+                    collector->trailEffectTimer = 0xF0;
                 } else {
-                    startSpeedFanEffect(gRacePlayers);
+                    startSpeedFanEffect(collector);
                 }
-                if (gRacePlayers[0].trailEffectTimer) {}
+                if (collector->trailEffectTimer) {}
             }
+#ifdef ONLINE_BATTLE
+            else if (onlineSessionActive() != 0) {
+                s32 remoteSeat;
+
+                /* Despawn when a remote puppet collects so both clients stay aligned. */
+                for (remoteSeat = 0; remoteSeat < ONLINE_MAX_SEATS; remoteSeat++) {
+                    if ((remoteSeat != collectorIndex) &&
+                        (onlinePlayerIsRemote(&gRacePlayers[remoteSeat]) != 0) &&
+                        (isRacePlayerInsideCylinder(pos, xzSize, ySize, remoteSeat) != 0)) {
+                        entry->active = 0;
+                        break;
+                    }
+                }
+            }
+#endif
         }
     }
 

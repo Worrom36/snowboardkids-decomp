@@ -32,6 +32,7 @@ class OnlineClient:
         mailbox_path: Path,
         auto_ready: bool = False,
         auto_start: bool = False,
+        min_players: int = 2,
     ) -> None:
         self.host = host
         self.port = port
@@ -44,6 +45,7 @@ class OnlineClient:
         self.connected = False
         self.auto_ready = auto_ready
         self.auto_start = auto_start
+        self.min_players = max(1, int(min_players))
         self._auto_ready_sent = False
         self._auto_start_sent = False
 
@@ -135,12 +137,17 @@ class OnlineClient:
         if self.local_seat != lobby.host_seat:
             return
         humans = [s for s in lobby.seats if s.kind == SeatKind.HUMAN]
-        if len(humans) < 2:
+        # Wait for the full party (default 2). Otherwise a 4P launch starts as soon
+        # as the first two clients ready and rejects late CONNECTs mid-race.
+        if len(humans) < self.min_players:
             return
         if not all(s.ready for s in humans):
             return
         self._auto_start_sent = True
-        print("-> READY + REQUEST_START (auto host)", flush=True)
+        print(
+            f"-> READY + REQUEST_START (auto host, {len(humans)}/{self.min_players})",
+            flush=True,
+        )
         self.send(Cmd.READY)
         self.send(Cmd.REQUEST_START)
 
@@ -294,7 +301,13 @@ def main() -> None:
     parser.add_argument(
         "--auto-start",
         action="store_true",
-        help="Host only: REQUEST_START when 2+ humans are ready",
+        help="Host only: REQUEST_START when min-players humans are all ready",
+    )
+    parser.add_argument(
+        "--min-players",
+        type=int,
+        default=2,
+        help="Host auto-start waits until this many humans have joined (default 2)",
     )
     args = parser.parse_args()
     cfg_host, cfg_port = load_config(args.config)
@@ -306,6 +319,7 @@ def main() -> None:
         args.mailbox,
         auto_ready=bool(args.auto_ready),
         auto_start=bool(args.auto_start),
+        min_players=int(args.min_players),
     )
     use_bridge = (sys.platform == "win32") if args.mupen_bridge is None else bool(args.mupen_bridge)
     asyncio.run(client_loop(client, mupen_bridge=use_bridge, mupen_pid=args.mupen_pid))

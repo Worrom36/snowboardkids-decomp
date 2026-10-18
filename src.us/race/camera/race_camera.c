@@ -159,6 +159,12 @@ extern s32 gMenuFlowState;
 void setRaceCameraMode(u16 arg0, u16 arg1) {
     RaceCamera *temp;
 
+#ifdef ONLINE_BATTLE
+    /* Single-screen online: local seat always drives camera 0. */
+    if (onlineSessionActive() != 0) {
+        arg0 = (u16)onlineSessionViewIndex((s32)arg0);
+    }
+#endif
     if (gRaceCameraModeChangeDisabled == 0) {
         temp = &gRaceCameras[arg0];
         temp->mode = arg1;
@@ -167,8 +173,14 @@ void setRaceCameraMode(u16 arg0, u16 arg1) {
 }
 
 void setRaceCameraModeForced(u16 arg0, u16 arg1) {
-    RaceCamera *temp = &gRaceCameras[arg0];
+    RaceCamera *temp;
 
+#ifdef ONLINE_BATTLE
+    if (onlineSessionActive() != 0) {
+        arg0 = (u16)onlineSessionViewIndex((s32)arg0);
+    }
+#endif
+    temp = &gRaceCameras[arg0];
     temp->mode = arg1;
     temp->update = gRaceCameraModeUpdates[arg1];
 }

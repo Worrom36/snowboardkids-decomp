@@ -8,7 +8,7 @@ from enum import IntEnum
 from typing import List, Optional, Tuple
 
 MAGIC = 0x4F4E504B  # 'ONPK'
-VERSION = 1
+VERSION = 2
 DEFAULT_PORT = 7777
 MAX_SEATS = 4
 
@@ -170,9 +170,17 @@ class RacerSnapshot:
     mode: int = 0
     stick_x: int = 0
     stick_y: int = 0
+    animation_id: int = 0
     input_flags: int = 0
+    update_state: int = 0
+    model_rotation_x: int = 0
+    model_rotation_y: int = 0
+    model_rotation_z: int = 0
+    state_flags: int = 0
+    state_timer: int = 0
+    ground_offset: int = 0
 
-    _STRUCT = struct.Struct(">BBBBBxxxIiiiiiihhhhihhhxxI")
+    _STRUCT = struct.Struct(">BBBBBxxxIiiiiiihhhhihhhhIhhhhIii")
 
     def pack(self) -> bytes:
         return self._STRUCT.pack(
@@ -196,7 +204,15 @@ class RacerSnapshot:
             self.mode,
             self.stick_x,
             self.stick_y,
+            self.animation_id,
             self.input_flags,
+            self.update_state,
+            self.model_rotation_x,
+            self.model_rotation_y,
+            self.model_rotation_z,
+            self.state_flags,
+            self.state_timer,
+            self.ground_offset,
         )
 
     @classmethod

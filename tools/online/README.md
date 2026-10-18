@@ -14,19 +14,18 @@ python tools/online_client.py --host <SERVER_IP> --port 7777 --mailbox tmp/onlin
 
 Server address defaults come from `tools/online-client/config.ini` (`127.0.0.1:7777`).
 
-## Fast local 2P test
+## Fast local 2P / 4P test
 
-Build a ROM that boots straight into the Online Lobby (default Slash / Big Snow Valley / 3 laps):
-
-```bash
-make BUILD_MODE=shiftable ONLINE_BATTLE=1 ONLINE_BATTLE_AUTOTEST=1
-```
-
-Then launch server + two Mupens + two pinned clients (auto ready + host start):
+Build a normal Online Battle ROM, then use the in-game **GAME MENU → Online Battle** entry on each window:
 
 ```bash
+make BUILD_MODE=shiftable ONLINE_BATTLE=1
 python tools/online_test_2p.py
+# or: python tools/online_test_4p.py
 ```
+
+`ONLINE_BATTLE_AUTOTEST=1` is an optional compile flag that skips title/menus and
+boots straight into the lobby (handy for iteration; leave it off for normal play).
 
 Use `--no-auto` if you want to ready/start with the pad yourself.
 

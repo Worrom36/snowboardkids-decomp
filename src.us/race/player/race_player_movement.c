@@ -712,7 +712,19 @@ void applyItemHitToRacePlayersInsideSphere(Vec3i *pos, s32 xzSize, s16 flag) {
                     }
                     if ((dz < radius) &&
                         (integerSquareRoot64((s64)dx * dx + (s64)dy * dy + (s64)dz * dz) < radius)) {
-                        player->pendingItemHitFlags |= flag;
+#ifdef ONLINE_BATTLE
+                        if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(player) != 0)) {
+                            onlineSessionEnqueueEvent(
+                                ONLINE_EVENT_HIT,
+                                (u8)(player - gRacePlayers),
+                                (u8)(flag & 0xFF),
+                                (u8)(((u16)flag >> 8) & 0xFF)
+                            );
+                        } else
+#endif
+                        {
+                            player->pendingItemHitFlags |= flag;
+                        }
                     }
                 }
             }
@@ -754,6 +766,21 @@ s32 tryApplyRacePlayerItemHit(Vec3i *pos, s32 xzSize, s16 flag, s16 playerIndex)
                 dz = -dz;
             }
             if ((dz < radius) && (integerSquareRoot64((s64)dx * dx + (s64)dy * dy + (s64)dz * dz) < radius)) {
+#ifdef ONLINE_BATTLE
+                /*
+                 * Remotes skip updateRacePlayer (no hit resolve) and pose sync
+                 * would overwrite any local reaction. Tell the victim to apply.
+                 */
+                if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(player) != 0)) {
+                    onlineSessionEnqueueEvent(
+                        ONLINE_EVENT_HIT,
+                        (u8)playerIndex,
+                        (u8)(flag & 0xFF),
+                        (u8)(((u16)flag >> 8) & 0xFF)
+                    );
+                    return 1;
+                }
+#endif
                 player->pendingItemHitFlags |= flag;
                 return 1;
             }

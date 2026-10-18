@@ -14,10 +14,19 @@
 #include "game/race/ui/race_ui_effects.h"
 #include "game/race/player/race_player_input.h"
 #include "game/engine/callback_task_scheduler.h"
+#ifdef ONLINE_BATTLE
+#include "game/online/online_session.h"
+#endif
 
 #define ASSET_HANDLE(index) (gAssetHandles[index])
 #define RACE_HUD_MAIN_FONT_HANDLE (gAssetHandles[0x1C])
 #define RACE_HUD_POPUP_FONT_HANDLE (gAssetHandles[0x1F])
+
+#ifdef ONLINE_BATTLE
+#define RACE_HUD_FOCUS_PLAYER_INDEX onlineSessionFocusPlayerIndex()
+#else
+#define RACE_HUD_FOCUS_PLAYER_INDEX 0
+#endif
 
 extern s16 gRaceLapCount;
 extern u8 gRaceUpdatePaused;
@@ -660,10 +669,15 @@ void drawSinglePlayerRaceHud(void *arg0) {
     s32 palette;
     s32 i;
     s32 var_s1;
+    s32 focus;
+    RacePlayer *player;
     char buffer[0x20];
 
-    sprintf(buffer, gRaceHudSinglePlayerScoreFormat, gRacePlayers[0].score);
-    if (gRacePlayers[0].score < 100) {
+    focus = RACE_HUD_FOCUS_PLAYER_INDEX;
+    player = &gRacePlayers[focus];
+
+    sprintf(buffer, gRaceHudSinglePlayerScoreFormat, player->score);
+    if (player->score < 100) {
         palette = 0x10;
     } else {
         palette = 0xE;
@@ -688,37 +702,37 @@ void drawSinglePlayerRaceHud(void *arg0) {
         (gRaceHudCoinSpinnerFrame >> 1) + 4
     );
 
-    if (gRacePlayers[0].itemEffectPalette != 0) {
+    if (player->itemEffectPalette != 0) {
         drawScaledAssetTableSprite(
             -0x20,
             -0x60,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceHudItemEffectTileOffsets[gRacePlayers[0].itemEffectType] + gRacePlayers[0].itemEffectCount - 1,
-            gRacePlayers[0].itemEffectPalette
+            gRaceHudItemEffectTileOffsets[player->itemEffectType] + player->itemEffectCount - 1,
+            player->itemEffectPalette
         );
     } else {
         drawAssetTableSprite(
             -0x20,
             -0x60,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceHudItemEffectTileOffsets[gRacePlayers[0].itemEffectType] + gRacePlayers[0].itemEffectCount - 1
+            gRaceHudItemEffectTileOffsets[player->itemEffectType] + player->itemEffectCount - 1
         );
     }
 
-    if (gRacePlayers[0].actionEffectPalette != 0) {
+    if (player->actionEffectPalette != 0) {
         drawScaledAssetTableSprite(
             0,
             -0x60,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceHudActionEffectTileIds[gRacePlayers[0].actionEffectType],
-            gRacePlayers[0].actionEffectPalette
+            gRaceHudActionEffectTileIds[player->actionEffectType],
+            player->actionEffectPalette
         );
     } else {
         drawAssetTableSprite(
             0,
             -0x60,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceHudActionEffectTileIds[gRacePlayers[0].actionEffectType]
+            gRaceHudActionEffectTileIds[player->actionEffectType]
         );
     }
 
@@ -726,14 +740,14 @@ void drawSinglePlayerRaceHud(void *arg0) {
         -0x88,
         0x40,
         getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-        gRacePlayers[0].rankIndex
+        player->rankIndex
     );
     drawAssetTableSprite(-0x88, -0x60, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x39);
     drawAssetTableSpriteWithExplicitPalette(
         -0x68,
         -0x60,
         getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-        gRacePlayers[0].lapDigit + 0x2C,
+        player->lapDigit + 0x2C,
         0xE
     );
     drawAssetTableSprite(-0x5C, -0x60, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x38);
@@ -1187,23 +1201,26 @@ void updateRaceHud(void) {
     }
 
     switch (*(u16 *)&gRaceHudMode) {
-        case RACE_HUD_MODE_ONE_PLAYER:
-            if (gRacePlayers[0].itemEffectPalette != 0) {
-                if (gRacePlayers[0].itemEffectPalette == 4) {
+        case RACE_HUD_MODE_ONE_PLAYER: {
+            RacePlayer *focusPlayer = &gRacePlayers[RACE_HUD_FOCUS_PLAYER_INDEX];
+
+            if (focusPlayer->itemEffectPalette != 0) {
+                if (focusPlayer->itemEffectPalette == 4) {
                     spawnRaceUiSparkle(-0x20, -0x60, 0, 0, 0);
                 }
-                gRacePlayers[0].itemEffectPalette--;
+                focusPlayer->itemEffectPalette--;
             }
-            if (gRacePlayers[0].actionEffectPalette != 0) {
-                if (gRacePlayers[0].actionEffectPalette == 4) {
+            if (focusPlayer->actionEffectPalette != 0) {
+                if (focusPlayer->actionEffectPalette == 4) {
                     spawnRaceUiSparkle(0, -0x60, 0, 0, 1);
                 }
-                gRacePlayers[0].actionEffectPalette--;
+                focusPlayer->actionEffectPalette--;
             }
             addRenderCallback(&gRaceOverlayRenderCallbackList, drawSinglePlayerRaceHud, 0);
             addRenderCallback(&gRaceForegroundRenderCallbackList, noopRaceHudCallback, 0);
             updateRaceCourseProgressMeter();
             return;
+        }
         case RACE_HUD_MODE_TWO_PLAYER:
             for (i = 0; i < 2; i++) {
                 if (gRacePlayers[i].itemEffectPalette != 0) {

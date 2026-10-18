@@ -414,8 +414,11 @@ class MupenBridge:
         # Continuous game-owned fields -> file
         host[OFF_PENDING_LOADOUT : OFF_PENDING_LOADOUT + 8] = rdram[OFF_PENDING_LOADOUT : OFF_PENDING_LOADOUT + 8]
         host[OFF_LOCAL_OUT : OFF_REMOTE_IN] = rdram[OFF_LOCAL_OUT : OFF_REMOTE_IN]
-        host[OFF_EVENT_OUT_COUNT] = rdram[OFF_EVENT_OUT_COUNT]
-        host[OFF_EVENT_OUT:OFF_EVENT_IN] = rdram[OFF_EVENT_OUT:OFF_EVENT_IN]
+        # One-shot eventOut: copy then clear RDRAM so events are not re-sent every frame.
+        if rdram[OFF_EVENT_OUT_COUNT] != 0:
+            host[OFF_EVENT_OUT_COUNT] = rdram[OFF_EVENT_OUT_COUNT]
+            host[OFF_EVENT_OUT:OFF_EVENT_IN] = rdram[OFF_EVENT_OUT:OFF_EVENT_IN]
+            rdram[OFF_EVENT_OUT_COUNT] = 0
         host[OFF_GAME_HEARTBEAT : OFF_GAME_HEARTBEAT + 4] = rdram[OFF_GAME_HEARTBEAT : OFF_GAME_HEARTBEAT + 4]
 
         # Lobby: host wins only after the net client has real server state.
@@ -438,8 +441,11 @@ class MupenBridge:
         # Continuous bridge-owned fields -> RDRAM
         rdram[OFF_ERROR] = host[OFF_ERROR]
         rdram[OFF_REMOTE_IN:OFF_EVENT_OUT_COUNT] = host[OFF_REMOTE_IN:OFF_EVENT_OUT_COUNT]
-        rdram[OFF_EVENT_IN_COUNT] = host[OFF_EVENT_IN_COUNT]
-        rdram[OFF_EVENT_IN:OFF_BRIDGE_HEARTBEAT] = host[OFF_EVENT_IN:OFF_BRIDGE_HEARTBEAT]
+        # One-shot eventIn: deliver when the game has drained the previous batch.
+        if rdram[OFF_EVENT_IN_COUNT] == 0 and host[OFF_EVENT_IN_COUNT] != 0:
+            rdram[OFF_EVENT_IN_COUNT] = host[OFF_EVENT_IN_COUNT]
+            rdram[OFF_EVENT_IN:OFF_BRIDGE_HEARTBEAT] = host[OFF_EVENT_IN:OFF_BRIDGE_HEARTBEAT]
+            host[OFF_EVENT_IN_COUNT] = 0
         # Heartbeat: prove bridge is alive (must be non-zero before offline fallback at ~90 frames)
         hb = struct.unpack_from(">I", host, OFF_BRIDGE_HEARTBEAT)[0] + 1
         struct.pack_into(">I", host, OFF_BRIDGE_HEARTBEAT, hb & 0xFFFFFFFF)
