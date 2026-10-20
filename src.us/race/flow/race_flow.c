@@ -1963,7 +1963,17 @@ void prepareRaceResultsFlow(void) {
     setCurrentGameTaskCallback(updateRaceResultsFlow, 0);
     if (D_80121B60 != 0) {
         requestMusicSequenceBank(6);
+#ifdef ONLINE_BATTLE
+        /*
+         * Online multi-human results use the VS banner (see
+         * updateRaceResultsFlow); the single-player award badge would draw
+         * seat 0's RANK/character-name over it on every client.
+         */
+        if ((gPlayerCount == 1) && (gRaceSplitscreenMode == 0) &&
+            !((onlineSessionActive() != 0) && (onlineSessionLobby()->humanCount > 1))) {
+#else
         if ((gPlayerCount == 1) && (gRaceSplitscreenMode == 0)) {
+#endif
             createCallbackTaskWithUserId((CallbackTaskCallback)updateRaceUiResultAwardBadgeDelay, 6, 0x64, 0xA9);
         }
         createCallbackTaskWithUserId((CallbackTaskCallback)initFallingConfetti, 5, 0x64, D_80121B60 - 1);

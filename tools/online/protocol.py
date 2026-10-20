@@ -8,9 +8,28 @@ from enum import IntEnum
 from typing import List, Optional, Tuple
 
 MAGIC = 0x4F4E504B  # 'ONPK'
-VERSION = 2
+VERSION = 3
 DEFAULT_PORT = 6464
 MAX_SEATS = 4
+NAME_LEN = 8
+_NAME_CHARS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -.'!")
+
+
+def sanitize_name(raw) -> bytes:
+    """Normalize a player name to NAME_LEN space-padded printable ASCII bytes."""
+    if raw is None:
+        text = ""
+    elif isinstance(raw, bytes):
+        text = raw.decode("ascii", errors="ignore")
+    else:
+        text = str(raw)
+    cleaned = "".join(ch if ch in _NAME_CHARS else " " for ch in text.upper())
+    cleaned = cleaned.strip()[:NAME_LEN]
+    return cleaned.encode("ascii").ljust(NAME_LEN, b" ")
+
+
+def name_to_str(raw: bytes) -> str:
+    return raw.decode("ascii", errors="ignore").strip()
 
 
 class Cmd(IntEnum):
@@ -68,8 +87,9 @@ class Loadout:
     character_variant: int = 0
     snowboard_texture_index: int = 0
     lap_count: int = 3
+    name: bytes = b""
 
-    _STRUCT = struct.Struct(">BBBBBxxx")
+    _STRUCT = struct.Struct(">BBBBBxxx8s")
 
     def pack(self) -> bytes:
         return self._STRUCT.pack(
@@ -78,12 +98,17 @@ class Loadout:
             self.character_variant,
             self.snowboard_texture_index,
             self.lap_count,
+            sanitize_name(self.name),
         )
 
     @classmethod
     def unpack(cls, data: bytes, offset: int = 0) -> Tuple["Loadout", int]:
         values = cls._STRUCT.unpack_from(data, offset)
         return cls(*values), offset + cls._STRUCT.size
+
+    @property
+    def name_str(self) -> str:
+        return name_to_str(sanitize_name(self.name))
 
 
 @dataclass

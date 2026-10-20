@@ -30,6 +30,7 @@ from tools.online.mailbox_file import (
     OFF_GAME_CMD,
     OFF_GAME_HEARTBEAT,
     OFF_LOBBY,
+    LOBBY_SEAT_SIZE,
     OFF_LOCAL_OUT,
     OFF_PENDING_LOADOUT,
     OFF_REMOTE_IN,
@@ -40,7 +41,7 @@ from tools.online.protocol import VERSION
 
 # N64 virtual address of gOnlineMailbox in the current shiftable Online Battle build
 # (RDRAM offset = addr - 0x80000000). Used as a scan hint after magic is found once.
-DEFAULT_MAILBOX_VRAM = 0x80114150
+DEFAULT_MAILBOX_VRAM = 0x801181E0
 
 PROCESS_QUERY_INFORMATION = 0x0400
 PROCESS_VM_READ = 0x0010
@@ -287,8 +288,8 @@ class MupenBridge:
         for base, size in self._regions():
             if size < 0x400000:
                 continue
-            # Mupen sometimes places RDRAM at region base, sometimes +0x1000.
-            for pad in (0, 0x1000, 0x2000):
+            # Mupen sometimes places RDRAM at region base, sometimes +0x1000..+0x8000.
+            for pad in range(0, 0x9000, 0x1000):
                 if pad + 0x800000 <= size or pad + rdram_off + MAILBOX_SIZE <= size:
                     found.append(base + pad)
         self._rdram_candidates = list(dict.fromkeys(found))
@@ -432,12 +433,12 @@ class MupenBridge:
         local_seat = rdram[OFF_LOBBY + 1]
         local_ready_opt = 0
         if local_seat < 4:
-            seat_off = OFF_LOBBY + 12 + int(local_seat) * 12
+            seat_off = OFF_LOBBY + 12 + int(local_seat) * LOBBY_SEAT_SIZE
             local_ready_opt = rdram[seat_off + 1]
         if host_phase >= 2:  # LOBBY / COUNTDOWN / RACING / ERROR
             rdram[OFF_LOBBY:OFF_PENDING_LOADOUT] = host[OFF_LOBBY:OFF_PENDING_LOADOUT]
-            if local_seat < 4 and local_ready_opt and host[OFF_LOBBY + 12 + int(local_seat) * 12 + 1] == 0:
-                rdram[OFF_LOBBY + 12 + int(local_seat) * 12 + 1] = 1
+            if local_seat < 4 and local_ready_opt and host[OFF_LOBBY + 12 + int(local_seat) * LOBBY_SEAT_SIZE + 1] == 0:
+                rdram[OFF_LOBBY + 12 + int(local_seat) * LOBBY_SEAT_SIZE + 1] = 1
         else:
             host[OFF_LOBBY:OFF_PENDING_LOADOUT] = rdram[OFF_LOBBY:OFF_PENDING_LOADOUT]
 
@@ -464,9 +465,9 @@ class MupenBridge:
         fresh = self.mailbox._read()
         host[OFF_REMOTE_IN:OFF_CPU_PATH_OUT] = fresh[OFF_REMOTE_IN:OFF_CPU_PATH_OUT]
         host[OFF_CPU_PATH_IN:OFF_EVENT_OUT_COUNT] = fresh[OFF_CPU_PATH_IN:OFF_EVENT_OUT_COUNT]
-        if fresh[OFF_EVENT_IN_COUNT] != 0:
-            host[OFF_EVENT_IN_COUNT] = fresh[OFF_EVENT_IN_COUNT]
-            host[OFF_EVENT_IN:OFF_BRIDGE_HEARTBEAT] = fresh[OFF_EVENT_IN:OFF_BRIDGE_HEARTBEAT]
+        # NOTE: do not re-merge eventIn here. Events are one-shot: the file copy
+        # is the same batch delivery above already consumed in-memory, so copying
+        # it back resurrects it and the game re-applies it every drain (item spam).
         if fresh[OFF_BRIDGE_CMD] != 0:
             host[OFF_BRIDGE_CMD] = fresh[OFF_BRIDGE_CMD]
             host[OFF_ERROR] = fresh[OFF_ERROR]

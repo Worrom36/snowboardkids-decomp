@@ -75,6 +75,66 @@ typedef struct OnlineRemoteMotion {
     u32 stateFlags;
 } OnlineRemoteMotion;
 
+static char sOnlinePlayerNames[ONLINE_MAX_SEATS][ONLINE_PLAYER_NAME_LEN + 1];
+static const char sOnlineSeatFallbackNames[ONLINE_MAX_SEATS][3] = { "P1", "P2", "P3", "P4" };
+
+/* Copy up to NAME_LEN printable chars, trim trailing spaces, NUL-terminate. */
+static void onlineCopyPlayerName(char *dst, const char *src, s32 srcLen) {
+    s32 i;
+    s32 out;
+
+    out = 0;
+    for (i = 0; i < srcLen && out < ONLINE_PLAYER_NAME_LEN; i++) {
+        char c = src[i];
+        if (c == '\0') {
+            break;
+        }
+        if (c < ' ' || c > '~') {
+            c = ' ';
+        }
+        dst[out++] = c;
+    }
+    while (out > 0 && dst[out - 1] == ' ') {
+        out--;
+    }
+    dst[out] = '\0';
+}
+
+const char *onlineSessionPlayerName(s32 seat) {
+    if (seat < 0 || seat >= ONLINE_MAX_SEATS) {
+        return "";
+    }
+    if (sOnlinePlayerNames[seat][0] == '\0') {
+        return sOnlineSeatFallbackNames[seat];
+    }
+    return sOnlinePlayerNames[seat];
+}
+
+void onlineSessionSetPlayerName(const char *name) {
+    char cleaned[ONLINE_PLAYER_NAME_LEN + 1];
+    s32 i;
+    s32 len;
+
+    onlineCopyPlayerName(cleaned, name, ONLINE_PLAYER_NAME_LEN);
+    len = 0;
+    while (cleaned[len] != '\0') {
+        len++;
+    }
+    for (i = 0; i < ONLINE_PLAYER_NAME_LEN; i++) {
+        gOnlineMailbox.pendingLoadout.name[i] = (i < len) ? cleaned[i] : ' ';
+    }
+    if (gOnlineMailbox.lobby.localSeat < ONLINE_MAX_SEATS) {
+        onlineCopyPlayerName(sOnlinePlayerNames[gOnlineMailbox.lobby.localSeat], cleaned, ONLINE_PLAYER_NAME_LEN);
+        for (i = 0; i < ONLINE_PLAYER_NAME_LEN; i++) {
+            gOnlineMailbox.lobby.seats[gOnlineMailbox.lobby.localSeat].loadout.name[i] =
+                (i < len) ? cleaned[i] : ' ';
+        }
+    }
+    if (gOnlineMailbox.lobby.phase >= ONLINE_PHASE_LOBBY) {
+        onlineMailboxRequest(ONLINE_CMD_SET_LOADOUT);
+    }
+}
+
 static OnlineRemoteMotion sRemoteMotion[ONLINE_MAX_SEATS];
 static s16 sRemotePredictFrame;
 static u32 sPublishSeq[ONLINE_MAX_SEATS];
@@ -779,6 +839,7 @@ void onlineSessionConfigureRacePlayers(void) {
 
     sRemotePredictFrame = -1;
     for (i = 0; i < ONLINE_MAX_SEATS; i++) {
+        onlineCopyPlayerName(sOnlinePlayerNames[i], lobby->seats[i].loadout.name, ONLINE_PLAYER_NAME_LEN);
         sOnlineRemoteSeat[i] = 0;
         onlineRemoteMotionResetSeat(i);
         gRacePlayers[i].replayInputSource = RACE_PLAYER_INPUT_LIVE;

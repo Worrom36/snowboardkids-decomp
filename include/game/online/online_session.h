@@ -22,6 +22,10 @@ void onlineSessionSetReady(s32 ready);
 void onlineSessionRequestStart(void);
 void onlineSessionDisconnect(void);
 void onlineSessionSetLoadout(u8 courseId, u8 characterId, u8 characterVariant, u8 board, u8 laps);
+/* Copy a printable name into pendingLoadout and push SET_LOADOUT once joined. */
+void onlineSessionSetPlayerName(const char *name);
+/* Race-time display name for a seat (falls back to P1..P4 when blank). */
+const char *onlineSessionPlayerName(s32 seat);
 
 OnlineLobbySnapshot *onlineSessionLobby(void);
 u8 onlineSessionLocalSeat(void);

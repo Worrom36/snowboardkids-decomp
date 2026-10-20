@@ -16,6 +16,10 @@
 #include "game/engine/callback_task_scheduler.h"
 #ifdef ONLINE_BATTLE
 #include "game/online/online_session.h"
+#include "game/race/camera/race_camera.h"
+#include "game/math/fixed_point_math.h"
+#include "game/engine/controller_input.h"
+#include <PR/os_cont.h>
 #endif
 
 #define ASSET_HANDLE(index) (gAssetHandles[index])
@@ -1192,6 +1196,111 @@ void updateRaceCourseProgressMeter(void) {
     addRenderCallback(&gMenuRenderCallbackList, drawRaceCourseProgressMeter, 0);
 }
 
+#ifdef ONLINE_BATTLE
+/* Overhead name tags, toggled with L (default on). */
+static u8 sOnlineNameTagsEnabled = 1;
+
+/*
+ * Overhead player names: project each remote human's head position through
+ * camera 0 (online is single-screen) and draw with the HUD ASCII font.
+ * HUD pass has no depth test, so tags show through terrain by design.
+ * World coords are 16.16 fixed; camera basis is normalized to 12-bit frac.
+ */
+static void drawOnlinePlayerNameTags(void *unused) {
+    RaceCamera *cam;
+    OnlineLobbySnapshot *lobby;
+    s32 fx, fy, fz;
+    s32 rx, rz;
+    s32 ux, uy, uz;
+    s32 lenF, lenR;
+    s32 fnx, fny, fnz;
+    s32 rnx, rnz;
+    s32 localSeat;
+    s32 i;
+
+    (void)unused;
+    if (onlineSessionActive() == 0) {
+        return;
+    }
+    lobby = onlineSessionLobby();
+    localSeat = onlineSessionLocalSeat();
+    cam = &gRaceCameras[0];
+
+    fx = cam->focus.x - cam->pos.x;
+    fy = cam->focus.y - cam->pos.y;
+    fz = cam->focus.z - cam->pos.z;
+    lenF = integerSquareRoot64((s64)fx * fx + (s64)fy * fy + (s64)fz * fz);
+    if (lenF == 0) {
+        return;
+    }
+    fnx = (s32)(((s64)fx * 0x1000) / lenF);
+    fny = (s32)(((s64)fy * 0x1000) / lenF);
+    fnz = (s32)(((s64)fz * 0x1000) / lenF);
+
+    /* right = forward x world-up */
+    rx = -fz;
+    rz = fx;
+    lenR = integerSquareRoot64((s64)rx * rx + (s64)rz * rz);
+    if (lenR == 0) {
+        return;
+    }
+    rnx = (s32)(((s64)rx * 0x1000) / lenR);
+    rnz = (s32)(((s64)rz * 0x1000) / lenR);
+
+    /* true up = right x forward (12-bit frac) */
+    ux = (s32)(((s64)0 * fnz - (s64)rnz * fny) >> 12);
+    uy = (s32)(((s64)rnz * fnx - (s64)rnx * fnz) >> 12);
+    uz = (s32)(((s64)rnx * fny - (s64)0 * fnx) >> 12);
+
+    for (i = 0; i < ONLINE_MAX_SEATS; i++) {
+        RacePlayer *player;
+        const char *name;
+        s32 relX, relY, relZ;
+        s32 depth, cx, cy;
+        s32 sx, sy;
+        s32 nameLen;
+
+        if (i == localSeat) {
+            continue;
+        }
+        if (lobby->seats[i].kind != ONLINE_SEAT_HUMAN) {
+            continue;
+        }
+        player = &gRacePlayers[i];
+        if (player->isActive == 0) {
+            continue;
+        }
+        name = onlineSessionPlayerName(i);
+        nameLen = 0;
+        while (name[nameLen] != '\0') {
+            nameLen++;
+        }
+        if (nameLen == 0) {
+            continue;
+        }
+
+        relX = player->projectedPos.x - cam->pos.x;
+        relY = (player->projectedPos.y + 0x90000) - cam->pos.y;
+        relZ = player->projectedPos.z - cam->pos.z;
+
+        depth = (s32)(((s64)relX * fnx + (s64)relY * fny + (s64)relZ * fnz) >> 12);
+        if (depth < 0x8000 || depth > (400 << 16)) {
+            continue;
+        }
+        cx = (s32)(((s64)relX * rnx + (s64)relZ * rnz) >> 12);
+        cy = (s32)(((s64)relX * ux + (s64)relY * uy + (s64)relZ * uz) >> 12);
+
+        /* focal ~= 171 px for 70 deg FOV on a 320x240 centered HUD. */
+        sx = (s32)(((s64)cx * 171) / depth);
+        sy = (s32)(-((s64)cy * 171) / depth);
+        if (sx < -175 || sx > 175 || sy < -135 || sy > 135) {
+            continue;
+        }
+        drawMenuAsciiTextDefaultScale((s16)(sx - (nameLen * 8) / 2), (s16)(sy - 4), (char *)name, 1);
+    }
+}
+#endif
+
 void updateRaceHud(void) {
     s32 i;
 
@@ -1218,6 +1327,16 @@ void updateRaceHud(void) {
             }
             addRenderCallback(&gRaceOverlayRenderCallbackList, drawSinglePlayerRaceHud, 0);
             addRenderCallback(&gRaceForegroundRenderCallbackList, noopRaceHudCallback, 0);
+#ifdef ONLINE_BATTLE
+            if (onlineSessionActive() != 0) {
+                if (gPlayerInputPressed[0] & L_TRIG) {
+                    sOnlineNameTagsEnabled ^= 1;
+                }
+                if (sOnlineNameTagsEnabled != 0) {
+                    addRenderCallback(&gRaceForegroundRenderCallbackList, drawOnlinePlayerNameTags, 0);
+                }
+            }
+#endif
             updateRaceCourseProgressMeter();
             return;
         }

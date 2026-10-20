@@ -3,9 +3,10 @@
 
 #include "common.h"
 
-#define ONLINE_PROTOCOL_VERSION 2
+#define ONLINE_PROTOCOL_VERSION 3
 #define ONLINE_MAX_SEATS        4
 #define ONLINE_DEFAULT_PORT     6464
+#define ONLINE_PLAYER_NAME_LEN  8
 
 /* Wire / mailbox command ids (shared with Python tools). */
 typedef enum OnlineCmd {
@@ -70,6 +71,7 @@ typedef struct OnlineLoadout {
     /* 0x03 */ u8 snowboardTextureIndex;
     /* 0x04 */ u8 lapCount;
     /* 0x05 */ u8 pad05[3];
+    /* 0x08 */ char name[ONLINE_PLAYER_NAME_LEN]; /* space-padded, may lack NUL */
 } OnlineLoadout;
 
 typedef struct OnlineLobbySeat {

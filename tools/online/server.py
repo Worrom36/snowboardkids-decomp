@@ -24,7 +24,9 @@ from tools.online.protocol import (
     RaceEvent,
     RacerSnapshot,
     SeatKind,
+    name_to_str,
     pack_packet,
+    sanitize_name,
     unpack_packet,
 )
 
@@ -259,9 +261,11 @@ class LobbyServer:
 
         if cmd == Cmd.SET_LOADOUT and self.phase == Phase.LOBBY:
             loadout, _ = Loadout.unpack(payload)
+            loadout.name = sanitize_name(loadout.name)
             client.loadout = loadout
             log(
-                f"SET_LOADOUT seat={client.seat} course={loadout.course_id} "
+                f"SET_LOADOUT seat={client.seat} name={name_to_str(loadout.name)!r} "
+                f"course={loadout.course_id} "
                 f"char={loadout.character_id} board={loadout.snowboard_texture_index} "
                 f"laps={loadout.lap_count}"
             )
@@ -370,8 +374,14 @@ class LobbyServer:
 
         if cmd == Cmd.EVENT and self.phase == Phase.RACING:
             event, _ = RaceEvent.unpack(payload)
-            event.seat = client.seat
-            log(f"EVENT type={event.type} seat={client.seat} args=({event.arg0},{event.arg1})")
+            # seat meaning: ITEM_USE(1)/ACTION_USE(2) = actor, HIT(5) = victim.
+            # Forcing seat=sender on HIT reroutes the hit away from the victim.
+            if event.type in (1, 2):
+                event.seat = client.seat
+            log(
+                f"EVENT type={event.type} seat={event.seat} from={client.seat} "
+                f"args=({event.arg0},{event.arg1})"
+            )
             self.broadcast(Cmd.EVENT, event.pack(), exclude=addr)
             return
 

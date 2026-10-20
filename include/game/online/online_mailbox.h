@@ -20,24 +20,25 @@ typedef struct OnlineMailbox {
     /* 0x00A */ u8 errorCode;                /* OnlineErrorCode */
     /* 0x00B */ u8 pad0B;
     /* 0x00C */ OnlineLobbySnapshot lobby;
-    /* 0x048 */ OnlineLoadout pendingLoadout;
-    /* 0x050 */ OnlineRacerSnapshot authorityOut[ONLINE_MAX_SEATS]; /* local + host-sim CPUs */
-    /* 0x190 */ OnlineRacerSnapshot remoteIn[ONLINE_MAX_SEATS];
-    /* 0x2D0 */ OnlineCpuPathSnapshot cpuPathOut[ONLINE_MAX_SEATS];
-    /* 0x380 */ OnlineCpuPathSnapshot cpuPathIn[ONLINE_MAX_SEATS];
-    /* 0x430 */ u8 eventOutCount;
-    /* 0x431 */ u8 eventInCount;
-    /* 0x432 */ u8 pad432[2];
-    /* 0x434 */ OnlineRaceEvent eventOut[ONLINE_EVENT_QUEUE_SIZE];
-    /* 0x474 */ OnlineRaceEvent eventIn[ONLINE_EVENT_QUEUE_SIZE];
-    /* 0x4B4 */ u32 bridgeHeartbeat;
-    /* 0x4B8 */ u32 gameHeartbeat;
+    /* 0x068 */ OnlineLoadout pendingLoadout;
+    /* 0x078 */ OnlineRacerSnapshot authorityOut[ONLINE_MAX_SEATS]; /* local + host-sim CPUs */
+    /* 0x1B8 */ OnlineRacerSnapshot remoteIn[ONLINE_MAX_SEATS];
+    /* 0x2F8 */ OnlineCpuPathSnapshot cpuPathOut[ONLINE_MAX_SEATS];
+    /* 0x3A8 */ OnlineCpuPathSnapshot cpuPathIn[ONLINE_MAX_SEATS];
+    /* 0x458 */ u8 eventOutCount;
+    /* 0x459 */ u8 eventInCount;
+    /* 0x45A */ u8 pad45A[2];
+    /* 0x45C */ OnlineRaceEvent eventOut[ONLINE_EVENT_QUEUE_SIZE];
+    /* 0x49C */ OnlineRaceEvent eventIn[ONLINE_EVENT_QUEUE_SIZE];
+    /* 0x4DC */ u32 bridgeHeartbeat;
+    /* 0x4E0 */ u32 gameHeartbeat;
 } OnlineMailbox;
 
-typedef char OnlineMailboxLobbyOffsetCheck[(sizeof(OnlineLobbySnapshot) == 0x3C) ? 1 : -1];
+typedef char OnlineMailboxLoadoutOffsetCheck[(sizeof(OnlineLoadout) == 0x10) ? 1 : -1];
+typedef char OnlineMailboxLobbyOffsetCheck[(sizeof(OnlineLobbySnapshot) == 0x5C) ? 1 : -1];
 typedef char OnlineMailboxRacerOffsetCheck[(sizeof(OnlineRacerSnapshot) == 0x50) ? 1 : -1];
 typedef char OnlineMailboxCpuPathOffsetCheck[(sizeof(OnlineCpuPathSnapshot) == 0x2C) ? 1 : -1];
-typedef char OnlineMailboxSizeCheck[(sizeof(OnlineMailbox) == 0x4BC) ? 1 : -1];
+typedef char OnlineMailboxSizeCheck[(sizeof(OnlineMailbox) == 0x4E4) ? 1 : -1];
 
 extern OnlineMailbox gOnlineMailbox;
 

@@ -44,6 +44,91 @@ static u8 sOnlineRaceStartArmed;
 /* Task that runs handleOnlineBattleConnectFlow while lobby task 4 is up. */
 static u8 sOnlineParentTaskId;
 
+/* Name entry (manual lobbies): edit before ready; A confirms + readies. */
+static const char sOnlineNameCharset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -.'!";
+static char sOnlineNameBuffer[ONLINE_PLAYER_NAME_LEN + 1];
+static u8 sOnlineNameLen;
+static u8 sOnlineNameCursor;
+static u8 sOnlineNameEditing;
+static u8 sOnlineNameBlink;
+
+static void onlineNameCycle(s32 dir) {
+    s32 idx;
+    s32 len;
+    char cur;
+    const char *set = sOnlineNameCharset;
+
+    if (sOnlineNameCursor >= ONLINE_PLAYER_NAME_LEN) {
+        return;
+    }
+    cur = (sOnlineNameCursor < sOnlineNameLen) ? sOnlineNameBuffer[sOnlineNameCursor] : 'A';
+    idx = 0;
+    while (set[idx] != '\0' && set[idx] != cur) {
+        idx++;
+    }
+    if (set[idx] == '\0') {
+        idx = 0;
+    }
+    len = 0;
+    while (set[len] != '\0') {
+        len++;
+    }
+    idx = (idx + dir) % len;
+    if (idx < 0) {
+        idx += len;
+    }
+    sOnlineNameBuffer[sOnlineNameCursor] = set[idx];
+    if (sOnlineNameCursor >= sOnlineNameLen) {
+        sOnlineNameLen = sOnlineNameCursor + 1;
+        sOnlineNameBuffer[sOnlineNameLen] = '\0';
+    }
+}
+
+static void onlineNameDelete(void) {
+    s32 i;
+
+    if (sOnlineNameCursor == 0 || sOnlineNameLen == 0) {
+        return;
+    }
+    sOnlineNameCursor--;
+    for (i = sOnlineNameCursor; i < sOnlineNameLen - 1; i++) {
+        sOnlineNameBuffer[i] = sOnlineNameBuffer[i + 1];
+    }
+    sOnlineNameLen--;
+    sOnlineNameBuffer[sOnlineNameLen] = '\0';
+}
+
+/* Returns 1 when the frame's input was consumed by name editing. */
+static s32 onlineNameHandleInput(s32 pressed) {
+    if (sOnlineNameEditing == 0) {
+        return 0;
+    }
+    sOnlineNameBlink++;
+    if (pressed & (U_JPAD | STICK_UP)) {
+        onlineNameCycle(1);
+    }
+    if (pressed & (D_JPAD | STICK_DOWN)) {
+        onlineNameCycle(-1);
+    }
+    if ((pressed & (L_JPAD | STICK_LEFT)) && (sOnlineNameCursor > 0)) {
+        sOnlineNameCursor--;
+    }
+    if ((pressed & (R_JPAD | STICK_RIGHT)) && (sOnlineNameCursor < sOnlineNameLen) &&
+        (sOnlineNameCursor < ONLINE_PLAYER_NAME_LEN - 1)) {
+        sOnlineNameCursor++;
+    }
+    if (pressed & 0x4000) { /* B: backspace */
+        onlineNameDelete();
+        return 1;
+    }
+    if (pressed & (0x8000 | 0x1000)) { /* A / Start: confirm */
+        onlineSessionSetPlayerName(sOnlineNameBuffer);
+        sOnlineNameEditing = 0;
+        return (pressed & 0x8000) ? 0 : 1; /* A also readies below; Start only confirms */
+    }
+    return 1;
+}
+
 static void fadeOutOnlineLobbyMenu(void);
 static void beginOnlineLobbyRaceStart(void);
 
@@ -93,7 +178,37 @@ static void drawOnlineLobbyHud(void *unused) {
     humans = 0;
     y = -0x18;
     for (i = 0; i < ONLINE_MAX_SEATS; i++) {
-        drawMenuAsciiTextDefaultScale(-0x50, y, sOnlineSeatLabels[i], 0);
+        char nameBuf[ONLINE_PLAYER_NAME_LEN + 1];
+        s32 j;
+        s32 nameLen;
+
+        nameLen = 0;
+        if (lobby->seats[i].kind == ONLINE_SEAT_HUMAN) {
+            for (j = 0; j < ONLINE_PLAYER_NAME_LEN; j++) {
+                char c = lobby->seats[i].loadout.name[j];
+                if (c == '\0') {
+                    break;
+                }
+                nameBuf[nameLen++] = (c >= ' ' && c <= '~') ? c : ' ';
+            }
+            while (nameLen > 0 && nameBuf[nameLen - 1] == ' ') {
+                nameLen--;
+            }
+        }
+        nameBuf[nameLen] = '\0';
+
+        if ((i == (s32)localSeat) && (sOnlineNameEditing != 0)) {
+            if (sOnlineNameLen > 0) {
+                drawMenuAsciiTextDefaultScale(-0x50, y, sOnlineNameBuffer, 1);
+            }
+            if (((sOnlineNameBlink >> 4) & 1) == 0) {
+                drawMenuAsciiTextDefaultScale((s16)(-0x50 + sOnlineNameCursor * 8), y, "_", 1);
+            }
+        } else if (nameLen > 0) {
+            drawMenuAsciiTextDefaultScale(-0x50, y, nameBuf, (i == (s32)localSeat) ? 1 : 0);
+        } else {
+            drawMenuAsciiTextDefaultScale(-0x50, y, sOnlineSeatLabels[i], 0);
+        }
         if (lobby->seats[i].kind == ONLINE_SEAT_HUMAN) {
             humans++;
             if (lobby->seats[i].ready != 0) {
@@ -107,11 +222,13 @@ static void drawOnlineLobbyHud(void *unused) {
         } else {
             status = sOnlineEmptyText;
         }
-        drawMenuAsciiTextDefaultScale(-0x20, y, status, (i == (s32)localSeat) ? 1 : 0);
+        drawMenuAsciiTextDefaultScale(0x00, y, status, (i == (s32)localSeat) ? 1 : 0);
         y += 0x12;
     }
 
-    if (lobby->phase == ONLINE_PHASE_COUNTDOWN) {
+    if (sOnlineNameEditing != 0) {
+        drawMenuAsciiTextDefaultScale(-0x50, 0x40, "NAME UP DN A OK", 1);
+    } else if (lobby->phase == ONLINE_PHASE_COUNTDOWN) {
         drawMenuAsciiTextDefaultScale(-0x38, 0x40, sOnlineStartingText, 0);
     } else if (localSeat == lobby->hostSeat) {
         if ((allReady != 0) && (humans >= 1)) {
@@ -184,6 +301,15 @@ void initOnlineLobbyMenu(void) {
     sOnlineConnectFrames = 0;
     sOnlineFadeSwapWait = 0;
     sOnlineRaceStartArmed = 0;
+    sOnlineNameBuffer[0] = '\0';
+    sOnlineNameLen = 0;
+    sOnlineNameCursor = 0;
+    sOnlineNameBlink = 0;
+#ifdef ONLINE_BATTLE_AUTOTEST
+    sOnlineNameEditing = 0;
+#else
+    sOnlineNameEditing = 1;
+#endif
     gMenuExitSelection = 0;
     gMenuFlowState = 0;
     /* Fade in from the black frame left by GAME MENU teardown. */
@@ -263,6 +389,12 @@ void updateOnlineLobbyMenu(void) {
     }
 
     pressed = gPlayerInputPressed[0];
+    if ((lobby->phase == ONLINE_PHASE_LOBBY) && (sOnlineLobbyLocalReady == 0)) {
+        if (onlineNameHandleInput(pressed) != 0) {
+            updateCallbackTasks();
+            return;
+        }
+    }
     if (lobby->phase == ONLINE_PHASE_LOBBY) {
         /*
          * Ready: A (0x8000) or Start/Enter (0x1000). Mupen keyboard maps Enter to
@@ -292,6 +424,9 @@ void updateOnlineLobbyMenu(void) {
         if (sOnlineLobbyLocalReady != 0) {
             sOnlineLobbyLocalReady = 0;
             onlineSessionSetReady(0);
+#ifndef ONLINE_BATTLE_AUTOTEST
+            sOnlineNameEditing = 1;
+#endif
             if (lobby->localSeat < ONLINE_MAX_SEATS) {
                 lobby->seats[lobby->localSeat].ready = 0;
             }

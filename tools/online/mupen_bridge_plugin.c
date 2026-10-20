@@ -18,7 +18,7 @@
 static uint8_t *g_rdram;
 static uint32_t g_mailbox_rdram_offset; /* byte offset of gOnlineMailbox in RDRAM */
 
-#define ONLINE_MAILBOX_SIZE  0x4BC
+#define ONLINE_MAILBOX_SIZE  0x4E4
 #define ONLINE_RACER_SIZE    0x50
 #define ONLINE_CPU_PATH_SIZE 0x2C
 
@@ -42,11 +42,11 @@ int online_bridge_sync(const uint8_t *host_inbound, uint8_t *host_outbound) {
     /* Preserve game→bridge command; merge bridge→game fields from host. */
     mailbox[0x009] = host_inbound[0x009]; /* bridgeToGameCmd */
     mailbox[0x00A] = host_inbound[0x00A]; /* errorCode */
-    memcpy(mailbox + 0x00C, host_inbound + 0x00C, 0x3C); /* lobby */
-    memcpy(mailbox + 0x190, host_inbound + 0x190, ONLINE_RACER_SIZE * 4); /* remoteIn */
-    memcpy(mailbox + 0x380, host_inbound + 0x380, ONLINE_CPU_PATH_SIZE * 4); /* cpuPathIn */
-    mailbox[0x431] = host_inbound[0x431];
-    memcpy(mailbox + 0x474, host_inbound + 0x474, 8 * 8); /* eventIn */
-    memcpy(mailbox + 0x4B4, host_inbound + 0x4B4, 4); /* bridgeHeartbeat */
+    memcpy(mailbox + 0x00C, host_inbound + 0x00C, 0x5C); /* lobby */
+    memcpy(mailbox + 0x1B8, host_inbound + 0x1B8, ONLINE_RACER_SIZE * 4); /* remoteIn */
+    memcpy(mailbox + 0x3A8, host_inbound + 0x3A8, ONLINE_CPU_PATH_SIZE * 4); /* cpuPathIn */
+    mailbox[0x459] = host_inbound[0x459];
+    memcpy(mailbox + 0x49C, host_inbound + 0x49C, 8 * 8); /* eventIn */
+    memcpy(mailbox + 0x4DC, host_inbound + 0x4DC, 4); /* bridgeHeartbeat */
     return 0;
 }

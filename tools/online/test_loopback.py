@@ -46,16 +46,16 @@ async def run_test() -> None:
         client_b.mailbox.init()
 
         # Simulate game CONNECT + loadout.
-        for client, course in ((client_a, 0), (client_b, 1)):
+        for client, course, name in ((client_a, 0, b"ACE"), (client_b, 1, b"BOB")):
             buf = client.mailbox._read()
             buf[0x008] = Cmd.CONNECT
             client.mailbox._write(buf)
             client.poll_mailbox_commands()
             await asyncio.sleep(0.05)
-            loadout = Loadout(course_id=course, character_id=course + 1, lap_count=3)
+            loadout = Loadout(course_id=course, character_id=course + 1, lap_count=3, name=name)
             buf = client.mailbox._read()
             packed = loadout.pack()
-            buf[0x048 : 0x048 + len(packed)] = packed
+            buf[0x068 : 0x068 + len(packed)] = packed
             buf[0x008] = Cmd.SET_LOADOUT
             client.mailbox._write(buf)
             client.poll_mailbox_commands()
@@ -81,6 +81,17 @@ async def run_test() -> None:
         host_client.mailbox._write(buf)
         host_client.poll_mailbox_commands()
         await asyncio.sleep(0.1)
+
+        # START only enters COUNTDOWN; both games must report loaded for RACE_GO.
+        assert server.phase == Phase.COUNTDOWN
+        names = {c.loadout.name_str for c in server.seats.values()}
+        assert names == {"ACE", "BOB"}, names
+        for client in (client_a, client_b):
+            buf = client.mailbox._read()
+            buf[0x008] = Cmd.RACE_LOADED
+            client.mailbox._write(buf)
+            client.poll_mailbox_commands()
+            await asyncio.sleep(0.05)
 
         assert server.phase == Phase.RACING
         assert client_a.phase in (Phase.COUNTDOWN, Phase.RACING)
