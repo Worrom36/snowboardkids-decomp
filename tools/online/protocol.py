@@ -29,6 +29,8 @@ class Cmd(IntEnum):
     EVENT = 12
     HEARTBEAT = 13
     CPU_PATH_SNAPSHOT = 14
+    RACE_LOADED = 15
+    RACE_GO = 16
 
 
 class Phase(IntEnum):
@@ -236,14 +238,15 @@ class CpuPathSnapshot:
     facing_angle: int = 0
     course_path_offset: int = 0
     along_speed: int = 0
+    lateral_offset: int = 0
     mode: int = 0
     animation_id: int = 0
     update_state: int = 0
     state_flags: int = 0
     ground_offset: int = 0
 
-    # Matches OnlineCpuPathSnapshot (0x28); pad1E is xx (2 bytes).
-    _STRUCT = struct.Struct(">BBBBBBxxIhhiihhhxxIi")
+    # Matches OnlineCpuPathSnapshot (0x2C); pad22 is xx.
+    _STRUCT = struct.Struct(">BBBBBBxxIhhiiihhhxxIi")
 
     def pack(self) -> bytes:
         return self._STRUCT.pack(
@@ -258,6 +261,7 @@ class CpuPathSnapshot:
             self.facing_angle,
             self.course_path_offset,
             self.along_speed,
+            self.lateral_offset,
             self.mode,
             self.animation_id,
             self.update_state,

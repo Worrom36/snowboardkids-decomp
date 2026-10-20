@@ -458,6 +458,30 @@ class MupenBridge:
         ]
         _ = game_phase  # retained for status logging clarity
 
+        # Re-merge inbound fields before writing the file. handle_packet may have
+        # written remote/path/event/bridge-cmd into the mailbox while we held a
+        # stale `host` buffer — a blind _write would wipe those and freeze remotes.
+        fresh = self.mailbox._read()
+        host[OFF_REMOTE_IN:OFF_CPU_PATH_OUT] = fresh[OFF_REMOTE_IN:OFF_CPU_PATH_OUT]
+        host[OFF_CPU_PATH_IN:OFF_EVENT_OUT_COUNT] = fresh[OFF_CPU_PATH_IN:OFF_EVENT_OUT_COUNT]
+        if fresh[OFF_EVENT_IN_COUNT] != 0:
+            host[OFF_EVENT_IN_COUNT] = fresh[OFF_EVENT_IN_COUNT]
+            host[OFF_EVENT_IN:OFF_BRIDGE_HEARTBEAT] = fresh[OFF_EVENT_IN:OFF_BRIDGE_HEARTBEAT]
+        if fresh[OFF_BRIDGE_CMD] != 0:
+            host[OFF_BRIDGE_CMD] = fresh[OFF_BRIDGE_CMD]
+            host[OFF_ERROR] = fresh[OFF_ERROR]
+        # Lobby/phase from net client (JOINED/START/GO) must not be rolled back.
+        if fresh[OFF_LOBBY] >= 2:
+            host[OFF_LOBBY:OFF_PENDING_LOADOUT] = fresh[OFF_LOBBY:OFF_PENDING_LOADOUT]
+            rdram[OFF_LOBBY:OFF_PENDING_LOADOUT] = fresh[OFF_LOBBY:OFF_PENDING_LOADOUT]
+        # Push the freshest remotes into RDRAM too (same race window).
+        rdram[OFF_REMOTE_IN:OFF_CPU_PATH_OUT] = host[OFF_REMOTE_IN:OFF_CPU_PATH_OUT]
+        rdram[OFF_CPU_PATH_IN:OFF_EVENT_OUT_COUNT] = host[OFF_CPU_PATH_IN:OFF_EVENT_OUT_COUNT]
+        rdram[OFF_ERROR] = host[OFF_ERROR]
+        if host[OFF_BRIDGE_CMD] != 0 and rdram[OFF_BRIDGE_CMD] == 0:
+            rdram[OFF_BRIDGE_CMD] = host[OFF_BRIDGE_CMD]
+            host[OFF_BRIDGE_CMD] = 0
+
         self.mailbox._write(host)
         if not self._write_mailbox_be(rdram):
             self.host_addr = None

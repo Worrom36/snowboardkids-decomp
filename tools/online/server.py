@@ -9,7 +9,7 @@ import random
 import sys
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Set, Tuple
 
 from tools.online.protocol import (
     DEFAULT_PORT,
@@ -67,6 +67,9 @@ class LobbyServer:
         self.transport: Optional[asyncio.DatagramTransport] = None
         self.verbose_snapshots = verbose_snapshots
         self._unknown_packet_count = 0
+        self.loaded_seats: Set[int] = set()
+        self._race_go_sent = False
+        self._start_mono: float = 0.0
 
     def next_seq(self) -> int:
         self.seq = (self.seq + 1) & 0xFFFFFFFF
@@ -134,6 +137,31 @@ class LobbyServer:
             seats=seats,
         )
 
+    def all_humans_loaded(self) -> bool:
+        humans = set(self.seats.keys())
+        return len(humans) > 0 and humans <= self.loaded_seats
+
+    def maybe_send_race_go(self, force: bool = False) -> None:
+        if self._race_go_sent or self.phase != Phase.COUNTDOWN:
+            return
+        timed_out = False
+        if self._start_mono > 0 and (time.time() - self._start_mono) >= 8.0:
+            timed_out = True
+        if not force and not timed_out and not self.all_humans_loaded():
+            return
+        self._race_go_sent = True
+        self.phase = Phase.RACING
+        reason = "timeout" if timed_out and not self.all_humans_loaded() else "all loaded"
+        log(
+            f"RACE_GO ({reason}) loaded={sorted(self.loaded_seats)} "
+            f"humans={sorted(self.seats.keys())}"
+        )
+        for addr_i, client_i in list(self.clients.items()):
+            snap = self.build_lobby_snapshot(client_i.seat)
+            snap.phase = Phase.RACING
+            self.send(addr_i, Cmd.RACE_GO, snap.pack())
+            log(f"  -> RACE_GO to seat={client_i.seat} {fmt_addr(addr_i)}")
+
     def broadcast(self, cmd: int, payload: bytes, exclude: Optional[Tuple[str, int]] = None) -> None:
         if self.transport is None:
             return
@@ -170,6 +198,8 @@ class LobbyServer:
         if not self.seats:
             self.phase = Phase.LOBBY
             self.race_frame = 0
+            self.loaded_seats.clear()
+            self._race_go_sent = False
             log("lobby empty; phase -> LOBBY")
         self.broadcast_lobby()
 
@@ -261,16 +291,20 @@ class LobbyServer:
             if not self.all_humans_ready():
                 log(f"REQUEST_START ignored (not all ready) — {self.lobby_status_line()}")
                 return
-            self.phase = Phase.RACING
+            # Stay in COUNTDOWN until every human has loaded the race scene.
+            self.phase = Phase.COUNTDOWN
             self.race_seed = random.randint(1, 0x7FFFFFFF)
             self.start_frame = 90
             self.race_frame = 0
+            self.loaded_seats.clear()
+            self._race_go_sent = False
+            self._start_mono = time.time()
             for seat_client in self.seats.values():
                 seat_client.ready = False
                 seat_client.snapshot_count = 0
             log(
                 f"START race seed={self.race_seed} start_frame={self.start_frame} "
-                f"players={self.human_count()}"
+                f"players={self.human_count()} (waiting for RACE_LOADED)"
             )
             for addr_i, client_i in list(self.clients.items()):
                 snap = self.build_lobby_snapshot(client_i.seat)
@@ -279,7 +313,21 @@ class LobbyServer:
                 log(f"  -> START to seat={client_i.seat} {fmt_addr(addr_i)}")
             return
 
-        if cmd in (Cmd.RACER_SNAPSHOT, Cmd.CPU_PATH_SNAPSHOT) and self.phase == Phase.RACING:
+        if cmd == Cmd.RACE_LOADED and self.phase == Phase.COUNTDOWN:
+            self.loaded_seats.add(client.seat)
+            log(
+                f"RACE_LOADED seat={client.seat} "
+                f"({len(self.loaded_seats)}/{self.human_count()})"
+            )
+            self.maybe_send_race_go()
+            return
+
+        # COUNTDOWN too: remotes must hard-place at the start line before RACE_GO,
+        # otherwise puppets stay unposed/invisible until the first racing snap.
+        if cmd in (Cmd.RACER_SNAPSHOT, Cmd.CPU_PATH_SNAPSHOT) and self.phase in (
+            Phase.COUNTDOWN,
+            Phase.RACING,
+        ):
             if cmd == Cmd.RACER_SNAPSHOT:
                 snap, _ = RacerSnapshot.unpack(payload)
             else:
@@ -350,6 +398,12 @@ class LobbyProtocol(asyncio.DatagramProtocol):
         log(f"socket error: {exc}")
 
 
+async def _race_go_watchdog(server: LobbyServer) -> None:
+    while True:
+        await asyncio.sleep(0.5)
+        server.maybe_send_race_go()
+
+
 async def run_server(host: str, port: int, verbose_snapshots: bool) -> None:
     loop = asyncio.get_running_loop()
     server = LobbyServer(verbose_snapshots=verbose_snapshots)
@@ -357,12 +411,14 @@ async def run_server(host: str, port: int, verbose_snapshots: bool) -> None:
         lambda: LobbyProtocol(server),
         local_addr=(host, port),
     )
+    watchdog = asyncio.create_task(_race_go_watchdog(server))
     log(f"Online Battle lobby listening on {host}:{port}")
     log("waiting for CONNECT / READY / REQUEST_START ...")
     try:
         await asyncio.Future()
     finally:
         log("shutting down")
+        watchdog.cancel()
         transport.close()
 
 

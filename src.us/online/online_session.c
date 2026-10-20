@@ -7,7 +7,6 @@
 #include "game/race/player/race_player_collision.h"
 #include "game/race/player/race_player_movement.h"
 #include "game/race/player/race_player_pickup_effects.h"
-#include "game/race/player/race_player_progress.h"
 #include "game/math/fixed_point_math.h"
 #include "game/engine/asset_manager.h"
 #include "game/engine/callback_task_scheduler.h"
@@ -61,6 +60,7 @@ typedef struct OnlineRemoteMotion {
     s32 groundOffset;
     s32 alongSpeed;
     s32 coursePathOffset;
+    s32 lateralOffset;
     s16 coursePathIndex;
     s16 facingAngle;
     s16 pitchAngle;
@@ -141,6 +141,40 @@ static s32 onlineRemoteUpdateGrounded(OnlineRemoteMotion *motion, OnlineRacerSna
     return motion->grounded != 0;
 }
 
+static s32 onlineClampPathIndex(s32 index) {
+    s32 maxIndex;
+
+    maxIndex = gRaceCourseStartEntries[gRaceCourseIndex.signedValue].maxSurfaceIndex;
+    if (maxIndex < 0) {
+        return 0;
+    }
+    if (index < 0) {
+        return 0;
+    }
+    if (index > maxIndex) {
+        return maxIndex;
+    }
+    return index;
+}
+
+/*
+ * findRaceCourseSurfaceFromHint walks neighbor links with no cycle guard —
+ * safe for the local player (physics keeps it on the strip), but a predicted
+ * remote can drift off-course and bounce between two surfaces forever,
+ * hanging the whole client (publish/apply stop, emulator spins). Use the
+ * bounded full scan for remote placement; fall back to the clamped hint
+ * surface when the point is outside every quad.
+ */
+static s32 onlineSafeSurfaceAt(s32 hint, s32 x, s32 z) {
+    s32 terrainId;
+
+    terrainId = findRaceCourseSurfaceAtPoint(x, z);
+    if (terrainId != 0) {
+        return terrainId;
+    }
+    return onlineClampPathIndex(hint);
+}
+
 /*
  * Viewer has the same course mesh as the authority. Place Y on local terrain
  * under predicted XZ so downhill does not float (soft net Y) or stair-step
@@ -151,7 +185,7 @@ static void onlineRemoteStickToSurface(OnlineRemoteMotion *motion, s16 pathHint)
     s32 surfaceY;
     s32 offset;
 
-    terrainId = findRaceCourseSurfaceFromHint(pathHint, motion->posX, motion->posZ);
+    terrainId = onlineSafeSurfaceAt(pathHint, motion->posX, motion->posZ);
     surfaceY = getRaceCourseSurfaceHeight(terrainId, motion->posX, motion->posZ);
     offset = motion->groundOffset;
     if (offset <= 0) {
@@ -187,6 +221,7 @@ static void onlineRemoteMotionResetSeat(s32 seat) {
     motion->groundOffset = 0x40000;
     motion->alongSpeed = 0;
     motion->coursePathOffset = 0;
+    motion->lateralOffset = 0;
     motion->coursePathIndex = 0;
     motion->facingAngle = 0;
     motion->pitchAngle = 0;
@@ -204,14 +239,37 @@ static void onlineRemoteMotionResetSeat(s32 seat) {
 }
 
 /*
- * Invert projectRaceCourseSurfaceProgress: place XZ on the surface at the
- * networked along-track offset plus the seat's lateral lane bias.
+ * Lateral complementary to projectRaceCourseSurfaceProgress:
+ * along = (-sin*dx + cos*dz)/0x1000, lateral = (cos*dx + sin*dz)/0x1000.
+ */
+static s32 onlineCpuLateralFromPos(s16 pathIndex, s32 posX, s32 posZ) {
+    RaceCourseSurface *surface;
+    s32 refX;
+    s32 refZ;
+    s32 deltaX;
+    s32 deltaZ;
+    s16 sinA;
+    s16 cosA;
+
+    pathIndex = (s16)onlineClampPathIndex(pathIndex);
+    surface = &gRaceCourseSurfaces[pathIndex];
+    refX = gRaceCourseSurfaceCoords[surface->referenceCoordIndex].x << 0x11;
+    refZ = gRaceCourseSurfaceCoords[surface->referenceCoordIndex].z << 0x11;
+    deltaX = posX - refX;
+    deltaZ = posZ - refZ;
+    sinA = fixedSine(surface->pathAngle);
+    cosA = fixedCosine(surface->pathAngle);
+    return (s32)((((s64)cosA * deltaX) + ((s64)sinA * deltaZ)) / 0x1000);
+}
+
+/*
+ * Invert path project: place XZ from along-track offset + true lateral.
  * coursePathOffset is stored as -project(...); along = -offset.
  */
 static void onlineCpuPlaceFromPath(
-    s32 seat,
     s16 pathIndex,
     s32 pathOffset,
+    s32 lateral,
     s32 groundOffset,
     s32 *outX,
     s32 *outY,
@@ -221,25 +279,21 @@ static void onlineCpuPlaceFromPath(
     s32 refX;
     s32 refZ;
     s32 along;
-    s32 lateral;
     s16 sinA;
     s16 cosA;
     s32 terrainId;
     s32 offset;
 
-    if (pathIndex < 0) {
-        pathIndex = 0;
-    }
+    pathIndex = (s16)onlineClampPathIndex(pathIndex);
     surface = &gRaceCourseSurfaces[pathIndex];
     refX = gRaceCourseSurfaceCoords[surface->referenceCoordIndex].x << 0x11;
     refZ = gRaceCourseSurfaceCoords[surface->referenceCoordIndex].z << 0x11;
     along = -pathOffset;
-    lateral = getRacePlayerPathOffset(seat & 3, pathIndex);
     sinA = fixedSine(surface->pathAngle);
     cosA = fixedCosine(surface->pathAngle);
     *outX = refX + (s32)((((s64)cosA * lateral) + ((s64)(-sinA) * along)) / 0x1000);
     *outZ = refZ + (s32)((((s64)sinA * lateral) + ((s64)cosA * along)) / 0x1000);
-    terrainId = findRaceCourseSurfaceFromHint(pathIndex, *outX, *outZ);
+    terrainId = onlineSafeSurfaceAt(pathIndex, *outX, *outZ);
     offset = groundOffset;
     if (offset <= 0) {
         offset = 0x40000;
@@ -253,9 +307,10 @@ static void onlineRemoteAcceptCpuPath(OnlineRemoteMotion *motion, OnlineCpuPathS
     motion->pathMode = 1;
     motion->grounded = 1;
     motion->airFrames = 0;
-    motion->coursePathIndex = snap->coursePathIndex;
+    motion->coursePathIndex = (s16)onlineClampPathIndex(snap->coursePathIndex);
     motion->coursePathOffset = snap->coursePathOffset;
     motion->alongSpeed = snap->alongSpeed;
+    motion->lateralOffset = snap->lateralOffset;
     motion->facingAngle = snap->facingAngle;
     motion->pitchAngle = 0;
     motion->leanAngle = 0;
@@ -281,38 +336,28 @@ static void onlineRemoteAcceptCpuPath(OnlineRemoteMotion *motion, OnlineCpuPathS
     motion->velX = 0;
     motion->velY = 0;
     motion->velZ = 0;
+    /* Hard place from path+true lateral. No soft-correct/coast (those drifted remotes). */
     onlineCpuPlaceFromPath(
-        seat,
         motion->coursePathIndex,
         motion->coursePathOffset,
+        motion->lateralOffset,
         motion->groundOffset,
         &motion->posX,
         &motion->posY,
         &motion->posZ
     );
     motion->initialized = 1;
+    (void)seat;
 }
 
-static void onlineRemoteTickCpuPath(OnlineRemoteMotion *motion, s32 seat) {
+static void onlineRemoteTickCpuPath(OnlineRemoteMotion *motion) {
     if (motion->initialized == 0 || motion->pathMode == 0) {
         return;
     }
     if (motion->framesSinceSnap < 0xFF) {
         motion->framesSinceSnap++;
     }
-    if (motion->framesSinceSnap > ONLINE_REMOTE_COAST_MAX_FRAMES) {
-        return;
-    }
-    motion->coursePathOffset += motion->alongSpeed;
-    onlineCpuPlaceFromPath(
-        seat,
-        motion->coursePathIndex,
-        motion->coursePathOffset,
-        motion->groundOffset,
-        &motion->posX,
-        &motion->posY,
-        &motion->posZ
-    );
+    /* Hold last placed pose until the next path snap — no along-track coast. */
 }
 
 static s16 onlineRemoteBlendAngle(s16 current, s16 target) {
@@ -849,6 +894,11 @@ void onlineSessionPublishLocalRacer(RacePlayer *player) {
 
     sPublishSeq[seat]++;
     usePath = 0;
+    /*
+     * Path sync is host-CPU only for now. Autopilot humans share the AI steer
+     * code but still leave the rail enough that path reconstruction drifted /
+     * culled remotes mid-lap — they keep full XYZ soft-correct.
+     */
     if ((player->isCpu != 0) &&
         (onlineRemoteSurfaceLocked(player->mode, player->updateState, player->stateFlags) != 0) &&
         (onlineRemoteIsReactionAirMode(player->mode) == 0)) {
@@ -877,10 +927,12 @@ void onlineSessionPublishLocalRacer(RacePlayer *player) {
         pathOut->facingAngle = player->facingAngle;
         pathOut->coursePathOffset = player->coursePathOffset;
         pathOut->alongSpeed = alongSpeed;
+        pathOut->lateralOffset =
+            onlineCpuLateralFromPos(player->coursePathIndex, player->pos.x, player->pos.z);
         pathOut->mode = player->mode;
         pathOut->animationId = player->animationId;
         pathOut->updateState = player->updateState;
-        pathOut->pad1E = 0;
+        pathOut->pad22 = 0;
         pathOut->stateFlags = player->stateFlags & ~ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
         pathOut->groundOffset = player->groundOffset;
         gOnlineMailbox.gameHeartbeat++;
@@ -980,6 +1032,7 @@ void onlineSessionApplyRemoteRacers(void) {
         gotNewerPath = 0;
         gotNewerFull = 0;
 
+        /* Path snaps are host-CPU only; ignore for human remotes (XYZ authority). */
         if ((player->isCpu != 0) && (pathSnap->valid != 0)) {
             if ((motion->initialized == 0) || ((s32)(pathSnap->sequence - motion->lastSequence) > 0)) {
                 gotNewerPath = 1;
@@ -1011,17 +1064,15 @@ void onlineSessionApplyRemoteRacers(void) {
         }
 
         if (motion->initialized == 0) {
+            /* Keep start-grid / last local pose drawable until the first snap. */
+            onlineSessionPoseRemoteRacer(player);
             continue;
         }
 
         if (usePath != 0) {
-            /*
-             * Path accept already hard-places. Only coast along-track when no
-             * fresh snap this frame (unlike XYZ soft-correct, which must tick
-             * every frame including snap frames).
-             */
-            if ((shouldTick != 0) && (gotNewerPath == 0)) {
-                onlineRemoteTickCpuPath(motion, i);
+            /* Soft-correct / missed-packet coast — tick every frame like XYZ. */
+            if (shouldTick != 0) {
+                onlineRemoteTickCpuPath(motion);
             }
             if (pathSnap->valid != 0) {
                 motion->facingAngle = onlineRemoteBlendAngle(motion->facingAngle, pathSnap->facingAngle);
@@ -1076,7 +1127,7 @@ void onlineSessionApplyRemoteRacers(void) {
                 player->facingAngle = motion->facingAngle;
                 player->pitchAngle = motion->pitchAngle;
                 player->leanAngle = motion->leanAngle;
-                player->coursePathIndex = snap->coursePathIndex;
+                player->coursePathIndex = (s16)onlineClampPathIndex(snap->coursePathIndex);
                 player->coursePathOffset = snap->coursePathOffset;
                 player->lapDigit = (s8)snap->lapDigit;
                 player->mode = snap->mode;

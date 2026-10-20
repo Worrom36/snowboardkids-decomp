@@ -42,6 +42,7 @@
 #ifdef ONLINE_BATTLE
 #include "game/online/online_lobby_menu.h"
 #include "game/online/online_session.h"
+#include "game/online/online_mailbox.h"
 #endif
 
 #define COURSE_GRID_ENTRY_FREE -1
@@ -847,6 +848,9 @@ void initRaceSceneFlow(void) {
          * Skip fadeInRaceGameplayViewports (SP pass-award path). Still need the
          * follow-cam + initialized flag that path normally installs, or VP0 stays
          * in noop camera mode at the origin — solid black on both seats.
+         *
+         * Hold here until the server sees RACE_LOADED from every human and
+         * broadcasts RACE_GO — otherwise staggered asset loads desync the 3-2-1.
          */
         gViewportStates[0].overlayActive = 0;
         gViewportStates[0].overlayAlpha = 0;
@@ -854,9 +858,11 @@ void initRaceSceneFlow(void) {
         updateRacePlayerProjectedPosition(&gRacePlayers[gRaceCameras[0].playerIndex & 3]);
         setRaceCameraMode(0, 1);
         gRaceCameras[0].initialized.value = 1;
-        createCallbackTask((CallbackTaskCallback)initRaceCountdownPrompt, 6, 0x64);
-        createCallbackTask((CallbackTaskCallback)initRaceStartOverlay, 6, 0x64);
-        setCurrentGameTaskCallback(startRaceGameplayFlow, 0);
+        gRaceUpdatePaused = 1;
+        gMenuFadeAlpha = 0;
+        gCurrentGameTask->callbackData0 = 0;
+        onlineMailboxRequest(ONLINE_CMD_RACE_LOADED);
+        setCurrentGameTaskCallback(waitOnlineRaceGo, 0);
     } else
 #endif
     if (gRaceSplitscreenMode == 0) {
@@ -978,6 +984,45 @@ void fadeInRaceGameplayViewports(void) {
     }
     updateRaceFlowFrame();
 }
+
+#ifdef ONLINE_BATTLE
+void waitOnlineRaceGo(void) {
+    OnlineLobbySnapshot *lobby;
+    u8 cmd;
+    s32 go;
+
+    lobby = onlineSessionLobby();
+    gOnlineMailbox.gameHeartbeat++;
+    cmd = onlineMailboxPollBridgeCmd();
+    go = 0;
+    if (cmd == ONLINE_CMD_RACE_GO) {
+        go = 1;
+    }
+    /* Sticky: client writes phase=RACING with GO so a lost 1-byte cmd still works. */
+    if ((lobby != NULL) && (lobby->phase == ONLINE_PHASE_RACING)) {
+        go = 1;
+    }
+    /* Failsafe if the server never collects every LOADED (~5s at 60fps). */
+    gCurrentGameTask->callbackData0++;
+    if (gCurrentGameTask->callbackData0 >= 300) {
+        go = 1;
+    }
+
+    if (go != 0) {
+        gRaceUpdatePaused = 0;
+        createCallbackTask((CallbackTaskCallback)initRaceCountdownPrompt, 6, 0x64);
+        createCallbackTask((CallbackTaskCallback)initRaceStartOverlay, 6, 0x64);
+        setCurrentGameTaskCallback(startRaceGameplayFlow, 0);
+        return;
+    }
+
+    /* Keep requesting LOADED while waiting — 1-byte mailbox cmd can be dropped. */
+    if ((gCurrentGameTask->callbackData0 & 0x1F) == 0) {
+        onlineMailboxRequest(ONLINE_CMD_RACE_LOADED);
+    }
+    updateRaceFlowFrameWithCourseEffects();
+}
+#endif
 
 void startRaceGameplayFlow(void) {
     if (gMenuFadeAlpha != 0) {

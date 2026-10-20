@@ -18,9 +18,9 @@
 static uint8_t *g_rdram;
 static uint32_t g_mailbox_rdram_offset; /* byte offset of gOnlineMailbox in RDRAM */
 
-#define ONLINE_MAILBOX_SIZE 0x49C
-#define ONLINE_RACER_SIZE   0x50
-#define ONLINE_CPU_PATH_SIZE 0x28
+#define ONLINE_MAILBOX_SIZE  0x4BC
+#define ONLINE_RACER_SIZE    0x50
+#define ONLINE_CPU_PATH_SIZE 0x2C
 
 void online_bridge_set_rdram(uint8_t *rdram, uint32_t mailbox_offset) {
     g_rdram = rdram;
@@ -44,9 +44,9 @@ int online_bridge_sync(const uint8_t *host_inbound, uint8_t *host_outbound) {
     mailbox[0x00A] = host_inbound[0x00A]; /* errorCode */
     memcpy(mailbox + 0x00C, host_inbound + 0x00C, 0x3C); /* lobby */
     memcpy(mailbox + 0x190, host_inbound + 0x190, ONLINE_RACER_SIZE * 4); /* remoteIn */
-    memcpy(mailbox + 0x370, host_inbound + 0x370, ONLINE_CPU_PATH_SIZE * 4); /* cpuPathIn */
-    mailbox[0x411] = host_inbound[0x411];
-    memcpy(mailbox + 0x454, host_inbound + 0x454, 8 * 8); /* eventIn */
-    memcpy(mailbox + 0x494, host_inbound + 0x494, 4); /* bridgeHeartbeat */
+    memcpy(mailbox + 0x380, host_inbound + 0x380, ONLINE_CPU_PATH_SIZE * 4); /* cpuPathIn */
+    mailbox[0x431] = host_inbound[0x431];
+    memcpy(mailbox + 0x474, host_inbound + 0x474, 8 * 8); /* eventIn */
+    memcpy(mailbox + 0x4B4, host_inbound + 0x4B4, 4); /* bridgeHeartbeat */
     return 0;
 }

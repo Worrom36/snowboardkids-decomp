@@ -23,7 +23,10 @@ typedef enum OnlineCmd {
     ONLINE_CMD_RACER_SNAPSHOT = 11,
     ONLINE_CMD_EVENT = 12,
     ONLINE_CMD_HEARTBEAT = 13,
-    ONLINE_CMD_CPU_PATH_SNAPSHOT = 14
+    ONLINE_CMD_CPU_PATH_SNAPSHOT = 14,
+    /* Client finished race-scene load; server replies RACE_GO when all humans are ready. */
+    ONLINE_CMD_RACE_LOADED = 15,
+    ONLINE_CMD_RACE_GO = 16
 } OnlineCmd;
 
 typedef enum OnlinePhase {
@@ -122,8 +125,9 @@ typedef struct OnlineRacerSnapshot {
 } OnlineRacerSnapshot;
 
 /*
- * Compact grounded-CPU sync: remotes place from course path instead of XYZ soft-correct.
- * Size 0x28; host publishes this while surface-locked, full OnlineRacerSnapshot in air/hit.
+ * Compact grounded AI-path sync (CPU / autopilot). Remotes place from path
+ * params; lateralOffset is the real perpendicular component (not lane tables).
+ * Size 0x2C; full OnlineRacerSnapshot used for air/hit.
  */
 typedef struct OnlineCpuPathSnapshot {
     /* 0x00 */ u8 seat;
@@ -138,12 +142,13 @@ typedef struct OnlineCpuPathSnapshot {
     /* 0x0E */ s16 facingAngle;
     /* 0x10 */ s32 coursePathOffset;
     /* 0x14 */ s32 alongSpeed;
-    /* 0x18 */ s16 mode;
-    /* 0x1A */ s16 animationId;
-    /* 0x1C */ s16 updateState;
-    /* 0x1E */ s16 pad1E;
-    /* 0x20 */ u32 stateFlags;
-    /* 0x24 */ s32 groundOffset;
+    /* 0x18 */ s32 lateralOffset;
+    /* 0x1C */ s16 mode;
+    /* 0x1E */ s16 animationId;
+    /* 0x20 */ s16 updateState;
+    /* 0x22 */ s16 pad22;
+    /* 0x24 */ u32 stateFlags;
+    /* 0x28 */ s32 groundOffset;
 } OnlineCpuPathSnapshot;
 
 typedef struct OnlineRaceEvent {

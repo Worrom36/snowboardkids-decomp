@@ -37,6 +37,9 @@ void openPassAwardCelebrationFlow(void);
 void initRaceSceneFlow(void);
 void fadeOutPassAwardCelebrationFlow(void);
 void fadeInRaceGameplayViewports(void);
+#ifdef ONLINE_BATTLE
+void waitOnlineRaceGo(void);
+#endif
 void startRaceGameplayFlow(void);
 void drawRacePauseMenu(void *arg0);
 void updateRaceGameplayFlow(void);

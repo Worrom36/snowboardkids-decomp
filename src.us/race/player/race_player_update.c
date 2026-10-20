@@ -578,6 +578,22 @@ void updateRacePlayers(void) {
         onlineSessionDrainInboundEvents();
 #endif
         updateRacePlayerRankings();
+#ifdef ONLINE_BATTLE
+    } else if (onlineSessionActive() != 0) {
+        /*
+         * Load barrier (waitOnlineRaceGo) pauses physics but must still publish
+         * start-line poses and apply remotes, or puppets stay unposed/invisible
+         * and peers never see each other until long after GO.
+         */
+        for (i = 0; i < gRacePlayerCount; i++) {
+            if (onlinePlayerIsRemote(&gRacePlayers[i]) != 0) {
+                continue;
+            }
+            onlineSessionPublishLocalRacer(&gRacePlayers[i]);
+        }
+        onlineSessionApplyRemoteRacers();
+        onlineSessionDrainInboundEvents();
+#endif
     }
 }
 

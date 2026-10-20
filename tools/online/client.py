@@ -95,6 +95,16 @@ class OnlineClient:
             print("race START received")
             return
 
+        if cmd == Cmd.RACE_GO:
+            lobby, _ = LobbySnapshot.unpack(payload)
+            self.phase = Phase.RACING
+            lobby.phase = Phase.RACING
+            # Sticky phase=RACING so GO is not lost if the 1-byte bridge cmd is overwritten.
+            self.mailbox.write_lobby(lobby, bridge_cmd=Cmd.RACE_GO)
+            self.mailbox.bump_bridge_heartbeat()
+            print("race GO received (synced countdown)", flush=True)
+            return
+
         if cmd == Cmd.ERROR:
             code = payload[0] if payload else 0
             self.mailbox.write_error(code)
@@ -194,6 +204,10 @@ class OnlineClient:
                 self.phase = Phase.CONNECTING
                 self.send(Cmd.CONNECT)
             self._send_pending_loadout()
+            return
+        if cmd == Cmd.RACE_LOADED:
+            print("-> RACE_LOADED", flush=True)
+            self.send(Cmd.RACE_LOADED)
             return
 
     def publish_local_snapshot(self) -> None:
