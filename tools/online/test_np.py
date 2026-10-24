@@ -7,6 +7,9 @@ Prereq (normal Online Battle ROM — use the in-game Online Battle menu):
 Optional fast-boot (skips title/menus; not for shipping builds):
   make BUILD_MODE=shiftable ONLINE_BATTLE=1 ONLINE_BATTLE_AUTOTEST=1
 
+ONLINE_BATTLE_AUTOTEST also enables autopilot for each local human so the
+N-P stack races hands-off (toggle with R still works in-game).
+
 Then:
   python tools/online_test_2p.py
   python tools/online_test_4p.py
@@ -96,6 +99,89 @@ def _pid_alive_mupen(pid: int) -> bool:
     return str(pid) in out and "mupen64plus" in out.lower()
 
 
+def _find_main_hwnd(pid: int):
+    """Return the largest visible top-level window owned by pid, or None."""
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+    best = [None, 0]  # hwnd, area
+
+    @WNDENUMPROC
+    def _enum(hwnd, _lparam):
+        proc_id = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(proc_id))
+        if proc_id.value != pid:
+            return True
+        if not user32.IsWindowVisible(hwnd):
+            return True
+        if user32.GetWindow(hwnd, 4):  # GW_OWNER — skip owned popups
+            return True
+        rect = wintypes.RECT()
+        if not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+            return True
+        area = max(0, rect.right - rect.left) * max(0, rect.bottom - rect.top)
+        if area > best[1]:
+            best[0] = hwnd
+            best[1] = area
+        return True
+
+    user32.EnumWindows(_enum, 0)
+    return best[0]
+
+
+def _tile_mupen_windows(pids: list[int]) -> None:
+    """Place Mupen windows in a row at native size, centered in the work area."""
+    if sys.platform != "win32" or not pids:
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    SPI_GETWORKAREA = 0x0030
+    SW_RESTORE = 9
+    SWP_NOSIZE = 0x0001
+    SWP_SHOWWINDOW = 0x0040
+
+    work = wintypes.RECT()
+    if not user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(work), 0):
+        return
+    work_w = max(1, work.right - work.left)
+    work_h = max(1, work.bottom - work.top)
+
+    hwnds: list = []
+    for _attempt in range(20):
+        hwnds = [_find_main_hwnd(pid) for pid in pids]
+        if all(hwnds):
+            break
+        time.sleep(0.25)
+    if not all(hwnds):
+        missing = [i + 1 for i, h in enumerate(hwnds) if not h]
+        print(f"  (could not tile Mupen window(s) for P{missing})")
+        return
+
+    sizes: list[tuple[int, int]] = []
+    for hwnd in hwnds:
+        user32.ShowWindow(hwnd, SW_RESTORE)
+        rect = wintypes.RECT()
+        user32.GetWindowRect(hwnd, ctypes.byref(rect))
+        sizes.append((max(1, rect.right - rect.left), max(1, rect.bottom - rect.top)))
+
+    gap = 8
+    total_w = sum(w for w, _h in sizes) + gap * (len(sizes) - 1)
+    max_h = max(h for _w, h in sizes)
+    origin_x = work.left + max(0, (work_w - total_w) // 2)
+    origin_y = work.top + max(0, (work_h - max_h) // 2)
+
+    x = origin_x
+    for hwnd, (w, _h) in zip(hwnds, sizes):
+        user32.SetWindowPos(hwnd, 0, x, origin_y, 0, 0, SWP_NOSIZE | SWP_SHOWWINDOW)
+        x += w + gap
+    print(f"  placed {len(pids)} Mupen windows in a centered row (native size)")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Local N-player Online Battle quick test")
     parser.add_argument("--players", type=int, default=2, choices=range(1, MAX_PLAYERS + 1))
@@ -150,6 +236,7 @@ def main() -> None:
             raise SystemExit(f"Mupen P{i + 1} exited early (pid={pid})")
         mupen_pids.append(pid)
     print("  " + "  ".join(f"P{i + 1} pid={pid}" for i, pid in enumerate(mupen_pids)))
+    _tile_mupen_windows(mupen_pids)
 
     clients: list[subprocess.Popen] = []
     print("starting clients pinned to those PIDs...")
@@ -183,6 +270,7 @@ def main() -> None:
     print(f"{n}P stack is up.")
     print(f"  server pid={server.pid}  clients={[c.pid for c in clients]}")
     print("  Autotest ROM boots straight into ONLINE LOBBY (random character / course 0).")
+    print("  Autopilot ON for each local human (ONLINE_BATTLE_AUTOTEST); R toggles.")
     if args.no_auto:
         print("  Manual: Enter to ready on each window, host Start to launch.")
     else:

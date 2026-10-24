@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from tools.online.mailbox_file import (
+    EVENT_QUEUE,
+    EVENT_SIZE,
     MAILBOX_MAGIC,
     MAILBOX_SIZE,
     OFF_BRIDGE_CMD,
@@ -407,22 +409,44 @@ class MupenBridge:
                 pass
 
         # Client -> game: deliver then clear in file.
+        # Track clears so the fresh-file re-merge below cannot resurrect the same
+        # one-shot (RACE_GO was sticky forever: deliver → clear host buf → fresh
+        # read still had 16 on disk → rewrite 16 → re-deliver every tick).
+        bridge_cmd_cleared = False
         if host[OFF_BRIDGE_CMD] != 0 and rdram[OFF_BRIDGE_CMD] == 0:
             rdram[OFF_BRIDGE_CMD] = host[OFF_BRIDGE_CMD]
             log(f"client cmd -> game: {rdram[OFF_BRIDGE_CMD]}")
             host[OFF_BRIDGE_CMD] = 0
+            bridge_cmd_cleared = True
         elif host[OFF_BRIDGE_CMD] != 0 and rdram[OFF_BRIDGE_CMD] == host[OFF_BRIDGE_CMD]:
             host[OFF_BRIDGE_CMD] = 0
+            bridge_cmd_cleared = True
 
         # Continuous game-owned fields -> file
         host[OFF_PENDING_LOADOUT : OFF_PENDING_LOADOUT + 8] = rdram[OFF_PENDING_LOADOUT : OFF_PENDING_LOADOUT + 8]
         host[OFF_LOCAL_OUT : OFF_REMOTE_IN] = rdram[OFF_LOCAL_OUT : OFF_REMOTE_IN]
         host[OFF_CPU_PATH_OUT:OFF_CPU_PATH_IN] = rdram[OFF_CPU_PATH_OUT:OFF_CPU_PATH_IN]
-        # One-shot eventOut: copy then clear RDRAM so events are not re-sent every frame.
-        if rdram[OFF_EVENT_OUT_COUNT] != 0:
-            host[OFF_EVENT_OUT_COUNT] = rdram[OFF_EVENT_OUT_COUNT]
-            host[OFF_EVENT_OUT:OFF_EVENT_IN] = rdram[OFF_EVENT_OUT:OFF_EVENT_IN]
-            rdram[OFF_EVENT_OUT_COUNT] = 0
+        # One-shot eventOut: append into the file queue, then clear what we took
+        # from RDRAM. Never replace an undrained batch (that dropped ITEM_USE).
+        rdram_ev = int(rdram[OFF_EVENT_OUT_COUNT])
+        host_ev = int(host[OFF_EVENT_OUT_COUNT])
+        if rdram_ev > 0:
+            space = EVENT_QUEUE - host_ev
+            take = rdram_ev if space >= rdram_ev else max(0, space)
+            if take > 0:
+                src = OFF_EVENT_OUT
+                dst = OFF_EVENT_OUT + host_ev * EVENT_SIZE
+                nbytes = take * EVENT_SIZE
+                host[dst : dst + nbytes] = rdram[src : src + nbytes]
+                host[OFF_EVENT_OUT_COUNT] = host_ev + take
+            # Drop taken events from RDRAM (shift remainder down).
+            left = rdram_ev - take
+            if left > 0 and take > 0:
+                rem = left * EVENT_SIZE
+                rdram[OFF_EVENT_OUT : OFF_EVENT_OUT + rem] = rdram[
+                    OFF_EVENT_OUT + take * EVENT_SIZE : OFF_EVENT_OUT + take * EVENT_SIZE + rem
+                ]
+            rdram[OFF_EVENT_OUT_COUNT] = left
         host[OFF_GAME_HEARTBEAT : OFF_GAME_HEARTBEAT + 4] = rdram[OFF_GAME_HEARTBEAT : OFF_GAME_HEARTBEAT + 4]
 
         # Lobby: host wins only after the net client has real server state.
@@ -468,9 +492,12 @@ class MupenBridge:
         # NOTE: do not re-merge eventIn here. Events are one-shot: the file copy
         # is the same batch delivery above already consumed in-memory, so copying
         # it back resurrects it and the game re-applies it every drain (item spam).
-        if fresh[OFF_BRIDGE_CMD] != 0:
+        if fresh[OFF_BRIDGE_CMD] != 0 and not bridge_cmd_cleared:
             host[OFF_BRIDGE_CMD] = fresh[OFF_BRIDGE_CMD]
             host[OFF_ERROR] = fresh[OFF_ERROR]
+        elif bridge_cmd_cleared:
+            # Keep the in-memory clear; drop any stale on-disk copy.
+            host[OFF_BRIDGE_CMD] = 0
         # Lobby/phase from net client (JOINED/START/GO) must not be rolled back.
         if fresh[OFF_LOBBY] >= 2:
             host[OFF_LOBBY:OFF_PENDING_LOADOUT] = fresh[OFF_LOBBY:OFF_PENDING_LOADOUT]
@@ -479,7 +506,7 @@ class MupenBridge:
         rdram[OFF_REMOTE_IN:OFF_CPU_PATH_OUT] = host[OFF_REMOTE_IN:OFF_CPU_PATH_OUT]
         rdram[OFF_CPU_PATH_IN:OFF_EVENT_OUT_COUNT] = host[OFF_CPU_PATH_IN:OFF_EVENT_OUT_COUNT]
         rdram[OFF_ERROR] = host[OFF_ERROR]
-        if host[OFF_BRIDGE_CMD] != 0 and rdram[OFF_BRIDGE_CMD] == 0:
+        if (not bridge_cmd_cleared) and host[OFF_BRIDGE_CMD] != 0 and rdram[OFF_BRIDGE_CMD] == 0:
             rdram[OFF_BRIDGE_CMD] = host[OFF_BRIDGE_CMD]
             host[OFF_BRIDGE_CMD] = 0
 

@@ -14,6 +14,9 @@ python tools/online_client.py --host <SERVER_IP> --port 6464 --mailbox tmp/onlin
 
 Server address defaults come from `tools/online-client/config.ini` (`127.0.0.1:6464`).
 
+`body_collision = bump` (default) or `ghost` — the **first joiner** (lobby host)
+publishes this on CONNECT; peers follow the lobby snapshot flag.
+
 ## Fast local 2P / 4P test
 
 Build a normal Online Battle ROM, then use the in-game **GAME MENU → Online Battle** entry on each window:

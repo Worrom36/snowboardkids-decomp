@@ -12,6 +12,7 @@ from typing import Optional, Tuple
 from tools.online.mailbox_file import MailboxFile
 from tools.online.protocol import (
     DEFAULT_PORT,
+    RACE_RULE_BODY_BUMP,
     Cmd,
     Loadout,
     LobbySnapshot,
@@ -33,6 +34,7 @@ class OnlineClient:
         auto_ready: bool = False,
         auto_start: bool = False,
         min_players: int = 2,
+        race_rules: int = RACE_RULE_BODY_BUMP,
     ) -> None:
         self.host = host
         self.port = port
@@ -46,6 +48,7 @@ class OnlineClient:
         self.auto_ready = auto_ready
         self.auto_start = auto_start
         self.min_players = max(1, int(min_players))
+        self.race_rules = race_rules & RACE_RULE_BODY_BUMP
         self._auto_ready_sent = False
         self._auto_start_sent = False
 
@@ -177,7 +180,8 @@ class OnlineClient:
         if cmd == Cmd.CONNECT:
             self.phase = Phase.CONNECTING
             self.connected = False
-            self.send(Cmd.CONNECT)
+            # Byte 0 = race rules (host's CONNECT sets lobby body_collision).
+            self.send(Cmd.CONNECT, bytes([self.race_rules & 0xFF]))
             # Loadout is stored in the mailbox before/with connect; send after JOIN.
             return
         if cmd == Cmd.DISCONNECT:
@@ -202,7 +206,7 @@ class OnlineClient:
             # If CONNECT was overwritten in the 1-byte cmd slot, join first.
             if not self.connected:
                 self.phase = Phase.CONNECTING
-                self.send(Cmd.CONNECT)
+                self.send(Cmd.CONNECT, bytes([self.race_rules & 0xFF]))
             self._send_pending_loadout()
             return
         if cmd == Cmd.RACE_LOADED:
@@ -211,16 +215,19 @@ class OnlineClient:
             return
 
     def publish_local_snapshot(self) -> None:
-        if self.phase not in (Phase.RACING, Phase.COUNTDOWN):
-            # Still forward if mailbox marks racing via lobby phase.
+        # Always drain events first so a phase mismatch cannot leave ITEM_USE
+        # sitting in the mailbox until the bridge overwrites the queue.
+        events = self.mailbox.drain_events_out()
+        racing = self.phase in (Phase.RACING, Phase.COUNTDOWN)
+        if not racing:
             lobby_phase = self.mailbox.read_phase()
-            if lobby_phase not in (Phase.RACING, Phase.COUNTDOWN):
-                return
-        for snap in self.mailbox.read_authority_snapshots():
-            self.send(Cmd.RACER_SNAPSHOT, snap.pack())
-        for snap in self.mailbox.read_cpu_path_out_snapshots():
-            self.send(Cmd.CPU_PATH_SNAPSHOT, snap.pack())
-        for event in self.mailbox.drain_events_out():
+            racing = lobby_phase in (Phase.RACING, Phase.COUNTDOWN)
+        if racing:
+            for snap in self.mailbox.read_authority_snapshots():
+                self.send(Cmd.RACER_SNAPSHOT, snap.pack())
+            for snap in self.mailbox.read_cpu_path_out_snapshots():
+                self.send(Cmd.CPU_PATH_SNAPSHOT, snap.pack())
+        for event in events:
             self.send(Cmd.EVENT, event.pack())
 
 
@@ -268,16 +275,23 @@ async def client_loop(
         transport.close()
 
 
-def load_config(path: Path) -> Tuple[str, int]:
+def load_config(path: Path) -> Tuple[str, int, int]:
     host = "127.0.0.1"
     port = DEFAULT_PORT
+    race_rules = RACE_RULE_BODY_BUMP
     if path.is_file():
         parser = configparser.ConfigParser()
         parser.read(path)
         if parser.has_section("online"):
             host = parser.get("online", "host", fallback=host)
             port = parser.getint("online", "port", fallback=port)
-    return host, port
+            raw = parser.get("online", "body_collision", fallback="bump").strip().lower()
+            if raw in ("ghost", "0", "off", "false", "no"):
+                race_rules = 0
+            else:
+                # Default / bump / anything else → bump
+                race_rules = RACE_RULE_BODY_BUMP
+    return host, port, race_rules
 
 
 def main() -> None:
@@ -332,9 +346,11 @@ def main() -> None:
         help="Host auto-start waits until this many humans have joined (default 2)",
     )
     args = parser.parse_args()
-    cfg_host, cfg_port = load_config(args.config)
+    cfg_host, cfg_port, cfg_rules = load_config(args.config)
     host = args.host or cfg_host
     port = args.port or cfg_port
+    bump = "bump" if cfg_rules & RACE_RULE_BODY_BUMP else "ghost"
+    print(f"config body_collision={bump} (host CONNECT publishes if first joiner)", flush=True)
     client = OnlineClient(
         host,
         port,
@@ -342,6 +358,7 @@ def main() -> None:
         auto_ready=bool(args.auto_ready),
         auto_start=bool(args.auto_start),
         min_players=int(args.min_players),
+        race_rules=cfg_rules,
     )
     use_bridge = (sys.platform == "win32") if args.mupen_bridge is None else bool(args.mupen_bridge)
     asyncio.run(client_loop(client, mupen_bridge=use_bridge, mupen_pid=args.mupen_pid))

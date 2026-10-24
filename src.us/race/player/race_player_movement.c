@@ -404,6 +404,17 @@ void pushRacePlayersOutOfCylinderAndApplyItemHit(Vec3i *pos, s32 xzSize, s32 ySi
     i = 0;
     do {
         if (gRacePlayers[i].isActive != 0) {
+#ifdef ONLINE_BATTLE
+            /*
+             * Course props / thrown obstacles: remotes resolve world collisions on
+             * their own machine. Shoving puppets here fights pose sync and the
+             * every-frame pending would spam ResolveRemoteCosmeticHits.
+             */
+            if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(&gRacePlayers[i]) != 0)) {
+                i++;
+                continue;
+            }
+#endif
             yLimit = ySize;
             temp = pos->y - gRacePlayers[i].collisionBottomY;
             if (temp < 0) {
@@ -475,6 +486,42 @@ void pushRacePlayerOutOfCylinderAndApplyItemHit(Vec3i *pos, s32 xzSize, s32 ySiz
 
     player = &gRacePlayers[playerIndex];
     if (player->isActive != 0) {
+#ifdef ONLINE_BATTLE
+        /*
+         * Item-steal trail only. Remotes skip updateRacePlayer — enqueue HIT for
+         * the victim and queue pending here for caster-side FX. Do not shove;
+         * pose sync owns remote position.
+         */
+        if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(player) != 0)) {
+            yLimit = ySize;
+            temp = pos->y - player->collisionBottomY;
+            if (temp < 0) {
+                temp = -temp;
+            } else {
+                yLimit = player->collisionHeight;
+            }
+            if (temp <= yLimit) {
+                xzLimit = player->collisionRadius + xzSize;
+                xDiff = pos->x - player->pos.x;
+                if (xDiff < 0) {
+                    xDiff = -xDiff;
+                }
+                if (xDiff < xzLimit) {
+                    zDiff = pos->z - player->pos.z;
+                    if (zDiff < 0) {
+                        zDiff = -zDiff;
+                    }
+                    if ((zDiff < xzLimit) &&
+                        (integerSquareRoot64(
+                             (s64)((0, xDiff)) * xDiff + (((s64)zDiff * zDiff) & 0xFFFFFFFFFFFFFFFF)
+                         ) < xzLimit)) {
+                        onlineSessionQueueRemoteHit((u8)playerIndex, flag);
+                    }
+                }
+            }
+            return;
+        }
+#endif
         yLimit = ySize;
         temp = pos->y - player->collisionBottomY;
         if (temp < 0) {
@@ -536,6 +583,12 @@ void pushRacePlayersOutOfCylinderOrApplyItemHit(Vec3i *pos, s32 xzSize, s32 ySiz
 
     for (i = 0; i < RACE_PLAYER_COUNT; i++) {
         if (gRacePlayers[i].isActive != 0) {
+#ifdef ONLINE_BATTLE
+            /* Course hazards: remotes own their world collisions. */
+            if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(&gRacePlayers[i]) != 0)) {
+                continue;
+            }
+#endif
             yLimit = ySize;
             temp = pos->y - gRacePlayers[i].collisionBottomY;
             if (temp < 0) {
@@ -714,12 +767,12 @@ void applyItemHitToRacePlayersInsideSphere(Vec3i *pos, s32 xzSize, s16 flag) {
                         (integerSquareRoot64((s64)dx * dx + (s64)dy * dy + (s64)dz * dz) < radius)) {
 #ifdef ONLINE_BATTLE
                         if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(player) != 0)) {
-                            onlineSessionEnqueueEvent(
-                                ONLINE_EVENT_HIT,
-                                (u8)(player - gRacePlayers),
-                                (u8)(flag & 0xFF),
-                                (u8)(((u16)flag >> 8) & 0xFF)
-                            );
+                            /*
+                             * Authority hit goes to the victim. Also queue
+                             * pending locally so the caster sees impact FX
+                             * (remotes skip updateRacePlayer hit resolve).
+                             */
+                            onlineSessionQueueRemoteHit((u8)(player - gRacePlayers), (u16)flag);
                         } else
 #endif
                         {
@@ -768,16 +821,22 @@ s32 tryApplyRacePlayerItemHit(Vec3i *pos, s32 xzSize, s16 flag, s16 playerIndex)
             if ((dz < radius) && (integerSquareRoot64((s64)dx * dx + (s64)dy * dy + (s64)dz * dz) < radius)) {
 #ifdef ONLINE_BATTLE
                 /*
-                 * Remotes skip updateRacePlayer (no hit resolve) and pose sync
-                 * would overwrite any local reaction. Tell the victim to apply.
+                 * Remotes skip updateRacePlayer (no hit resolve). Tell the victim
+                 * to apply authoritatively, and still queue pending here so
+                 * onlineSessionResolveRemoteCosmeticHits can play caster-side FX.
                  */
                 if ((onlineSessionActive() != 0) && (onlinePlayerIsRemote(player) != 0)) {
+                    /*
+                     * Projectiles are one-shot — always notify the victim. Hold
+                     * debounce is only for continuous overlaps (steal trail).
+                     */
                     onlineSessionEnqueueEvent(
                         ONLINE_EVENT_HIT,
                         (u8)playerIndex,
                         (u8)(flag & 0xFF),
                         (u8)(((u16)flag >> 8) & 0xFF)
                     );
+                    player->pendingItemHitFlags |= flag;
                     return 1;
                 }
 #endif

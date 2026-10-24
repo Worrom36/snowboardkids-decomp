@@ -14,6 +14,7 @@ from typing import Dict, Optional, Set, Tuple
 from tools.online.protocol import (
     DEFAULT_PORT,
     MAX_SEATS,
+    RACE_RULE_BODY_BUMP,
     Cmd,
     CpuPathSnapshot,
     ErrorCode,
@@ -72,6 +73,8 @@ class LobbyServer:
         self.loaded_seats: Set[int] = set()
         self._race_go_sent = False
         self._start_mono: float = 0.0
+        # Host config via first CONNECT payload; default bump.
+        self.race_rules: int = RACE_RULE_BODY_BUMP
 
     def next_seq(self) -> int:
         self.seq = (self.seq + 1) & 0xFFFFFFFF
@@ -136,6 +139,7 @@ class LobbyServer:
             human_count=self.human_count(),
             race_seed=self.race_seed,
             start_frame=self.start_frame,
+            race_rules=self.race_rules,
             seats=seats,
         )
 
@@ -202,10 +206,11 @@ class LobbyServer:
             self.race_frame = 0
             self.loaded_seats.clear()
             self._race_go_sent = False
+            self.race_rules = RACE_RULE_BODY_BUMP
             log("lobby empty; phase -> LOBBY")
         self.broadcast_lobby()
 
-    def handle_connect(self, addr: Tuple[str, int]) -> None:
+    def handle_connect(self, addr: Tuple[str, int], payload: bytes = b"") -> None:
         if addr in self.clients:
             client = self.clients[addr]
             log(f"CONNECT (rejoin) seat={client.seat} from {fmt_addr(addr)}")
@@ -223,6 +228,13 @@ class LobbyServer:
         client = Client(addr=addr, seat=seat)
         if not self.seats:
             self.host_seat = seat
+            # Host Join client sends race rules in CONNECT payload byte 0.
+            if payload:
+                self.race_rules = payload[0] & RACE_RULE_BODY_BUMP
+            else:
+                self.race_rules = RACE_RULE_BODY_BUMP
+            bump = "bump" if self.race_rules & RACE_RULE_BODY_BUMP else "ghost"
+            log(f"host race rules: body_collision={bump}")
         self.clients[addr] = client
         self.seats[seat] = client
         log(
@@ -243,7 +255,7 @@ class LobbyServer:
         cmd_name = CMD_NAMES.get(cmd, str(cmd))
 
         if cmd == Cmd.CONNECT:
-            self.handle_connect(addr)
+            self.handle_connect(addr, payload)
             return
 
         client = self.clients.get(addr)

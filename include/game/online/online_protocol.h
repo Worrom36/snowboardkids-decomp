@@ -3,10 +3,14 @@
 
 #include "common.h"
 
-#define ONLINE_PROTOCOL_VERSION 3
+#define ONLINE_PROTOCOL_VERSION 4
 #define ONLINE_MAX_SEATS        4
 #define ONLINE_DEFAULT_PORT     6464
 #define ONLINE_PLAYER_NAME_LEN  8
+/* Packed in OnlineLobbySnapshot.humanCount bit 7 (count uses low 7 bits). */
+#define ONLINE_RACE_RULE_BODY_BUMP 0x80
+#define ONLINE_LOBBY_HUMAN_COUNT(lobby) ((u8)((lobby)->humanCount & 0x7F))
+#define ONLINE_LOBBY_BODY_BUMP(lobby)   (((lobby)->humanCount & ONLINE_RACE_RULE_BODY_BUMP) != 0)
 
 /* Wire / mailbox command ids (shared with Python tools). */
 typedef enum OnlineCmd {
@@ -61,7 +65,12 @@ typedef enum OnlineRaceEventType {
     ONLINE_EVENT_FINISH = 3,
     ONLINE_EVENT_DISCONNECT = 4,
     /* seat=victim, arg0=flags lo, arg1=flags hi — victim applies locally. */
-    ONLINE_EVENT_HIT = 5
+    ONLINE_EVENT_HIT = 5,
+    /*
+     * seat=target (apply to this seat's local sim),
+     * arg0=angle>>8, arg1=push magnitude — target separates along angle.
+     */
+    ONLINE_EVENT_BUMP = 6
 } OnlineRaceEventType;
 
 typedef struct OnlineLoadout {
@@ -85,7 +94,7 @@ typedef struct OnlineLobbySnapshot {
     /* 0x00 */ u8 phase; /* OnlinePhase */
     /* 0x01 */ u8 localSeat;
     /* 0x02 */ u8 hostSeat;
-    /* 0x03 */ u8 humanCount;
+    /* 0x03 */ u8 humanCount; /* low 7 bits = count; bit7 = ONLINE_RACE_RULE_BODY_BUMP */
     /* 0x04 */ u32 raceSeed;
     /* 0x08 */ u32 startFrame;
     /* 0x0C */ OnlineLobbySeat seats[ONLINE_MAX_SEATS];
@@ -99,7 +108,7 @@ typedef struct OnlineRacerSnapshot {
     /* 0x03 */ u8 itemEffectCount;
     /* 0x04 */ u8 actionEffectType;
     /* 0x05 */ u8 lapDigit; /* Remotes skip updateRacePlayer; must sync for HUD rank. */
-    /* 0x06 */ u8 pad06[2];
+    /* 0x06 */ s16 squashScale; /* RacePlayer.unk2D6 — pan flatten (1=flat … 8=full). */
     /* 0x08 */ u32 sequence;
     /* 0x0C */ s32 posX;
     /* 0x10 */ s32 posY;
@@ -127,9 +136,9 @@ typedef struct OnlineRacerSnapshot {
 } OnlineRacerSnapshot;
 
 /*
- * Compact grounded AI-path sync (CPU / autopilot). Remotes place from path
+ * Compact grounded AI-path sync (host CPUs). Remotes hard-place from path
  * params; lateralOffset is the real perpendicular component (not lane tables).
- * Size 0x2C; full OnlineRacerSnapshot used for air/hit.
+ * Size 0x2C; humans use full OnlineRacerSnapshot (XYZ hard-follow).
  */
 typedef struct OnlineCpuPathSnapshot {
     /* 0x00 */ u8 seat;
@@ -148,7 +157,7 @@ typedef struct OnlineCpuPathSnapshot {
     /* 0x1C */ s16 mode;
     /* 0x1E */ s16 animationId;
     /* 0x20 */ s16 updateState;
-    /* 0x22 */ s16 pad22;
+    /* 0x22 */ s16 squashScale; /* RacePlayer.unk2D6 — pan flatten for path-synced CPUs. */
     /* 0x24 */ u32 stateFlags;
     /* 0x28 */ s32 groundOffset;
 } OnlineCpuPathSnapshot;

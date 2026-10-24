@@ -534,8 +534,9 @@ void initRacePlayer(RacePlayer *player) {
      * initRacePlayer zeroes from pos through the end of the struct, which
      * includes autopilotEnabled. Re-apply after that wipe. isCpu / input source
      * live before pos and survive the clear.
+     * ONLINE_BATTLE_AUTOTEST implies autopilot so local N-P stacks race hands-off.
      */
-#ifdef AUTOPILOT_DEFAULT_ON
+#if defined(AUTOPILOT_DEFAULT_ON) || defined(ONLINE_BATTLE_AUTOTEST)
     if ((player->isCpu == 0) && (player->replayInputSource == RACE_PLAYER_INPUT_LIVE)) {
         player->autopilotEnabled = 1;
     } else {
@@ -563,18 +564,30 @@ void updateRacePlayers(void) {
         for (i = 0; i < gRacePlayerCount; i++) {
 #ifdef ONLINE_BATTLE
             if (onlinePlayerIsRemote(&gRacePlayers[i]) != 0) {
+                RacePlayer *remote = &gRacePlayers[i];
+                /*
+                 * Homing "!" (itemTargetFlag) is client-authoritative: local
+                 * projectile/pan actors set it from this machine's sim.
+                 * Remotes skip updateRacePlayer (which clears the flag), so
+                 * clear here or the mark sticks after the first lock-on.
+                 */
+                remote->itemTargetFlag = 0;
+                /* Tick invisibility timer locally so remotes stay targetable. */
+                if (remote->stateFlags & 0x403040) {
+                    remote->actionSoundTimer = 0;
+                } else if (remote->actionSoundTimer != 0) {
+                    remote->actionSoundTimer--;
+                }
                 continue;
             }
 #endif
             updateRacePlayer(&gRacePlayers[i]);
-#ifdef ONLINE_BATTLE
-            onlineSessionPublishLocalRacer(&gRacePlayers[i]);
-#endif
         }
         resolveRacePlayerBodyCollisions();
 #ifdef ONLINE_BATTLE
         /* Apply after collisions so local physics cannot shove remote puppets. */
         onlineSessionApplyRemoteRacers();
+        onlineSessionResolveViewpointBumps();
         onlineSessionDrainInboundEvents();
 #endif
         updateRacePlayerRankings();

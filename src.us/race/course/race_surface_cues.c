@@ -253,9 +253,24 @@ s32 updateRacePlayerSurfaceCue(RacePlayer *player) {
     s8 stickX;
 
     cue = 0;
+#ifdef ONLINE_BATTLE
+    /* Autopilot humans need the CPU random-trick path (sticks are cleared). */
+    if (racePlayerAiControls(player)) {
+#else
     if (player->isCpu != 0) {
+#endif
         value = randomNextMain() & player->surfaceCueOverrideMask;
         cue = value;
+#ifdef ONLINE_BATTLE
+        /*
+         * Autopilot was firing a cue whenever the mask allowed it. Keep real
+         * CPU behavior; humans on autopilot only attempt ~60% of those cues.
+         */
+        if ((racePlayerUsesAutopilot(player) != 0) && (cue != 0)
+            && ((randomNextMain() & 0xFF) >= 0x9A)) {
+            cue = 0;
+        }
+#endif
         return cue;
     }
 

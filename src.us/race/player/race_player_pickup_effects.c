@@ -97,10 +97,49 @@ static void applyRacePlayerActionEffect(RacePlayer *player, s32 type) {
 }
 
 void applyOnlineRemoteItemUse(RacePlayer *player, s32 itemType) {
+    RaceItemProjectileActor *actor;
+    CallbackTaskCallback initFn;
+
     if ((player == NULL) || (itemType == RACE_ITEM_NONE)) {
         return;
     }
-    spawnRacePlayerItemProjectile(player, itemType);
+
+    initFn = NULL;
+    if (itemType == RACE_ITEM_SLAPSTICK) {
+        initFn = (CallbackTaskCallback)initWideHomingItemProjectile;
+    } else if (itemType == RACE_ITEM_PARACHUTE) {
+        initFn = (CallbackTaskCallback)initLongRangeHomingItemProjectile;
+    } else if (itemType == RACE_ITEM_FREEZE_SHOT) {
+        initFn = (CallbackTaskCallback)initCloseRangeHomingItemProjectile;
+    } else if (itemType == RACE_ITEM_SNOWMAN) {
+        initFn = (CallbackTaskCallback)initBouncingItemProjectile;
+    } else if (itemType == RACE_ITEM_BOMB) {
+        initFn = (CallbackTaskCallback)initAreaBlastItemProjectile;
+    }
+    if (initFn == NULL) {
+        return;
+    }
+
+    /*
+     * Type 0 uses the large shared pool (per-seat type1–4 can be empty on
+     * viewers). Run init immediately — a mid-frame create can be skipped by
+     * updateRemainingCallbackTasks if it inserts behind the walk cursor.
+     */
+    actor = createCallbackTaskWithUserIdPreservingArgs(
+        (void (*)())initFn,
+        0,
+        0x3C,
+        player->playerIndex
+    );
+    if (actor == NULL) {
+        return;
+    }
+    initFn(actor);
+    if (((CallbackTask *)actor)->header.isActive != 0) {
+        actor->matrix = NULL;
+        actor->matrixDirty = 1;
+    }
+    createCallbackTaskWithUserIdPreservingArgs(initRacePlayerShockEffect, 5, 4, player->playerIndex);
 }
 
 void applyOnlineRemoteActionUse(RacePlayer *player, s32 actionType) {

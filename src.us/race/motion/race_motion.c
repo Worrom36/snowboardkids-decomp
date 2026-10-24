@@ -141,8 +141,15 @@ void initRaceCourseSurfaceData(void) {
 s32 findRaceCourseSurfaceFromHint(s32 surfaceIndex, s32 x, s32 z) {
     s32 z2;
     s32 index;
+#ifdef ONLINE_BATTLE
+    /* Neighbor links can form cycles off-mesh; unguarded walk hangs the client. */
+    s32 hops;
+#endif
 
     index = surfaceIndex;
+#ifdef ONLINE_BATTLE
+    hops = 0;
+#endif
 
 loop: {
     Vec3s *coords;
@@ -153,6 +160,17 @@ loop: {
     s32 x2;
     s32 x3;
     s32 z1;
+
+#ifdef ONLINE_BATTLE
+    hops++;
+    if (hops > 0x100) {
+        z2 = findRaceCourseSurfaceAtPoint(x, z);
+        if (z2 != 0) {
+            return z2;
+        }
+        return index;
+    }
+#endif
 
     coords = gRaceCourseSurfaceCoords;
     x0 = coords[gRaceCourseSurfaces[index].boundaryCoordIndices[0]].x << 0x11;

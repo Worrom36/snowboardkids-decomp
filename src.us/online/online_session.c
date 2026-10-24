@@ -7,11 +7,14 @@
 #include "game/race/player/race_player_collision.h"
 #include "game/race/player/race_player_movement.h"
 #include "game/race/player/race_player_pickup_effects.h"
+#include "game/race/items/race_items.h"
 #include "game/math/fixed_point_math.h"
+#include "game/math/spatial_math.h"
 #include "game/engine/asset_manager.h"
 #include "game/engine/callback_task_scheduler.h"
 #include "game/engine/viewport_manager.h"
 #include "game/engine/game_task_scheduler.h"
+#include "game/audio/sound_manager.h"
 
 extern s16 gRaceLapCount;
 extern s8 gRacePlayerCount;
@@ -24,29 +27,55 @@ static u8 sOnlineSessionActive;
 static u8 sOnlineRemoteSeat[ONLINE_MAX_SEATS];
 static s16 sRemoteAppliedAnim[ONLINE_MAX_SEATS];
 static u8 sRemoteYawFlipHold[ONLINE_MAX_SEATS];
+/*
+ * Path B bump: cooldown gates net events only. Position separation runs
+ * every overlapping frame (same cadence as resolveRacePlayerBodyCollisions).
+ */
+static u8 sBumpCooldown[ONLINE_MAX_SEATS][ONLINE_MAX_SEATS];
+#define ONLINE_BUMP_EVENT_COOLDOWN_FRAMES 8
+/* Hold caster-side cosmetic hit mode/anim against snap overwrite briefly. */
+static u8 sRemoteCosmeticHitHold[ONLINE_MAX_SEATS];
+#define ONLINE_REMOTE_COSMETIC_HIT_HOLD_FRAMES 12
+/*
+ * Deferred remote item/action visuals. UDP ITEM_USE/ACTION_USE is one-shot and
+ * often lost while hit reactions still show via continuous pose snaps — spawn
+ * from authority itemEffectCount / actionEffectType drops instead.
+ */
+static u8 sRemotePendingItemType[ONLINE_MAX_SEATS];
+static u8 sRemotePendingItemDrops[ONLINE_MAX_SEATS];
+static u8 sRemotePendingActionType[ONLINE_MAX_SEATS];
+/* Ignore duplicate EVENT+snap spawns for the same fire (~10 frames). */
+static u8 sRemoteItemSpawnCooldown[ONLINE_MAX_SEATS];
+static u8 sRemoteActionSpawnCooldown[ONLINE_MAX_SEATS];
+#define ONLINE_REMOTE_ITEM_SPAWN_COOLDOWN 10
 
 /* Local renderer bits — must not be wiped by authority snapshots or draws skip frames. */
 #define ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK 0x180
 /* Board yaw-flip; toggles at the start line and mirrors the mesh every frame if raw-synced. */
 #define ONLINE_REMOTE_STATEFLAGS_YAW_FLIP   0x400
-#define ONLINE_REMOTE_YAW_FLIP_HOLD_FRAMES  3
+/* Hold long enough that a flicker/reorder cannot invert the mesh into the snow. */
+#define ONLINE_REMOTE_YAW_FLIP_HOLD_FRAMES  12
 /* Finished race — once seen, keep it so stale snaps cannot drop remotes from results. */
 #define ONLINE_REMOTE_STATEFLAGS_FINISHED   0x40
 
-/* Dead reckoning: coast on last velocity, soft-correct toward authority snaps. */
-#define ONLINE_REMOTE_CORRECT_FRAMES   6
+/*
+ * Target-follow: snaps set target+vel; each tick eases pos toward target.
+ * Gap frames advance the target with vel (prediction). Never add vel on top
+ * of a full error dump — that oscillated forward/back up close.
+ */
 #define ONLINE_REMOTE_COAST_MAX_FRAMES 12 /* ~200 ms at 60 fps */
-#define ONLINE_REMOTE_HARD_SNAP_AXIS   0x180000
+#define ONLINE_REMOTE_SMOOTH_DIV       5  /* XZ only — Y is client/terrain when grounded */
+#define ONLINE_REMOTE_HARD_SNAP_AXIS   0x1000000 /* teleport / respawn only */
+#define ONLINE_REMOTE_Y_FLOOR_PAD      0xA000    /* air: never draw below local mesh */
 /* Stay surface-locked through brief mode0↔air bumps so Y does not gravity-coast. */
 #define ONLINE_REMOTE_AIR_UNLOCK_FRAMES 4
 
 typedef struct OnlineRemoteMotion {
     u8 initialized;
-    u8 correctFrames;
     u8 framesSinceSnap;
     u8 grounded; /* surface-locked: no gravity Y coast */
     u8 airFrames; /* consecutive non-locked snaps; hysteresis before unlock */
-    u8 pathMode; /* CPU: place/coast on course path instead of XYZ soft-correct */
+    u8 pathMode; /* CPU: hard-place from path+lateral */
     u32 lastSequence;
     s32 posX;
     s32 posY;
@@ -54,9 +83,9 @@ typedef struct OnlineRemoteMotion {
     s32 velX;
     s32 velY;
     s32 velZ;
-    s32 correctX;
-    s32 correctY;
-    s32 correctZ;
+    s32 targetX;
+    s32 targetY;
+    s32 targetZ;
     s32 groundOffset;
     s32 alongSpeed;
     s32 coursePathOffset;
@@ -142,16 +171,6 @@ static s32 sCpuPrevPathOffset[ONLINE_MAX_SEATS];
 static s16 sCpuPrevPathIndex[ONLINE_MAX_SEATS];
 static u8 sCpuPrevPathValid[ONLINE_MAX_SEATS];
 
-static s32 onlineRemoteAbs(s32 value) {
-    return (value < 0) ? -value : value;
-}
-
-static s32 onlineRemoteHardSnapNeeded(s32 errX, s32 errY, s32 errZ) {
-    return (onlineRemoteAbs(errX) > ONLINE_REMOTE_HARD_SNAP_AXIS) ||
-           (onlineRemoteAbs(errY) > ONLINE_REMOTE_HARD_SNAP_AXIS) ||
-           (onlineRemoteAbs(errZ) > ONLINE_REMOTE_HARD_SNAP_AXIS);
-}
-
 /*
  * Modes that still run surface contact on the authority (board stays on snow).
  * Remotes have no contact probes — treating these as airborne lets gravity
@@ -168,15 +187,46 @@ static s32 onlineRemoteSurfaceLocked(s16 mode, s16 updateState, u32 stateFlags) 
     if ((mode == 2) && (updateState == 0)) {
         return 1;
     }
+    /*
+     * Ground hit reactions (pan 0x18, spin 0x19, steal 0x17):
+     * authority Mode* sinks pos.y then PostUpdateNoop surface-contact fixes it,
+     * but publish can still carry a sunk Y — remotes that follow snap Y bury the
+     * puppet in the mesh (seen as the player "disappearing" after a pan).
+     * Do NOT include slide 0x1B: Mode27 launches with vel.y and spins in air
+     * (parachute-item hit). Terrain-glue left victims spinning on the snow.
+     */
+    if (mode == 0x17 || mode == 0x18 || mode == 0x19) {
+        return 1;
+    }
     return 0;
 }
 
-/* Hit/air reaction modes — never terrain-glue (parachute tumble, knockdowns, …). */
+/*
+ * True airborne / aerial-trick / launched-hit modes — never terrain-glue.
+ * Do NOT include ground knockdowns (0x17–0x19); those publish a sunk Y
+ * before surface contact and must stick to local terrain on remotes.
+ */
 static s32 onlineRemoteIsReactionAirMode(s16 mode) {
-    if (mode == 0xB || mode == 0xC || mode == 0xE) {
+    if (mode == 1 || mode == 2 || mode == 3 || mode == 4 || mode == 6 || mode == 9 || mode == 0xA) {
         return 1;
     }
-    if (mode >= 0x16 && mode <= 0x1C) {
+    if (mode == 0xB || mode == 0xC || mode == 0xD || mode == 0xE || mode == 0x28) {
+        return 1;
+    }
+    if (mode >= 0xF && mode <= 0x15) {
+        return 1;
+    }
+    /*
+     * 0x16 airborne cruise, 0x1A bomb tumble, 0x1B parachute-item slide (launches),
+     * 0x1C terrain-fall-with-item.
+     */
+    if (mode == 0x16 || mode == 0x1A || mode == 0x1B || mode == 0x1C) {
+        return 1;
+    }
+    if (mode >= 0x1F && mode <= 0x27) {
+        return 1;
+    }
+    if (mode >= 0x29 && mode <= 0x39) {
         return 1;
     }
     return 0;
@@ -235,10 +285,28 @@ static s32 onlineSafeSurfaceAt(s32 hint, s32 x, s32 z) {
     return onlineClampPathIndex(hint);
 }
 
+/* Air only: never draw below the local mesh (sunk snap Y / mode glitches). */
+static void onlineRemoteClampAboveSurface(OnlineRemoteMotion *motion, s16 pathHint) {
+    s32 terrainId;
+    s32 surfaceY;
+    s32 floorY;
+
+    terrainId = onlineSafeSurfaceAt(pathHint, motion->posX, motion->posZ);
+    surfaceY = getRaceCourseSurfaceHeight(terrainId, motion->posX, motion->posZ);
+    floorY = surfaceY + ONLINE_REMOTE_Y_FLOOR_PAD;
+    if (motion->posY < floorY) {
+        motion->posY = floorY;
+        if (motion->targetY < floorY) {
+            motion->targetY = floorY;
+        }
+    }
+}
+
 /*
- * Viewer has the same course mesh as the authority. Place Y on local terrain
- * under predicted XZ so downhill does not float (soft net Y) or stair-step
- * (hard net Y). groundOffset matches authority: pos.y = surfaceY + offset.
+ * Client-authoritative grounded Y: hard-place on this machine's mesh under the
+ * visual XZ. Ignore net posY entirely while surface-locked — easing/filtering
+ * net or local height is what bobbed remotes up/down and left them hovering.
+ * groundOffset still comes from authority (crouch amount).
  */
 static void onlineRemoteStickToSurface(OnlineRemoteMotion *motion, s16 pathHint) {
     s32 terrainId;
@@ -254,8 +322,19 @@ static void onlineRemoteStickToSurface(OnlineRemoteMotion *motion, s16 pathHint)
         offset = 0x60000;
     }
     motion->posY = surfaceY + offset;
+    motion->targetY = motion->posY;
     motion->velY = 0;
-    motion->correctY = 0;
+}
+
+/*
+ * Air / launched hits: follow authority Y (jumps/tricks), then floor-clamp.
+ * Grounded paths never call this.
+ */
+static void onlineRemoteEaseAirY(OnlineRemoteMotion *motion, s32 authorityY, s16 pathHint) {
+    motion->targetY = authorityY;
+    motion->posY = authorityY;
+    motion->velY = 0;
+    onlineRemoteClampAboveSurface(motion, pathHint);
 }
 
 static void onlineRemoteMotionResetSeat(s32 seat) {
@@ -263,7 +342,6 @@ static void onlineRemoteMotionResetSeat(s32 seat) {
 
     motion = &sRemoteMotion[seat & 3];
     motion->initialized = 0;
-    motion->correctFrames = 0;
     motion->framesSinceSnap = 0;
     motion->grounded = 1;
     motion->airFrames = 0;
@@ -275,9 +353,9 @@ static void onlineRemoteMotionResetSeat(s32 seat) {
     motion->velX = 0;
     motion->velY = 0;
     motion->velZ = 0;
-    motion->correctX = 0;
-    motion->correctY = 0;
-    motion->correctZ = 0;
+    motion->targetX = 0;
+    motion->targetY = 0;
+    motion->targetZ = 0;
     motion->groundOffset = 0x40000;
     motion->alongSpeed = 0;
     motion->coursePathOffset = 0;
@@ -294,6 +372,11 @@ static void onlineRemoteMotionResetSeat(s32 seat) {
     motion->actionEffectType = 0;
     motion->lapDigit = 0;
     motion->stateFlags = 0;
+    sRemotePendingItemType[seat & 3] = RACE_ITEM_NONE;
+    sRemotePendingItemDrops[seat & 3] = 0;
+    sRemotePendingActionType[seat & 3] = RACE_ACTION_NONE;
+    sRemoteItemSpawnCooldown[seat & 3] = 0;
+    sRemoteActionSpawnCooldown[seat & 3] = 0;
     sPublishSeq[seat & 3] = 0;
     sCpuPrevPathValid[seat & 3] = 0;
 }
@@ -389,10 +472,6 @@ static void onlineRemoteAcceptCpuPath(OnlineRemoteMotion *motion, OnlineCpuPathS
     }
     motion->lastSequence = snap->sequence;
     motion->framesSinceSnap = 0;
-    motion->correctFrames = 0;
-    motion->correctX = 0;
-    motion->correctY = 0;
-    motion->correctZ = 0;
     motion->velX = 0;
     motion->velY = 0;
     motion->velZ = 0;
@@ -406,6 +485,9 @@ static void onlineRemoteAcceptCpuPath(OnlineRemoteMotion *motion, OnlineCpuPathS
         &motion->posY,
         &motion->posZ
     );
+    motion->targetX = motion->posX;
+    motion->targetY = motion->posY;
+    motion->targetZ = motion->posZ;
     motion->initialized = 1;
     (void)seat;
 }
@@ -424,25 +506,34 @@ static s16 onlineRemoteBlendAngle(s16 current, s16 target) {
     s32 delta;
 
     delta = (s16)(target - current);
-    return (s16)(current + (delta / 4));
+    return (s16)(current + (delta / ONLINE_REMOTE_SMOOTH_DIV));
 }
 
+static s32 onlineRemoteAbs(s32 value) {
+    return (value < 0) ? -value : value;
+}
+
+static s32 onlineRemoteHardSnapNeeded(s32 errX, s32 errY, s32 errZ) {
+    return (onlineRemoteAbs(errX) > ONLINE_REMOTE_HARD_SNAP_AXIS) ||
+           (onlineRemoteAbs(errY) > ONLINE_REMOTE_HARD_SNAP_AXIS) ||
+           (onlineRemoteAbs(errZ) > ONLINE_REMOTE_HARD_SNAP_AXIS);
+}
+
+/*
+ * Full XYZ snap → update follow target. Angles are blended in apply (not
+ * hard-assigned here) so close-up facing does not teleport every packet.
+ * Large error / first snap → hard place; otherwise tick eases toward target.
+ */
 static void onlineRemoteAcceptSnap(OnlineRemoteMotion *motion, OnlineRacerSnapshot *snap) {
     s32 errX;
     s32 errY;
     s32 errZ;
-    s32 coastTimedOut;
-
-    coastTimedOut = motion->framesSinceSnap > ONLINE_REMOTE_COAST_MAX_FRAMES;
 
     motion->mode = snap->mode;
     onlineRemoteUpdateGrounded(motion, snap);
     motion->velX = snap->velX;
     motion->velY = snap->velY;
     motion->velZ = snap->velZ;
-    motion->facingAngle = snap->facingAngle;
-    motion->pitchAngle = snap->pitchAngle;
-    motion->leanAngle = snap->leanAngle;
     if (snap->groundOffset <= 0) {
         motion->groundOffset = 0x40000;
     } else {
@@ -451,51 +542,52 @@ static void onlineRemoteAcceptSnap(OnlineRemoteMotion *motion, OnlineRacerSnapsh
     motion->lastSequence = snap->sequence;
     motion->framesSinceSnap = 0;
 
+    if (motion->grounded != 0) {
+        motion->velY = 0;
+    }
+
+    motion->targetX = snap->posX;
+    motion->targetZ = snap->posZ;
+    if (motion->grounded == 0) {
+        motion->targetY = snap->posY;
+    }
+
     if (motion->initialized == 0) {
-        motion->posX = snap->posX;
-        motion->posY = snap->posY;
-        motion->posZ = snap->posZ;
-        motion->correctX = 0;
-        motion->correctY = 0;
-        motion->correctZ = 0;
-        motion->correctFrames = 0;
+        motion->posX = motion->targetX;
+        motion->posZ = motion->targetZ;
+        if (motion->grounded == 0) {
+            motion->posY = motion->targetY;
+        }
+        /* Seed angles once; later packets ease in apply. */
+        motion->facingAngle = snap->facingAngle;
+        motion->pitchAngle = snap->pitchAngle;
+        motion->leanAngle = snap->leanAngle;
         motion->initialized = 1;
         return;
     }
 
-    errX = snap->posX - motion->posX;
-    errY = snap->posY - motion->posY;
-    errZ = snap->posZ - motion->posZ;
-
-    /* Surface-locked Y comes from local terrain each tick — ignore net Y error. */
+    errX = motion->targetX - motion->posX;
+    errZ = motion->targetZ - motion->posZ;
     if (motion->grounded != 0) {
-        motion->velY = 0;
         errY = 0;
+    } else {
+        errY = motion->targetY - motion->posY;
     }
 
-    if ((onlineRemoteHardSnapNeeded(errX, errY, errZ) != 0) || (coastTimedOut != 0)) {
-        motion->posX = snap->posX;
-        motion->posZ = snap->posZ;
+    /* Teleport / respawn only — routine jitter eases in tick. */
+    if (onlineRemoteHardSnapNeeded(errX, errY, errZ) != 0) {
+        motion->posX = motion->targetX;
+        motion->posZ = motion->targetZ;
         if (motion->grounded == 0) {
-            motion->posY = snap->posY;
+            motion->posY = motion->targetY;
         }
-        motion->correctX = 0;
-        motion->correctY = 0;
-        motion->correctZ = 0;
-        motion->correctFrames = 0;
-        return;
     }
-
-    motion->correctX = errX;
-    motion->correctY = errY;
-    motion->correctZ = errZ;
-    motion->correctFrames = ONLINE_REMOTE_CORRECT_FRAMES;
 }
 
 static void onlineRemoteTickMotion(OnlineRemoteMotion *motion) {
-    s32 stepX;
-    s32 stepY;
-    s32 stepZ;
+    s32 errX;
+    s32 errY;
+    s32 errZ;
 
     if (motion->initialized == 0) {
         return;
@@ -505,29 +597,25 @@ static void onlineRemoteTickMotion(OnlineRemoteMotion *motion) {
         motion->framesSinceSnap++;
     }
 
-    if (motion->framesSinceSnap <= ONLINE_REMOTE_COAST_MAX_FRAMES) {
-        motion->posX += motion->velX;
-        motion->posZ += motion->velZ;
+    /*
+     * Gap frames: advance the follow target with authority vel so we predict
+     * instead of freezing. Snap frames leave target at the packet pose.
+     */
+    if ((motion->framesSinceSnap > 1) && (motion->framesSinceSnap <= ONLINE_REMOTE_COAST_MAX_FRAMES)) {
+        motion->targetX += motion->velX;
+        motion->targetZ += motion->velZ;
         if (motion->grounded == 0) {
-            motion->posY += motion->velY;
+            motion->targetY += motion->velY;
         }
     }
 
-    if (motion->correctFrames > 0) {
-        stepX = motion->correctX / motion->correctFrames;
-        stepZ = motion->correctZ / motion->correctFrames;
-        motion->posX += stepX;
-        motion->posZ += stepZ;
-        motion->correctX -= stepX;
-        motion->correctZ -= stepZ;
-        if (motion->grounded == 0) {
-            stepY = motion->correctY / motion->correctFrames;
-            motion->posY += stepY;
-            motion->correctY -= stepY;
-        } else {
-            motion->correctY = 0;
-        }
-        motion->correctFrames--;
+    errX = motion->targetX - motion->posX;
+    errZ = motion->targetZ - motion->posZ;
+    motion->posX += errX / ONLINE_REMOTE_SMOOTH_DIV;
+    motion->posZ += errZ / ONLINE_REMOTE_SMOOTH_DIV;
+    /* Grounded Y is set later from local terrain; air follows predicted target. */
+    if (motion->grounded == 0) {
+        motion->posY = motion->targetY;
     }
 }
 
@@ -542,6 +630,39 @@ static void onlineRemoteTickMotion(OnlineRemoteMotion *motion) {
  * first, then board-height blend from anim 0. Sampling turn clips (2/3) for
  * that blend sinks the root into the ground when steering.
  */
+/*
+ * Mode24 (pan heavy knockdown) sets SQUASHED + unk2D6 on the authority.
+ * Remotes skip that update — apply the same enter visuals so flatten shows
+ * on casters/observers before (and while) snaps catch up.
+ */
+static void onlineRemoteApplyPanFlattenVisual(RacePlayer *player) {
+    s32 seat;
+
+    seat = player->playerIndex & 3;
+    player->stateFlags &= 0xFE0C1FFB;
+    player->stateFlags |= 0x1202000;
+    player->unk2D6 = 1;
+    player->animationId = 1;
+    sRemoteAppliedAnim[seat] = -1;
+}
+
+/* Keep pan flatten readable when snap scale is missing or wiped mid-hold. */
+static void onlineRemoteEnsurePanFlatten(RacePlayer *player) {
+    if (player->mode != 0x18) {
+        return;
+    }
+    player->stateFlags |= RACE_PLAYER_COLLISION_SQUASHED;
+    if ((player->unk2D6 <= 0) || (player->unk2D6 > 8)) {
+        if (player->updateState <= 1) {
+            player->unk2D6 = 1;
+        } else if (player->updateState == 2) {
+            player->unk2D6 = 4;
+        } else {
+            player->unk2D6 = 7;
+        }
+    }
+}
+
 static void onlineSessionPoseRemoteRacer(RacePlayer *player) {
     s32 groundLift;
     s32 groundOffset;
@@ -632,6 +753,7 @@ static void onlineSessionPoseRemoteRacer(RacePlayer *player) {
  * Cosmetic snow spray for remotes: place board-edge markers and spawn the same
  * spark bursts locals get in updateRacePlayerPostUpdate. Does not run surface
  * contact / push (those fight networked pose).
+ * Skip until RACING with the countdown gate clear — spawning during GO soft-locked.
  */
 static void onlineRemoteSpawnBoardSparks(RacePlayer *player) {
     Mat3x3 rotation;
@@ -642,6 +764,9 @@ static void onlineRemoteSpawnBoardSparks(RacePlayer *player) {
     unsigned long long random;
 
     if (player == NULL) {
+        return;
+    }
+    if (gOnlineMailbox.lobby.phase != ONLINE_PHASE_RACING) {
         return;
     }
     if (gMenuFlowState & 1) {
@@ -704,6 +829,7 @@ static void onlineRemoteSpawnBoardSparks(RacePlayer *player) {
 
 void onlineSessionReset(void) {
     s32 i;
+    s32 j;
 
     sOnlineSessionActive = 0;
     sRemotePredictFrame = -1;
@@ -711,7 +837,11 @@ void onlineSessionReset(void) {
         sOnlineRemoteSeat[i] = 0;
         sRemoteAppliedAnim[i] = -1;
         sRemoteYawFlipHold[i] = 0;
+        sRemoteCosmeticHitHold[i] = 0;
         onlineRemoteMotionResetSeat(i);
+        for (j = 0; j < ONLINE_MAX_SEATS; j++) {
+            sBumpCooldown[i][j] = 0;
+        }
     }
     onlineMailboxInit();
 }
@@ -841,6 +971,7 @@ void onlineSessionConfigureRacePlayers(void) {
     for (i = 0; i < ONLINE_MAX_SEATS; i++) {
         onlineCopyPlayerName(sOnlinePlayerNames[i], lobby->seats[i].loadout.name, ONLINE_PLAYER_NAME_LEN);
         sOnlineRemoteSeat[i] = 0;
+        sRemoteCosmeticHitHold[i] = 0;
         onlineRemoteMotionResetSeat(i);
         gRacePlayers[i].replayInputSource = RACE_PLAYER_INPUT_LIVE;
         gOnlineMailbox.authorityOut[i].valid = 0;
@@ -862,7 +993,7 @@ void onlineSessionConfigureRacePlayers(void) {
             if (i == (s32)localSeat) {
                 gRacePlayers[i].isCpu = 0;
                 gRacePlayers[i].replayInputSource = RACE_PLAYER_INPUT_LIVE;
-#ifdef AUTOPILOT_DEFAULT_ON
+#if defined(AUTOPILOT_DEFAULT_ON) || defined(ONLINE_BATTLE_AUTOTEST)
                 gRacePlayers[i].autopilotEnabled = 1;
 #else
                 gRacePlayers[i].autopilotEnabled = 0;
@@ -956,9 +1087,8 @@ void onlineSessionPublishLocalRacer(RacePlayer *player) {
     sPublishSeq[seat]++;
     usePath = 0;
     /*
-     * Path sync is host-CPU only for now. Autopilot humans share the AI steer
-     * code but still leave the rail enough that path reconstruction drifted /
-     * culled remotes mid-lap — they keep full XYZ soft-correct.
+     * Path hard-place is host-CPU only. Humans publish full XYZ and remotes
+     * hard-follow (no soft-correct) — path reconstruction jittered humans.
      */
     if ((player->isCpu != 0) &&
         (onlineRemoteSurfaceLocked(player->mode, player->updateState, player->stateFlags) != 0) &&
@@ -993,7 +1123,7 @@ void onlineSessionPublishLocalRacer(RacePlayer *player) {
         pathOut->mode = player->mode;
         pathOut->animationId = player->animationId;
         pathOut->updateState = player->updateState;
-        pathOut->pad22 = 0;
+        pathOut->squashScale = player->unk2D6;
         pathOut->stateFlags = player->stateFlags & ~ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
         pathOut->groundOffset = player->groundOffset;
         gOnlineMailbox.gameHeartbeat++;
@@ -1033,6 +1163,7 @@ void onlineSessionPublishLocalRacer(RacePlayer *player) {
     out->stateFlags = player->stateFlags & ~ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
     out->stateTimer = player->stateTimer;
     out->groundOffset = player->groundOffset;
+    out->squashScale = player->unk2D6;
     gOnlineMailbox.gameHeartbeat++;
 }
 
@@ -1054,6 +1185,50 @@ void onlineSessionApplyRemoteInput(RacePlayer *player) {
     player->stickY = (s8)snap->stickY;
 }
 
+static void onlineRemoteQueueItemVisual(s32 seat, u8 itemType, u8 drops) {
+    if ((seat < 0) || (seat >= ONLINE_MAX_SEATS) || (itemType == RACE_ITEM_NONE) || (drops == 0)) {
+        return;
+    }
+    sRemotePendingItemType[seat] = itemType;
+    if ((u8)(sRemotePendingItemDrops[seat] + drops) < sRemotePendingItemDrops[seat]) {
+        sRemotePendingItemDrops[seat] = 0xFF;
+    } else {
+        sRemotePendingItemDrops[seat] += drops;
+    }
+}
+
+static void onlineRemoteQueueActionVisual(s32 seat, u8 actionType) {
+    if ((seat < 0) || (seat >= ONLINE_MAX_SEATS) || (actionType == RACE_ACTION_NONE)) {
+        return;
+    }
+    sRemotePendingActionType[seat] = actionType;
+}
+
+static void onlineRemoteFlushPendingVisuals(s32 seat, RacePlayer *player) {
+    u8 drops;
+    u8 itemType;
+    u8 actionType;
+
+    drops = sRemotePendingItemDrops[seat];
+    itemType = sRemotePendingItemType[seat];
+    sRemotePendingItemDrops[seat] = 0;
+    sRemotePendingItemType[seat] = RACE_ITEM_NONE;
+    while (drops != 0) {
+        if (sRemoteItemSpawnCooldown[seat] == 0) {
+            applyOnlineRemoteItemUse(player, itemType);
+            sRemoteItemSpawnCooldown[seat] = ONLINE_REMOTE_ITEM_SPAWN_COOLDOWN;
+        }
+        drops--;
+    }
+
+    actionType = sRemotePendingActionType[seat];
+    sRemotePendingActionType[seat] = RACE_ACTION_NONE;
+    if ((actionType != RACE_ACTION_NONE) && (sRemoteActionSpawnCooldown[seat] == 0)) {
+        applyOnlineRemoteActionUse(player, actionType);
+        sRemoteActionSpawnCooldown[seat] = ONLINE_REMOTE_ITEM_SPAWN_COOLDOWN;
+    }
+}
+
 void onlineSessionApplyRemoteRacers(void) {
     RacePlayer *player;
     OnlineRacerSnapshot *snap;
@@ -1067,6 +1242,9 @@ void onlineSessionApplyRemoteRacers(void) {
     s32 usePath;
     s32 gotNewerPath;
     s32 gotNewerFull;
+    u8 prevItemType;
+    u8 prevItemCount;
+    u8 prevActionType;
 
     if (sOnlineSessionActive == 0) {
         return;
@@ -1079,6 +1257,14 @@ void onlineSessionApplyRemoteRacers(void) {
     shouldTick = (gFrameCounter != sRemotePredictFrame);
     if (shouldTick != 0) {
         sRemotePredictFrame = gFrameCounter;
+        for (i = 0; i < ONLINE_MAX_SEATS; i++) {
+            if (sRemoteItemSpawnCooldown[i] != 0) {
+                sRemoteItemSpawnCooldown[i]--;
+            }
+            if (sRemoteActionSpawnCooldown[i] != 0) {
+                sRemoteActionSpawnCooldown[i]--;
+            }
+        }
     }
 
     for (i = 0; i < ONLINE_MAX_SEATS; i++) {
@@ -1092,8 +1278,11 @@ void onlineSessionApplyRemoteRacers(void) {
         usePath = 0;
         gotNewerPath = 0;
         gotNewerFull = 0;
+        prevItemType = (u8)player->itemEffectType;
+        prevItemCount = (u8)player->itemEffectCount;
+        prevActionType = (u8)player->actionEffectType;
 
-        /* Path snaps are host-CPU only; ignore for human remotes (XYZ authority). */
+        /* Path snaps are host-CPU only; human remotes always use XYZ authority. */
         if ((player->isCpu != 0) && (pathSnap->valid != 0)) {
             if ((motion->initialized == 0) || ((s32)(pathSnap->sequence - motion->lastSequence) > 0)) {
                 gotNewerPath = 1;
@@ -1115,9 +1304,28 @@ void onlineSessionApplyRemoteRacers(void) {
         }
 
         if (gotNewerPath != 0) {
+            /*
+             * Path snaps carry item/action slots for host CPUs. Detect fires
+             * before accept overwrites motion's previous inventory.
+             */
+            if (motion->initialized != 0) {
+                if ((pathSnap->itemEffectCount < motion->itemEffectCount)
+                    && (motion->itemEffectType != RACE_ITEM_NONE)) {
+                    onlineRemoteQueueItemVisual(
+                        i,
+                        motion->itemEffectType,
+                        (u8)(motion->itemEffectCount - pathSnap->itemEffectCount)
+                    );
+                }
+                if ((motion->actionEffectType != RACE_ACTION_NONE)
+                    && (pathSnap->actionEffectType == RACE_ACTION_NONE)) {
+                    onlineRemoteQueueActionVisual(i, motion->actionEffectType);
+                }
+            }
             onlineRemoteAcceptCpuPath(motion, pathSnap, i);
             usePath = 1;
         } else if (gotNewerFull != 0) {
+            /* Leaving pathMode hard-places via acceptSnap (clears stale coast). */
             motion->pathMode = 0;
             onlineRemoteAcceptSnap(motion, snap);
         } else if (motion->pathMode != 0) {
@@ -1131,7 +1339,7 @@ void onlineSessionApplyRemoteRacers(void) {
         }
 
         if (usePath != 0) {
-            /* Soft-correct / missed-packet coast — tick every frame like XYZ. */
+            /* Hold last path place; framesSinceSnap only tracks packet gaps. */
             if (shouldTick != 0) {
                 onlineRemoteTickCpuPath(motion);
             }
@@ -1144,12 +1352,17 @@ void onlineSessionApplyRemoteRacers(void) {
             player->coursePathIndex = motion->coursePathIndex;
             player->coursePathOffset = motion->coursePathOffset;
             player->lapDigit = (s8)motion->lapDigit;
-            player->mode = motion->mode;
             player->itemEffectType = (s8)motion->itemEffectType;
             player->itemEffectCount = (s8)motion->itemEffectCount;
             player->actionEffectType = (s8)motion->actionEffectType;
-            player->animationId = motion->animationId;
-            player->updateState = motion->updateState;
+            if (sRemoteCosmeticHitHold[i] == 0) {
+                player->mode = motion->mode;
+                player->animationId = motion->animationId;
+                player->updateState = motion->updateState;
+            }
+            if ((pathSnap->valid != 0) && (sRemoteCosmeticHitHold[i] == 0)) {
+                player->unk2D6 = pathSnap->squashScale;
+            }
             player->stickX = 0;
             player->stickY = 0;
 
@@ -1157,6 +1370,11 @@ void onlineSessionApplyRemoteRacers(void) {
             incoming = motion->stateFlags & ~ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
             if (player->stateFlags & ONLINE_REMOTE_STATEFLAGS_FINISHED) {
                 incoming |= ONLINE_REMOTE_STATEFLAGS_FINISHED;
+            }
+            /* Cosmetic pan hold: do not let a pre-hit snap clear SQUASHED. */
+            if ((sRemoteCosmeticHitHold[i] != 0)
+                && (player->stateFlags & RACE_PLAYER_COLLISION_SQUASHED)) {
+                incoming |= RACE_PLAYER_COLLISION_SQUASHED;
             }
             yawBit = incoming & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP;
             if (yawBit != (player->stateFlags & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP)) {
@@ -1171,12 +1389,9 @@ void onlineSessionApplyRemoteRacers(void) {
                 sRemoteYawFlipHold[i] = 0;
             }
             player->stateFlags = incoming | localBits;
+            onlineRemoteEnsurePanFlatten(player);
         } else {
-            /*
-             * Always tick after accept (same as pre-path-sync). Soft-correct and
-             * vel coast live in tickMotion — skipping on snap frames left remotes
-             * frozen until the next miss, which looked like heavy stutter.
-             */
+            /* Extrapolate on gap frames; accept already hard-placed on snap frames. */
             if (shouldTick != 0) {
                 onlineRemoteTickMotion(motion);
             }
@@ -1191,12 +1406,33 @@ void onlineSessionApplyRemoteRacers(void) {
                 player->coursePathIndex = (s16)onlineClampPathIndex(snap->coursePathIndex);
                 player->coursePathOffset = snap->coursePathOffset;
                 player->lapDigit = (s8)snap->lapDigit;
-                player->mode = snap->mode;
+                /*
+                 * Inventory drops are the reliable fire signal (UDP ITEM_USE /
+                 * ACTION_USE can vanish while pose snaps keep arriving).
+                 */
+                if (motion->initialized != 0) {
+                    if ((snap->itemEffectCount < prevItemCount)
+                        && (prevItemType != RACE_ITEM_NONE)) {
+                        onlineRemoteQueueItemVisual(
+                            i,
+                            prevItemType,
+                            (u8)(prevItemCount - snap->itemEffectCount)
+                        );
+                    }
+                    if ((prevActionType != RACE_ACTION_NONE)
+                        && (snap->actionEffectType == RACE_ACTION_NONE)) {
+                        onlineRemoteQueueActionVisual(i, prevActionType);
+                    }
+                }
                 player->itemEffectType = (s8)snap->itemEffectType;
                 player->itemEffectCount = (s8)snap->itemEffectCount;
                 player->actionEffectType = (s8)snap->actionEffectType;
-                player->animationId = snap->animationId;
-                player->updateState = snap->updateState;
+                if (sRemoteCosmeticHitHold[i] == 0) {
+                    player->mode = snap->mode;
+                    player->animationId = snap->animationId;
+                    player->updateState = snap->updateState;
+                    player->unk2D6 = snap->squashScale;
+                }
                 player->modelRotationX = snap->modelRotationX;
                 player->modelRotationY = snap->modelRotationY;
                 player->modelRotationZ = snap->modelRotationZ;
@@ -1207,6 +1443,10 @@ void onlineSessionApplyRemoteRacers(void) {
                 incoming = snap->stateFlags & ~ONLINE_REMOTE_STATEFLAGS_LOCAL_MASK;
                 if (player->stateFlags & ONLINE_REMOTE_STATEFLAGS_FINISHED) {
                     incoming |= ONLINE_REMOTE_STATEFLAGS_FINISHED;
+                }
+                if ((sRemoteCosmeticHitHold[i] != 0)
+                    && (player->stateFlags & RACE_PLAYER_COLLISION_SQUASHED)) {
+                    incoming |= RACE_PLAYER_COLLISION_SQUASHED;
                 }
                 yawBit = incoming & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP;
                 if (yawBit != (player->stateFlags & ONLINE_REMOTE_STATEFLAGS_YAW_FLIP)) {
@@ -1221,6 +1461,7 @@ void onlineSessionApplyRemoteRacers(void) {
                     sRemoteYawFlipHold[i] = 0;
                 }
                 player->stateFlags = incoming | localBits;
+                onlineRemoteEnsurePanFlatten(player);
 
                 player->stateTimer = snap->stateTimer;
                 if (shouldTick != 0) {
@@ -1236,15 +1477,23 @@ void onlineSessionApplyRemoteRacers(void) {
             }
 
             /*
-             * After XZ predict: grounded → local terrain; parachute/hit air → hard
-             * follow authority Y (no terrain glue, no gravity coast lag).
+             * Y every apply when grounded (client mesh under visual XZ). Air
+             * uses authority Y once per tick. Net posY is never used grounded.
              */
-            if (motion->grounded != 0) {
+            if ((sRemoteCosmeticHitHold[i] != 0) && (onlineRemoteIsReactionAirMode(player->mode) != 0)
+                && (snap->valid != 0)) {
+                motion->grounded = 0;
+                if (shouldTick != 0) {
+                    onlineRemoteEaseAirY(motion, snap->posY, player->coursePathIndex);
+                }
+            } else if (motion->grounded != 0) {
                 onlineRemoteStickToSurface(motion, player->coursePathIndex);
             } else if ((snap->valid != 0) && (onlineRemoteIsReactionAirMode(player->mode) != 0)) {
-                motion->posY = snap->posY;
-                motion->velY = 0;
-                motion->correctY = 0;
+                if (shouldTick != 0) {
+                    onlineRemoteEaseAirY(motion, snap->posY, player->coursePathIndex);
+                }
+            } else {
+                onlineRemoteClampAboveSurface(motion, player->coursePathIndex);
             }
         }
 
@@ -1257,12 +1506,42 @@ void onlineSessionApplyRemoteRacers(void) {
         player->velocity.z = motion->velZ;
         player->groundOffset = motion->groundOffset;
         player->targetGroundOffset = motion->groundOffset;
+        onlineRemoteEnsurePanFlatten(player);
         onlineSessionPoseRemoteRacer(player);
+        /* Spawn after pose so projectile init sees valid modelPartTransforms. */
+        onlineRemoteFlushPendingVisuals(i, player);
         /* Once per frame: cosmetic board snow (skipped with remote post-update). */
         if (shouldTick != 0) {
             onlineRemoteSpawnBoardSparks(player);
         }
     }
+}
+
+s32 onlineSessionQueueRemoteHit(u8 seat, u16 flag) {
+    RacePlayer *player;
+
+    if ((sOnlineSessionActive == 0) || (seat >= ONLINE_MAX_SEATS) || (flag == 0)) {
+        return 0;
+    }
+    if (sOnlineRemoteSeat[seat] == 0) {
+        return 0;
+    }
+    /* Already playing caster-side reaction — wait out the hold. */
+    if (sRemoteCosmeticHitHold[seat] != 0) {
+        return 0;
+    }
+    player = &gRacePlayers[seat];
+    if ((player->pendingItemHitFlags & flag) != 0) {
+        return 0;
+    }
+    onlineSessionEnqueueEvent(
+        ONLINE_EVENT_HIT,
+        seat,
+        (u8)(flag & 0xFF),
+        (u8)((flag >> 8) & 0xFF)
+    );
+    player->pendingItemHitFlags |= flag;
+    return 1;
 }
 
 void onlineSessionEnqueueEvent(u8 type, u8 seat, u8 arg0, u8 arg1) {
@@ -1285,11 +1564,230 @@ void onlineSessionEnqueueEvent(u8 type, u8 seat, u8 arg0, u8 arg1) {
     gOnlineMailbox.eventOutCount = index + 1;
 }
 
+s32 onlineSessionBodyBumpEnabled(void) {
+    if (sOnlineSessionActive == 0) {
+        return 0;
+    }
+    return ONLINE_LOBBY_BODY_BUMP(&gOnlineMailbox.lobby) ? 1 : 0;
+}
+
+static void onlineApplyBodySeparation(RacePlayer *player, s16 angleAtoB, s32 halfPush, s32 aSide) {
+    s32 sine;
+    s32 cosine;
+    s32 pushX;
+    s32 pushZ;
+
+    /*
+     * Mirror resolveRacePlayerBodyCollisions half-push onto one body.
+     * aSide!=0: move like player A ( += ); else like player B ( -= ).
+     * angleAtoB matches calculateFixedAngleBetweenXZPoints(A, B).
+     */
+    sine = fixedSine(angleAtoB);
+    cosine = fixedCosine(angleAtoB);
+    pushX = (s32)((s64)-sine * halfPush / 0x1000);
+    pushZ = (s32)((s64)cosine * halfPush / 0x1000);
+    if (aSide != 0) {
+        player->pos.x += pushX;
+        player->pos.z -= pushZ;
+    } else {
+        player->pos.x -= pushX;
+        player->pos.z += pushZ;
+    }
+}
+
+static void onlineTickBumpCooldowns(void) {
+    s32 i;
+    s32 j;
+
+    for (i = 0; i < ONLINE_MAX_SEATS; i++) {
+        for (j = 0; j < ONLINE_MAX_SEATS; j++) {
+            if (sBumpCooldown[i][j] != 0) {
+                sBumpCooldown[i][j]--;
+            }
+        }
+    }
+}
+
+void onlineSessionResolveViewpointBumps(void) {
+    RacePlayer *local;
+    RacePlayer *remote;
+    s32 i;
+    s32 j;
+    s32 yDiff;
+    s32 yLimit;
+    s32 radius;
+    s32 xDiff;
+    s32 zDiff;
+    s32 dist;
+    s32 halfPush;
+    s16 angle;
+    s64 closingLocal;
+    s64 closingRemote;
+    u8 mag;
+
+    if ((sOnlineSessionActive == 0) || (onlineSessionBodyBumpEnabled() == 0)) {
+        return;
+    }
+    /*
+     * Countdown stacks everyone on the start grid — do not shove until GO
+     * clears bit0 (same gate as offline body collision becoming "live").
+     */
+    if (gMenuFlowState & 1) {
+        return;
+    }
+
+    onlineTickBumpCooldowns();
+
+    for (i = 0; i < ONLINE_MAX_SEATS; i++) {
+        local = &gRacePlayers[i];
+        if ((local->isActive == 0) || (onlinePlayerIsRemote(local) != 0)) {
+            continue;
+        }
+        if ((local->soundDisabled != 0) || (local->stateFlags & RACE_PLAYER_COLLISION_SQUASHED)) {
+            continue;
+        }
+
+        for (j = 0; j < ONLINE_MAX_SEATS; j++) {
+            if (i == j) {
+                continue;
+            }
+            remote = &gRacePlayers[j];
+            if ((remote->isActive == 0) || (onlinePlayerIsRemote(remote) == 0)) {
+                continue;
+            }
+            if ((remote->soundDisabled != 0) || (remote->stateFlags & RACE_PLAYER_COLLISION_SQUASHED)) {
+                continue;
+            }
+
+            yDiff = local->collisionBottomY - remote->collisionBottomY;
+            if (yDiff < 0) {
+                yDiff = -yDiff;
+                yLimit = local->collisionHeight;
+            } else {
+                yLimit = remote->collisionHeight;
+            }
+            if (yDiff > yLimit) {
+                continue;
+            }
+
+            radius = local->collisionRadius + remote->collisionRadius;
+            xDiff = local->pos.x - remote->pos.x;
+            if (xDiff < 0) {
+                xDiff = -xDiff;
+            }
+            if (xDiff >= radius) {
+                continue;
+            }
+            zDiff = local->pos.z - remote->pos.z;
+            if (zDiff < 0) {
+                zDiff = -zDiff;
+            }
+            if (zDiff >= radius) {
+                continue;
+            }
+            dist = integerSquareRoot64((s64)xDiff * xDiff + (s64)zDiff * zDiff);
+            if (dist >= radius) {
+                continue;
+            }
+
+            /* Same half-penetration as offline resolveRacePlayerBodyCollisions. */
+            halfPush = ((radius - dist) * -1) / 2;
+            if (halfPush == 0) {
+                continue;
+            }
+
+            /*
+             * Offline always splits along A->B. Remotes are pose-locked, so
+             * each machine only moves its local (A-side). Peers do the same
+             * on their screen — together that mirrors the mutual half-push.
+             */
+            angle = calculateFixedAngleBetweenXZPoints(
+                local->pos.x,
+                local->pos.z,
+                remote->pos.x,
+                remote->pos.z
+            );
+            onlineApplyBodySeparation(local, angle, halfPush, 1);
+
+            /*
+             * Net event / peer B-side only on impact frames so the queue does
+             * not fill every tick. Closing decides who was the bumper.
+             */
+            if (sBumpCooldown[i][j] != 0) {
+                continue;
+            }
+            closingLocal = (s64)local->velocity.x * (remote->pos.x - local->pos.x)
+                + (s64)local->velocity.z * (remote->pos.z - local->pos.z);
+            closingRemote = (s64)remote->velocity.x * (local->pos.x - remote->pos.x)
+                + (s64)remote->velocity.z * (local->pos.z - remote->pos.z);
+            if (closingLocal > closingRemote) {
+                mag = (u8)((-halfPush > 255) ? 255 : -halfPush);
+                onlineSessionEnqueueEvent(
+                    ONLINE_EVENT_BUMP,
+                    (u8)j,
+                    (u8)((u16)angle >> 8),
+                    mag
+                );
+            }
+            sBumpCooldown[i][j] = ONLINE_BUMP_EVENT_COOLDOWN_FRAMES;
+            sBumpCooldown[j][i] = ONLINE_BUMP_EVENT_COOLDOWN_FRAMES;
+        }
+    }
+}
+
+void onlineSessionResolveRemoteCosmeticHits(void) {
+    RacePlayer *player;
+    s32 i;
+    s8 savedSurface;
+    s8 savedPrevSurface;
+
+    if (sOnlineSessionActive == 0) {
+        return;
+    }
+
+    for (i = 0; i < ONLINE_MAX_SEATS; i++) {
+        if (sRemoteCosmeticHitHold[i] != 0) {
+            sRemoteCosmeticHitHold[i]--;
+        }
+        if (sOnlineRemoteSeat[i] == 0) {
+            continue;
+        }
+        player = &gRacePlayers[i];
+        if (player->pendingItemHitFlags == 0) {
+            continue;
+        }
+        /*
+         * Caster-side impact FX / reaction mode only. Remotes often have a stale
+         * unk330 (they skip surface update); resolveRacePlayerHitReactions would
+         * then also queue terrain fall/crash and bury the puppet in the mesh
+         * (seen with pan / ghost-slowdown on the shooter's screen).
+         */
+        savedSurface = player->unk330;
+        savedPrevSurface = player->unk331;
+        player->unk330 = 0;
+        player->unk331 = 0;
+        resolveRacePlayerHitReactions(player);
+        player->unk330 = savedSurface;
+        player->unk331 = savedPrevSurface;
+        /*
+         * Hit resolve only sets mode 0x18 — Mode24 enter (SQUASHED + unk2D6)
+         * never runs on remotes. Apply that visual here so the pan flatten is
+         * visible on the caster's screen immediately.
+         */
+        if (player->mode == 0x18) {
+            onlineRemoteApplyPanFlattenVisual(player);
+        }
+        sRemoteCosmeticHitHold[i] = ONLINE_REMOTE_COSMETIC_HIT_HOLD_FRAMES;
+    }
+}
+
 void onlineSessionDrainInboundEvents(void) {
     OnlineRaceEvent *event;
     RacePlayer *player;
     s32 i;
     u8 count;
+    s16 angle;
+    s32 halfPush;
 
     if (sOnlineSessionActive == 0) {
         gOnlineMailbox.eventInCount = 0;
@@ -1310,14 +1808,56 @@ void onlineSessionDrainInboundEvents(void) {
             }
             continue;
         }
+        if (event->type == ONLINE_EVENT_BUMP) {
+            /* Target seat applies shove to its local sim (human or host AI). */
+            if ((onlineSessionBodyBumpEnabled() != 0) && (sOnlineRemoteSeat[event->seat] == 0)
+                && !(gMenuFlowState & 1)) {
+                player = &gRacePlayers[event->seat];
+                if ((player->isActive != 0) && (player->soundDisabled == 0)
+                    && !(player->stateFlags & RACE_PLAYER_COLLISION_SQUASHED)) {
+                    /* arg angle is bumper->victim; apply B-side half-push. */
+                    angle = (s16)((u16)event->arg0 << 8);
+                    halfPush = -(s32)event->arg1;
+                    if (halfPush != 0) {
+                        onlineApplyBodySeparation(player, angle, halfPush, 0);
+                    }
+                }
+            }
+            continue;
+        }
         if (sOnlineRemoteSeat[event->seat] == 0) {
             continue;
         }
         player = &gRacePlayers[event->seat];
+        /*
+         * Early visual from UDP when it arrives. Snap inventory drops also
+         * queue the same spawn (onlineRemoteFlushPendingVisuals); credit via
+         * pending clear is wrong here, so only use events as a latency hint
+         * when snaps have not already reflected the fire (count still high).
+         */
         if (event->type == ONLINE_EVENT_ITEM_USE) {
-            applyOnlineRemoteItemUse(player, event->arg0);
+            /*
+             * Spawn whenever UDP arrives — do not require a prior inventory
+             * snap (count>0). Cooldown dedups the matching snap drop.
+             */
+            if (event->arg0 != RACE_ITEM_NONE) {
+                onlineRemoteQueueItemVisual(event->seat, event->arg0, 1);
+                onlineSessionPoseRemoteRacer(player);
+                onlineRemoteFlushPendingVisuals(event->seat, player);
+                if ((u8)player->itemEffectCount > 0) {
+                    player->itemEffectCount--;
+                    if (player->itemEffectCount == 0) {
+                        player->itemEffectType = RACE_ITEM_NONE;
+                    }
+                }
+            }
         } else if (event->type == ONLINE_EVENT_ACTION_USE) {
-            applyOnlineRemoteActionUse(player, event->arg0);
+            if (event->arg0 != RACE_ACTION_NONE) {
+                onlineRemoteQueueActionVisual(event->seat, event->arg0);
+                onlineSessionPoseRemoteRacer(player);
+                onlineRemoteFlushPendingVisuals(event->seat, player);
+                player->actionEffectType = RACE_ACTION_NONE;
+            }
         }
     }
     gOnlineMailbox.eventInCount = 0;

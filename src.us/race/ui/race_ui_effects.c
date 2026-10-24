@@ -4200,12 +4200,8 @@ void updateGhostSlowdownImpact(RaceUiPodiumTrailActor *arg0) {
                     gRacePlayers[targetIndex].pendingItemHitFlags |= PLAYER_HITFLAG_GHOST_SLOWDOWN;
                 } else if ((arg0->playerIndex == localSeat) &&
                            (onlinePlayerIsRemote(&gRacePlayers[targetIndex]) != 0)) {
-                    onlineSessionEnqueueEvent(
-                        ONLINE_EVENT_HIT,
-                        (u8)targetIndex,
-                        (u8)(PLAYER_HITFLAG_GHOST_SLOWDOWN & 0xFF),
-                        (u8)((PLAYER_HITFLAG_GHOST_SLOWDOWN >> 8) & 0xFF)
-                    );
+                    /* Caster-side pending → ResolveRemoteCosmeticHits plays FX. */
+                    onlineSessionQueueRemoteHit((u8)targetIndex, PLAYER_HITFLAG_GHOST_SLOWDOWN);
                 } else if (onlinePlayerIsRemote(&gRacePlayers[targetIndex]) == 0) {
                     gRacePlayers[targetIndex].pendingItemHitFlags |= PLAYER_HITFLAG_GHOST_SLOWDOWN;
                 }

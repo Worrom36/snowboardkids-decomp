@@ -8,10 +8,12 @@ from enum import IntEnum
 from typing import List, Optional, Tuple
 
 MAGIC = 0x4F4E504B  # 'ONPK'
-VERSION = 3
+VERSION = 4
 DEFAULT_PORT = 6464
 MAX_SEATS = 4
 NAME_LEN = 8
+# Lobby human_count bit 7: body collision bump (default on).
+RACE_RULE_BODY_BUMP = 0x80
 _NAME_CHARS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -.'!")
 
 
@@ -135,15 +137,22 @@ class LobbySnapshot:
     human_count: int = 0
     race_seed: int = 0
     start_frame: int = 0
+    # Bit flags packed into human_count high bits on the wire (bit7 = body bump).
+    race_rules: int = RACE_RULE_BODY_BUMP
     seats: List[LobbySeat] = field(default_factory=lambda: [LobbySeat() for _ in range(MAX_SEATS)])
 
+    @property
+    def body_bump(self) -> bool:
+        return (self.race_rules & RACE_RULE_BODY_BUMP) != 0
+
     def pack(self) -> bytes:
+        packed_humans = (self.human_count & 0x7F) | (self.race_rules & RACE_RULE_BODY_BUMP)
         body = struct.pack(
             ">BBBBII",
             self.phase,
             self.local_seat,
             self.host_seat,
-            self.human_count,
+            packed_humans,
             self.race_seed,
             self.start_frame,
         )
@@ -153,7 +162,7 @@ class LobbySnapshot:
 
     @classmethod
     def unpack(cls, data: bytes, offset: int = 0) -> Tuple["LobbySnapshot", int]:
-        phase, local_seat, host_seat, human_count, race_seed, start_frame = struct.unpack_from(
+        phase, local_seat, host_seat, packed_humans, race_seed, start_frame = struct.unpack_from(
             ">BBBBII", data, offset
         )
         offset += 12
@@ -166,9 +175,10 @@ class LobbySnapshot:
                 phase=phase,
                 local_seat=local_seat,
                 host_seat=host_seat,
-                human_count=human_count,
+                human_count=packed_humans & 0x7F,
                 race_seed=race_seed,
                 start_frame=start_frame,
+                race_rules=packed_humans & RACE_RULE_BODY_BUMP,
                 seats=seats,
             ),
             offset,
@@ -183,6 +193,7 @@ class RacerSnapshot:
     item_effect_count: int = 0
     action_effect_type: int = 0
     lap_digit: int = 0
+    squash_scale: int = 0
     sequence: int = 0
     pos_x: int = 0
     pos_y: int = 0
@@ -208,7 +219,8 @@ class RacerSnapshot:
     state_timer: int = 0
     ground_offset: int = 0
 
-    _STRUCT = struct.Struct(">BBBBBBxxIiiiiiihhhhihhhhIhhhhIii")
+    # pad06 is squash_scale (s16) — pan flatten scale for remotes.
+    _STRUCT = struct.Struct(">BBBBBBhIiiiiiihhhhihhhhIhhhhIii")
 
     def pack(self) -> bytes:
         return self._STRUCT.pack(
@@ -218,6 +230,7 @@ class RacerSnapshot:
             self.item_effect_count,
             self.action_effect_type,
             self.lap_digit,
+            self.squash_scale,
             self.sequence,
             self.pos_x,
             self.pos_y,
@@ -267,11 +280,12 @@ class CpuPathSnapshot:
     mode: int = 0
     animation_id: int = 0
     update_state: int = 0
+    squash_scale: int = 0
     state_flags: int = 0
     ground_offset: int = 0
 
-    # Matches OnlineCpuPathSnapshot (0x2C); pad22 is xx.
-    _STRUCT = struct.Struct(">BBBBBBxxIhhiiihhhxxIi")
+    # Matches OnlineCpuPathSnapshot (0x2C); pad22 is squash_scale (s16).
+    _STRUCT = struct.Struct(">BBBBBBxxIhhiiihhhhIi")
 
     def pack(self) -> bytes:
         return self._STRUCT.pack(
@@ -290,6 +304,7 @@ class CpuPathSnapshot:
             self.mode,
             self.animation_id,
             self.update_state,
+            self.squash_scale,
             self.state_flags,
             self.ground_offset,
         )

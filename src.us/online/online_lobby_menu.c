@@ -373,12 +373,17 @@ void updateOnlineLobbyMenu(void) {
 
     if (lobby->phase == ONLINE_PHASE_CONNECTING) {
         sOnlineConnectFrames++;
-        /* Bridge-less solo test: after a short wait, self-host a 1P lobby. */
-        if ((sOnlineConnectFrames >= 90) && (gOnlineMailbox.bridgeHeartbeat == 0)) {
+        /*
+         * Bridge-less solo test: after a wait, self-host a 1P lobby.
+         * Keep this long enough for multi-Mupen bridge scans to find ONLB
+         * (~several seconds) before falling back.
+         */
+        if ((sOnlineConnectFrames >= 600) && (gOnlineMailbox.bridgeHeartbeat == 0)) {
             lobby->phase = ONLINE_PHASE_LOBBY;
             lobby->localSeat = 0;
             lobby->hostSeat = 0;
-            lobby->humanCount = 1;
+            /* Solo bridge-less test: default Bump race rule (bit 7). */
+            lobby->humanCount = (u8)(1 | ONLINE_RACE_RULE_BODY_BUMP);
             lobby->seats[0].kind = ONLINE_SEAT_HUMAN;
             lobby->seats[0].ready = 0;
             lobby->seats[0].loadout = gOnlineMailbox.pendingLoadout;

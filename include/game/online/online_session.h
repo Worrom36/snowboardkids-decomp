@@ -14,7 +14,22 @@ void onlineSessionPublishLocalRacer(RacePlayer *player);
 void onlineSessionApplyRemoteRacers(void);
 void onlineSessionApplyRemoteInput(RacePlayer *player);
 void onlineSessionEnqueueEvent(u8 type, u8 seat, u8 arg0, u8 arg1);
+/*
+ * Caster-side hit on a remote seat: enqueue ONLINE_EVENT_HIT for the victim and
+ * set pending locally for ResolveRemoteCosmeticHits. Returns 0 if skipped
+ * (inactive hold / already pending) so continuous overlaps do not spam.
+ */
+s32 onlineSessionQueueRemoteHit(u8 seat, u16 flag);
 void onlineSessionDrainInboundEvents(void);
+/* Path B: local-viewpoint bumps vs remote-owned seats (Bump race rule). */
+void onlineSessionResolveViewpointBumps(void);
+s32 onlineSessionBodyBumpEnabled(void);
+/*
+ * Caster-side: remotes skip updateRacePlayer so pending hits never resolve.
+ * Call after projectile callbacks (and after the last applyRemoteRacers) so
+ * impact FX / reaction modes appear on the attacker's screen.
+ */
+void onlineSessionResolveRemoteCosmeticHits(void);
 
 /* Menu / flow helpers */
 void onlineSessionBeginConnect(void);

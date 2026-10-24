@@ -669,7 +669,7 @@ void initRaceSceneFlow(void) {
     for (i = 0; i < RACE_PLAYER_COUNT; i++) {
         gRacePlayers[i].autopilotEnabled = 0;
     }
-#ifdef AUTOPILOT_DEFAULT_ON
+#if defined(AUTOPILOT_DEFAULT_ON) || defined(ONLINE_BATTLE_AUTOTEST)
     for (i = 0; i < gPlayerCount; i++) {
         gRacePlayers[i].autopilotEnabled = 1;
     }
@@ -1010,6 +1010,8 @@ void waitOnlineRaceGo(void) {
 
     if (go != 0) {
         gRaceUpdatePaused = 0;
+        /* Fresh timer for startRaceGameplayFlow online countdown failsafe. */
+        gCurrentGameTask->callbackData0 = 0;
         createCallbackTask((CallbackTaskCallback)initRaceCountdownPrompt, 6, 0x64);
         createCallbackTask((CallbackTaskCallback)initRaceStartOverlay, 6, 0x64);
         setCurrentGameTaskCallback(startRaceGameplayFlow, 0);
@@ -1025,6 +1027,18 @@ void waitOnlineRaceGo(void) {
 #endif
 
 void startRaceGameplayFlow(void) {
+#ifdef ONLINE_BATTLE
+    /*
+     * If the READY/GO callback never clears bit0 (dropped task / soft hang),
+     * force the race open after ~5s so peers are not stuck on GO forever.
+     */
+    if (onlineSessionActive() != 0) {
+        gCurrentGameTask->callbackData0++;
+        if ((gMenuFlowState & 1) && (gCurrentGameTask->callbackData0 >= 300)) {
+            gMenuFlowState &= ~1;
+        }
+    }
+#endif
     if (gMenuFadeAlpha != 0) {
         gMenuFadeAlpha -= 0x10;
     }
@@ -1970,7 +1984,7 @@ void prepareRaceResultsFlow(void) {
          * seat 0's RANK/character-name over it on every client.
          */
         if ((gPlayerCount == 1) && (gRaceSplitscreenMode == 0) &&
-            !((onlineSessionActive() != 0) && (onlineSessionLobby()->humanCount > 1))) {
+            !((onlineSessionActive() != 0) && (ONLINE_LOBBY_HUMAN_COUNT(onlineSessionLobby()) > 1))) {
 #else
         if ((gPlayerCount == 1) && (gRaceSplitscreenMode == 0)) {
 #endif
@@ -2037,7 +2051,7 @@ void updateRaceResultsFlow(void) {
              * Online uses gPlayerCount==1 for the viewport, but multi-human races
              * need the VS results banner (placements for every seat).
              */
-            if ((onlineSessionActive() != 0) && (onlineSessionLobby()->humanCount > 1)) {
+            if ((onlineSessionActive() != 0) && (ONLINE_LOBBY_HUMAN_COUNT(onlineSessionLobby()) > 1)) {
                 resultActor =
                     createCallbackTask((CallbackTaskCallback)initRaceUiResultsBanner, 6, 0x64);
                 if (resultActor != NULL) {
@@ -2538,13 +2552,25 @@ void finalizeRaceExitFlow(void) {
 }
 
 void updateRaceFlowFrameWithCourseEffects(void) {
+    s32 i;
+
     updateRacePlayers();
     updateCallbackTasksWithMinPriority(0x63);
     updateRacePlayersPostUpdate();
 #ifdef ONLINE_BATTLE
-    /* Re-apply after post-update so local physics cannot drift remote poses. */
+    /* Publish after postUpdate so peers get the rendered pose, not mid-contact. */
     if (onlineSessionActive() != 0) {
+        if (gRaceUpdatePaused == 0) {
+            for (i = 0; i < gRacePlayerCount; i++) {
+                if (onlinePlayerIsRemote(&gRacePlayers[i]) == 0) {
+                    onlineSessionPublishLocalRacer(&gRacePlayers[i]);
+                }
+            }
+        }
+        /* Re-apply after post-update so local physics cannot drift remote poses. */
         onlineSessionApplyRemoteRacers();
+        /* After callbacks (projectiles) and the last pose apply — caster-side FX. */
+        onlineSessionResolveRemoteCosmeticHits();
     }
 #endif
     updateRemainingCallbackTasks();
@@ -2553,12 +2579,22 @@ void updateRaceFlowFrameWithCourseEffects(void) {
 }
 
 void updateRaceFlowFrame(void) {
+    s32 i;
+
     updateRacePlayers();
     updateCallbackTasksWithMinPriority(0x63);
     updateRacePlayersPostUpdate();
 #ifdef ONLINE_BATTLE
     if (onlineSessionActive() != 0) {
+        if (gRaceUpdatePaused == 0) {
+            for (i = 0; i < gRacePlayerCount; i++) {
+                if (onlinePlayerIsRemote(&gRacePlayers[i]) == 0) {
+                    onlineSessionPublishLocalRacer(&gRacePlayers[i]);
+                }
+            }
+        }
         onlineSessionApplyRemoteRacers();
+        onlineSessionResolveRemoteCosmeticHits();
     }
 #endif
     updateRemainingCallbackTasks();
