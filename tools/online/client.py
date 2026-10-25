@@ -213,6 +213,16 @@ class OnlineClient:
             print("-> RACE_LOADED", flush=True)
             self.send(Cmd.RACE_LOADED)
             return
+        if cmd == Cmd.RETURN_TO_LOBBY:
+            # Allow auto-ready/start again for the next match.
+            self._auto_ready_sent = False
+            self._auto_start_sent = False
+            self.phase = Phase.LOBBY
+            print("-> RETURN_TO_LOBBY", flush=True)
+            self.send(Cmd.RETURN_TO_LOBBY)
+            # Game cannot queue SET_LOADOUT after RETURN (1-byte cmd slot).
+            self._send_pending_loadout()
+            return
 
     def publish_local_snapshot(self) -> None:
         # Always drain events first so a phase mismatch cannot leave ITEM_USE

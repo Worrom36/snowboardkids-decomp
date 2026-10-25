@@ -245,6 +245,10 @@ extern u8 gFramebufferSwapHold;
 extern u8 gRumblePakConnectedMask;
 extern u8 gRaceUpdatePaused;
 
+#ifdef ONLINE_BATTLE
+/* Pause overlay open without freezing sim (gRaceUpdatePaused stays 0). */
+static u8 sOnlinePauseMenuOpen;
+#endif
 
 void initStartupControllerPakFlow(void) {
     LOAD_ASSET(_2427D0, 6);
@@ -627,6 +631,9 @@ void initRaceSceneFlow(void) {
     u16 *replayRecordFlag;
 
     gRaceUpdatePaused = 0;
+#ifdef ONLINE_BATTLE
+    sOnlinePauseMenuOpen = 0;
+#endif
     D_80121B57 = 0;
     gRaceCameraModeChangeDisabled = 0;
     gRaceResultState = 0;
@@ -854,11 +861,13 @@ void initRaceSceneFlow(void) {
          */
         gViewportStates[0].overlayActive = 0;
         gViewportStates[0].overlayAlpha = 0;
+        gMenuFadeOverlayActive = 0;
         onlineSessionBindLocalView();
         updateRacePlayerProjectedPosition(&gRacePlayers[gRaceCameras[0].playerIndex & 3]);
         setRaceCameraMode(0, 1);
         gRaceCameras[0].initialized.value = 1;
         gRaceUpdatePaused = 1;
+        /* Lobby fade-out leaves alpha at 0xFF — clear or rematch is a black frame. */
         gMenuFadeAlpha = 0;
         gCurrentGameTask->callbackData0 = 0;
         onlineMailboxRequest(ONLINE_CMD_RACE_LOADED);
@@ -990,6 +999,7 @@ void waitOnlineRaceGo(void) {
     OnlineLobbySnapshot *lobby;
     u8 cmd;
     s32 go;
+    u8 wasPaused;
 
     lobby = onlineSessionLobby();
     gOnlineMailbox.gameHeartbeat++;
@@ -998,9 +1008,17 @@ void waitOnlineRaceGo(void) {
     if (cmd == ONLINE_CMD_RACE_GO) {
         go = 1;
     }
-    /* Sticky: client writes phase=RACING with GO so a lost 1-byte cmd still works. */
-    if ((lobby != NULL) && (lobby->phase == ONLINE_PHASE_RACING)) {
-        go = 1;
+    if (lobby != NULL) {
+        if (lobby->phase == ONLINE_PHASE_COUNTDOWN) {
+            onlineSessionNoteRaceCountdown();
+        }
+        /*
+         * Sticky RACING only after this race's countdown was armed. A leftover
+         * phase=RACING from the previous match must not skip the load barrier.
+         */
+        if ((lobby->phase == ONLINE_PHASE_RACING) && (onlineSessionRaceGoAllowed() != 0)) {
+            go = 1;
+        }
     }
     /* Failsafe if the server never collects every LOADED (~5s at 60fps). */
     gCurrentGameTask->callbackData0++;
@@ -1010,6 +1028,8 @@ void waitOnlineRaceGo(void) {
 
     if (go != 0) {
         gRaceUpdatePaused = 0;
+        gMenuFadeAlpha = 0;
+        gMenuFadeOverlayActive = 0;
         /* Fresh timer for startRaceGameplayFlow online countdown failsafe. */
         gCurrentGameTask->callbackData0 = 0;
         createCallbackTask((CallbackTaskCallback)initRaceCountdownPrompt, 6, 0x64);
@@ -1023,6 +1043,19 @@ void waitOnlineRaceGo(void) {
         onlineMailboxRequest(ONLINE_CMD_RACE_LOADED);
     }
     updateRaceFlowFrameWithCourseEffects();
+    /*
+     * Physics stay paused for the load barrier, but follow-cam must still track
+     * or rematch waits on a black void at the world origin.
+     */
+    wasPaused = gRaceUpdatePaused;
+    gRaceUpdatePaused = 0;
+    updateRacePlayerProjectedPosition(&gRacePlayers[gRaceCameras[0].playerIndex & 3]);
+    updateRaceCameras();
+    gRaceUpdatePaused = wasPaused;
+    gMenuFadeAlpha = 0;
+    gMenuFadeOverlayActive = 0;
+    gViewportStates[0].overlayActive = 0;
+    gViewportStates[0].overlayAlpha = 0;
 }
 #endif
 
@@ -1083,40 +1116,69 @@ void updateRaceGameplayFlow(void) {
     s32 input;
     s32 selection;
     s32 valueTwo;
+    s32 menuOpen;
+#ifdef ONLINE_BATTLE
+    s32 onlinePause;
+#endif
 
-    opened = 0; \
-    i = 0; \
-    if (gPlayerCount > 0) { \
-        player = gRacePlayers; \
-        do { \
-            if (((player->soundDisabled == 0) && (gRaceUpdatePaused == 0)) && (gPlayerInputPressed[i] & START_BUTTON)) { \
-                D_80121B57 = 0; \
-                gRaceUpdatePaused = 1; \
-                opened = 1; \
-                enqueueSoundEffect(1, 0x32); \
-                requestRumbleMotorInit(0); \
-                requestRumbleMotorInit(1); \
-                requestRumbleMotorInit(2); \
-                requestRumbleMotorInit(3); \
-            } \
-            i++; \
-            player++; \
-        } while (i < gPlayerCount); \
-    } \
-    valueTwo = 2; \
-    if ((gRaceUpdatePaused != 0) && (opened == 0)) { \
-        i = 0; \
-        if (gPlayerCount > 0) { \
-            player = gRacePlayers; \
-            do { \
-                if (player->soundDisabled == 0) { \
-                    input = gPlayerInputPressed[i]; \
-                    if (input & (STICK_UP | U_JPAD)) { \
-                        selection = D_80121B57; \
-                        if (selection != 0) { \
-                            D_80121B57 = selection - 1; \
-                            enqueueSoundEffect(1, 0x32); \
-                            input = gPlayerInputPressed[i]; \
+    menuOpen = gRaceUpdatePaused;
+#ifdef ONLINE_BATTLE
+    if (sOnlinePauseMenuOpen != 0) {
+        menuOpen = 1;
+    }
+    onlinePause = 0;
+    if (onlineSessionActive() != 0) {
+        onlinePause = 1;
+    }
+#endif
+
+    opened = 0;
+    i = 0;
+    if (gPlayerCount > 0) {
+        player = gRacePlayers;
+        do {
+            if (((player->soundDisabled == 0) && (menuOpen == 0)) && (gPlayerInputPressed[i] & START_BUTTON)) {
+                D_80121B57 = 0;
+                opened = 1;
+                enqueueSoundEffect(1, 0x32);
+#ifdef ONLINE_BATTLE
+                /* Online: overlay only — do not freeze local sim (remotes keep racing). */
+                if (onlinePause != 0) {
+                    sOnlinePauseMenuOpen = 1;
+                } else
+#endif
+                {
+                    gRaceUpdatePaused = 1;
+                    requestRumbleMotorInit(0);
+                    requestRumbleMotorInit(1);
+                    requestRumbleMotorInit(2);
+                    requestRumbleMotorInit(3);
+                }
+            }
+            i++;
+            player++;
+        } while (i < gPlayerCount);
+    }
+    valueTwo = 2;
+#ifdef ONLINE_BATTLE
+    menuOpen = gRaceUpdatePaused;
+    if (sOnlinePauseMenuOpen != 0) {
+        menuOpen = 1;
+    }
+#endif
+    if ((menuOpen != 0) && (opened == 0)) {
+        i = 0;
+        if (gPlayerCount > 0) {
+            player = gRacePlayers;
+            do {
+                if (player->soundDisabled == 0) {
+                    input = gPlayerInputPressed[i];
+                    if (input & (STICK_UP | U_JPAD)) {
+                        selection = D_80121B57;
+                        if (selection != 0) {
+                            D_80121B57 = selection - 1;
+                            enqueueSoundEffect(1, 0x32);
+                            input = gPlayerInputPressed[i];
                         }
                     }
                     if (input & (STICK_DOWN | D_JPAD)) {
@@ -1131,12 +1193,18 @@ void updateRaceGameplayFlow(void) {
                         input = D_80121B57;
                         if (input == 0) {
                             gRaceUpdatePaused = 0;
+#ifdef ONLINE_BATTLE
+                            sOnlinePauseMenuOpen = 0;
+#endif
                             enqueueSoundEffect(1, 0x32);
                             input = D_80121B57;
                         }
                         if (input == 1) {
                             gRaceRumbleEnabled = 0;
                             gRaceUpdatePaused = 0;
+#ifdef ONLINE_BATTLE
+                            sOnlinePauseMenuOpen = 0;
+#endif
                             gFramebufferSwapHold = 1;
                             enqueueSoundEffect(1, 0x32);
                             setCurrentGameTaskCallback(finalizeRaceExitFlow, 0);
@@ -1145,6 +1213,9 @@ void updateRaceGameplayFlow(void) {
                         if (valueTwo == input) {
                             gRaceRumbleEnabled = 0;
                             gRaceUpdatePaused = 0;
+#ifdef ONLINE_BATTLE
+                            sOnlinePauseMenuOpen = 0;
+#endif
                             gFramebufferSwapHold = 1;
                             enqueueSoundEffect(1, 0x32);
                             setCurrentGameTaskCallback(finalizeRaceExitFlow, 0);
@@ -1166,6 +1237,9 @@ void updateRaceGameplayFlow(void) {
     if (areRacePlayersFinished() != 0) {
         gCurrentGameTask->callbackData0 = 0x3C;
         gRaceRumbleEnabled = 0;
+#ifdef ONLINE_BATTLE
+        sOnlinePauseMenuOpen = 0;
+#endif
         setCurrentGameTaskCallback(waitRaceFinishResultsFlow, 0);
     }
 }
@@ -2523,32 +2597,56 @@ void fadeOutRaceGhostReplayFlow(void) {
 
 void finalizeRaceExitFlow(void) {
     gFramebufferSwapHold = 1;
-    if (gPendingFramebufferSwapCount == 2) {
-        gRaceRumbleEnabled = 0;
-        gRaceCameraModeChangeDisabled = 0;
-        updateRelocatableHeap();
-        releaseMenuAssetHandles();
-        gFramebufferSwapHold = 0;
-        gFramebufferRenderInterval.value = 0;
-        stopSoundEffects();
-        requestRumbleMotorInit(0);
-        requestRumbleMotorInit(1);
-        requestRumbleMotorInit(2);
-        requestRumbleMotorInit(3);
-        gMenuFlowState = 0;
-        if (D_80121B57 == 2) {
-            setCurrentGameTaskCallback(initRaceSceneFlow, 0);
-        } else if (gPlayerCount == 1) {
-            if (gRaceSplitscreenMode == 1) {
-                setCurrentGameTaskCallback(openRaceTypeSelectFlow, 0);
-            } else {
-                setCurrentGameTaskCallback(openPassAwardCelebrationFlow, 0);
-            }
-        } else {
-            setCurrentGameTaskCallback(openPostRaceControllerPakContinuePromptFlow, 0);
+#ifdef ONLINE_BATTLE
+    /*
+     * Online (esp. P2) often never reaches pendingFramebufferSwapCount==2, same
+     * soft-lock the lobby fade already fails out of — without this, results fade
+     * to black and never reopen the lobby.
+     */
+    if ((onlineSessionActive() != 0) && (gPendingFramebufferSwapCount != 2)) {
+        gCurrentGameTask->callbackData0++;
+        if (gCurrentGameTask->callbackData0 < 4) {
+            return;
         }
-        requestMusicSequenceStop(0);
+    } else
+#endif
+    if (gPendingFramebufferSwapCount != 2) {
+        return;
     }
+
+    gRaceRumbleEnabled = 0;
+    gRaceCameraModeChangeDisabled = 0;
+    updateRelocatableHeap();
+    releaseMenuAssetHandles();
+    gFramebufferSwapHold = 0;
+    gFramebufferRenderInterval.value = 0;
+    stopSoundEffects();
+    requestRumbleMotorInit(0);
+    requestRumbleMotorInit(1);
+    requestRumbleMotorInit(2);
+    requestRumbleMotorInit(3);
+    gMenuFlowState = 0;
+    if (D_80121B57 == 2) {
+        setCurrentGameTaskCallback(initRaceSceneFlow, 0);
+#ifdef ONLINE_BATTLE
+    } else if (onlineSessionActive() != 0) {
+        /*
+         * Online uses gPlayerCount==1 / splitscreen 0, which would otherwise
+         * open the GP pass-award path and land on GAME MENU — black screen,
+         * never back to the lobby. Reopen the online lobby instead.
+         */
+        setCurrentGameTaskCallback(openOnlineBattleConnectFlow, 0);
+#endif
+    } else if (gPlayerCount == 1) {
+        if (gRaceSplitscreenMode == 1) {
+            setCurrentGameTaskCallback(openRaceTypeSelectFlow, 0);
+        } else {
+            setCurrentGameTaskCallback(openPassAwardCelebrationFlow, 0);
+        }
+    } else {
+        setCurrentGameTaskCallback(openPostRaceControllerPakContinuePromptFlow, 0);
+    }
+    requestMusicSequenceStop(0);
 }
 
 void updateRaceFlowFrameWithCourseEffects(void) {

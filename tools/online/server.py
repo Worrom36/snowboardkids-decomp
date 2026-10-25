@@ -188,6 +188,26 @@ class LobbyServer:
             snap = self.build_lobby_snapshot(client.seat)
             self.send(addr, Cmd.LOBBY_SNAPSHOT, snap.pack())
 
+    def return_to_lobby(self, reason: str) -> None:
+        """End COUNTDOWN/RACING and reopen the lobby for a rematch."""
+        if self.phase not in (Phase.COUNTDOWN, Phase.RACING):
+            # Still unready + broadcast so a late RETURN after LOBBY is harmless.
+            for client in self.clients.values():
+                client.ready = False
+            self.broadcast_lobby()
+            return
+        self.phase = Phase.LOBBY
+        self.race_frame = 0
+        self.loaded_seats.clear()
+        self._race_go_sent = False
+        self._start_mono = 0.0
+        for client in self.clients.values():
+            client.ready = False
+            client.last_snapshot = None
+            client.snapshot_count = 0
+        log(f"phase -> LOBBY ({reason}) — {self.lobby_status_line()}")
+        self.broadcast_lobby()
+
     def remove_client(self, addr: Tuple[str, int]) -> None:
         client = self.clients.pop(addr, None)
         if client is None:
@@ -327,6 +347,11 @@ class LobbyServer:
                 snap.phase = Phase.COUNTDOWN
                 self.send(addr_i, Cmd.START, snap.pack())
                 log(f"  -> START to seat={client_i.seat} {fmt_addr(addr_i)}")
+            return
+
+        if cmd == Cmd.RETURN_TO_LOBBY:
+            log(f"RETURN_TO_LOBBY from seat={client.seat} {fmt_addr(addr)}")
+            self.return_to_lobby(f"seat={client.seat}")
             return
 
         if cmd == Cmd.RACE_LOADED and self.phase == Phase.COUNTDOWN:

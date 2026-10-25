@@ -423,7 +423,9 @@ class MupenBridge:
             bridge_cmd_cleared = True
 
         # Continuous game-owned fields -> file
-        host[OFF_PENDING_LOADOUT : OFF_PENDING_LOADOUT + 8] = rdram[OFF_PENDING_LOADOUT : OFF_PENDING_LOADOUT + 8]
+        # OnlineLoadout is 0x10 (course/char/… + 8-byte name); copying only 8
+        # dropped the name so SET_LOADOUT always shipped blanks → lobby "P#".
+        host[OFF_PENDING_LOADOUT:OFF_LOCAL_OUT] = rdram[OFF_PENDING_LOADOUT:OFF_LOCAL_OUT]
         host[OFF_LOCAL_OUT : OFF_REMOTE_IN] = rdram[OFF_LOCAL_OUT : OFF_REMOTE_IN]
         host[OFF_CPU_PATH_OUT:OFF_CPU_PATH_IN] = rdram[OFF_CPU_PATH_OUT:OFF_CPU_PATH_IN]
         # One-shot eventOut: append into the file queue, then clear what we took
@@ -456,13 +458,22 @@ class MupenBridge:
         game_phase = rdram[OFF_LOBBY]
         local_seat = rdram[OFF_LOBBY + 1]
         local_ready_opt = 0
+        local_name_opt = b""
         if local_seat < 4:
             seat_off = OFF_LOBBY + 12 + int(local_seat) * LOBBY_SEAT_SIZE
             local_ready_opt = rdram[seat_off + 1]
+            # loadout.name is 8 bytes at seat+4+8
+            local_name_opt = bytes(rdram[seat_off + 12 : seat_off + 20])
         if host_phase >= 2:  # LOBBY / COUNTDOWN / RACING / ERROR
             rdram[OFF_LOBBY:OFF_PENDING_LOADOUT] = host[OFF_LOBBY:OFF_PENDING_LOADOUT]
-            if local_seat < 4 and local_ready_opt and host[OFF_LOBBY + 12 + int(local_seat) * LOBBY_SEAT_SIZE + 1] == 0:
-                rdram[OFF_LOBBY + 12 + int(local_seat) * LOBBY_SEAT_SIZE + 1] = 1
+            if local_seat < 4:
+                seat_off = OFF_LOBBY + 12 + int(local_seat) * LOBBY_SEAT_SIZE
+                if local_ready_opt and host[seat_off + 1] == 0:
+                    rdram[seat_off + 1] = 1
+                # Keep optimistic local name until server SET_LOADOUT catches up.
+                host_name = bytes(rdram[seat_off + 12 : seat_off + 20])
+                if local_name_opt.strip() and not host_name.strip():
+                    rdram[seat_off + 12 : seat_off + 20] = local_name_opt
         else:
             host[OFF_LOBBY:OFF_PENDING_LOADOUT] = rdram[OFF_LOBBY:OFF_PENDING_LOADOUT]
 

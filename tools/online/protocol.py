@@ -52,6 +52,7 @@ class Cmd(IntEnum):
     CPU_PATH_SNAPSHOT = 14
     RACE_LOADED = 15
     RACE_GO = 16
+    RETURN_TO_LOBBY = 17
 
 
 class Phase(IntEnum):

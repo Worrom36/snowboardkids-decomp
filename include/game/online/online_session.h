@@ -33,6 +33,12 @@ void onlineSessionResolveRemoteCosmeticHits(void);
 
 /* Menu / flow helpers */
 void onlineSessionBeginConnect(void);
+/* Keep the session; ask the server to reopen the lobby after a race. */
+void onlineSessionReturnToLobby(void);
+/* Lobby START/COUNTDOWN for this race — enables sticky RACE_GO. */
+void onlineSessionNoteRaceCountdown(void);
+/* True after NoteRaceCountdown until ReturnToLobby (rematch GO gate). */
+s32 onlineSessionRaceGoAllowed(void);
 void onlineSessionSetReady(s32 ready);
 void onlineSessionRequestStart(void);
 void onlineSessionDisconnect(void);

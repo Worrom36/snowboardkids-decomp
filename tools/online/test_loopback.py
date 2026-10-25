@@ -110,7 +110,17 @@ async def run_test() -> None:
         assert got[offset + 1] == 1  # valid
         assert int.from_bytes(got[offset + 0x0C : offset + 0x10], "big", signed=True) == 12345
 
-        print("loopback OK: join, ready, start, snapshot relay")
+        # Post-race: either client can reopen the lobby for a rematch.
+        buf = client_a.mailbox._read()
+        buf[0x008] = Cmd.RETURN_TO_LOBBY
+        client_a.mailbox._write(buf)
+        client_a.poll_mailbox_commands()
+        await asyncio.sleep(0.1)
+        assert server.phase == Phase.LOBBY
+        assert not server.all_humans_ready()
+        assert client_a.phase == Phase.LOBBY
+
+        print("loopback OK: join, ready, start, snapshot relay, return to lobby")
 
         transport_a.close()
         transport_b.close()

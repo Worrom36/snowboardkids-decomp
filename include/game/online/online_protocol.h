@@ -31,7 +31,9 @@ typedef enum OnlineCmd {
     ONLINE_CMD_CPU_PATH_SNAPSHOT = 14,
     /* Client finished race-scene load; server replies RACE_GO when all humans are ready. */
     ONLINE_CMD_RACE_LOADED = 15,
-    ONLINE_CMD_RACE_GO = 16
+    ONLINE_CMD_RACE_GO = 16,
+    /* Post-results: server unready seats and returns phase to LOBBY. */
+    ONLINE_CMD_RETURN_TO_LOBBY = 17
 } OnlineCmd;
 
 typedef enum OnlinePhase {

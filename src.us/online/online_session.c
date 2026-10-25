@@ -24,6 +24,11 @@ extern RaceCourseSurface *gRaceCourseSurfaces;
 extern Vec3i gRacePlayerGroundProbeOffsets[];
 
 static u8 sOnlineSessionActive;
+/*
+ * Set on lobby START/COUNTDOWN; cleared on return-to-lobby. Rematch must not
+ * treat leftover phase=RACING as RACE_GO (skips the load barrier → black screen).
+ */
+static u8 sOnlineSawCountdown;
 static u8 sOnlineRemoteSeat[ONLINE_MAX_SEATS];
 static s16 sRemoteAppliedAnim[ONLINE_MAX_SEATS];
 static u8 sRemoteYawFlipHold[ONLINE_MAX_SEATS];
@@ -832,6 +837,7 @@ void onlineSessionReset(void) {
     s32 j;
 
     sOnlineSessionActive = 0;
+    sOnlineSawCountdown = 0;
     sRemotePredictFrame = -1;
     for (i = 0; i < ONLINE_MAX_SEATS; i++) {
         sOnlineRemoteSeat[i] = 0;
@@ -866,8 +872,39 @@ s32 onlinePlayerIsRemote(const RacePlayer *player) {
 void onlineSessionBeginConnect(void) {
     onlineSessionReset();
     sOnlineSessionActive = 1;
+    sOnlineSawCountdown = 0;
     gOnlineMailbox.lobby.phase = ONLINE_PHASE_CONNECTING;
     onlineMailboxRequest(ONLINE_CMD_CONNECT);
+}
+
+void onlineSessionNoteRaceCountdown(void) {
+    sOnlineSawCountdown = 1;
+}
+
+s32 onlineSessionRaceGoAllowed(void) {
+    return sOnlineSawCountdown != 0;
+}
+
+void onlineSessionReturnToLobby(void) {
+    s32 i;
+    OnlineLobbySnapshot *lobby;
+
+    if (sOnlineSessionActive == 0) {
+        return;
+    }
+    lobby = &gOnlineMailbox.lobby;
+    /*
+     * Optimistic local reopen so bridge-less / laggy paths still show the lobby.
+     * The server (or a later LOBBY_SNAPSHOT) is authoritative for seats/host.
+     */
+    lobby->phase = ONLINE_PHASE_LOBBY;
+    for (i = 0; i < ONLINE_MAX_SEATS; i++) {
+        lobby->seats[i].ready = 0;
+    }
+    sOnlineSawCountdown = 0;
+    /* Drop a sticky RACE_GO left in the 1-byte bridge slot from the last race. */
+    gOnlineMailbox.bridgeToGameCmd = ONLINE_CMD_NONE;
+    onlineMailboxRequest(ONLINE_CMD_RETURN_TO_LOBBY);
 }
 
 void onlineSessionDisconnect(void) {

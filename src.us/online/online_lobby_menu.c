@@ -44,7 +44,7 @@ static u8 sOnlineRaceStartArmed;
 /* Task that runs handleOnlineBattleConnectFlow while lobby task 4 is up. */
 static u8 sOnlineParentTaskId;
 
-/* Name entry (manual lobbies): edit before ready; A confirms + readies. */
+/* Name entry (manual lobbies): edit before ready; Start confirms (does not ready). */
 static const char sOnlineNameCharset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -.'!";
 static char sOnlineNameBuffer[ONLINE_PLAYER_NAME_LEN + 1];
 static u8 sOnlineNameLen;
@@ -98,6 +98,23 @@ static void onlineNameDelete(void) {
     sOnlineNameBuffer[sOnlineNameLen] = '\0';
 }
 
+/* Accept glyph at cursor (default 'A') and move right when room remains. */
+static void onlineNameAdvance(void) {
+    if (sOnlineNameCursor >= ONLINE_PLAYER_NAME_LEN) {
+        return;
+    }
+    if (sOnlineNameCursor >= sOnlineNameLen) {
+        sOnlineNameBuffer[sOnlineNameCursor] = 'A';
+        sOnlineNameLen = sOnlineNameCursor + 1;
+        sOnlineNameBuffer[sOnlineNameLen] = '\0';
+    }
+    if (sOnlineNameCursor < ONLINE_PLAYER_NAME_LEN - 1) {
+        sOnlineNameCursor++;
+    }
+    /* Show caret immediately on the new (often blank) slot. */
+    sOnlineNameBlink = 0;
+}
+
 /* Returns 1 when the frame's input was consumed by name editing. */
 static s32 onlineNameHandleInput(s32 pressed) {
     if (sOnlineNameEditing == 0) {
@@ -106,25 +123,34 @@ static s32 onlineNameHandleInput(s32 pressed) {
     sOnlineNameBlink++;
     if (pressed & (U_JPAD | STICK_UP)) {
         onlineNameCycle(1);
+        sOnlineNameBlink = 0;
     }
     if (pressed & (D_JPAD | STICK_DOWN)) {
         onlineNameCycle(-1);
+        sOnlineNameBlink = 0;
     }
     if ((pressed & (L_JPAD | STICK_LEFT)) && (sOnlineNameCursor > 0)) {
         sOnlineNameCursor--;
+        sOnlineNameBlink = 0;
     }
     if ((pressed & (R_JPAD | STICK_RIGHT)) && (sOnlineNameCursor < sOnlineNameLen) &&
         (sOnlineNameCursor < ONLINE_PLAYER_NAME_LEN - 1)) {
         sOnlineNameCursor++;
+        sOnlineNameBlink = 0;
     }
     if (pressed & 0x4000) { /* B: backspace */
         onlineNameDelete();
+        sOnlineNameBlink = 0;
         return 1;
     }
-    if (pressed & (0x8000 | 0x1000)) { /* A / Start: confirm */
+    if (pressed & 0x1000) { /* Start: confirm name only (ready is a separate press) */
         onlineSessionSetPlayerName(sOnlineNameBuffer);
         sOnlineNameEditing = 0;
-        return (pressed & 0x8000) ? 0 : 1; /* A also readies below; Start only confirms */
+        return 1;
+    }
+    if (pressed & 0x8000) { /* A: place / next letter */
+        onlineNameAdvance();
+        return 1;
     }
     return 1;
 }
@@ -142,6 +168,8 @@ static void beginOnlineLobbyRaceStart(void) {
     sOnlineFadeSwapWait = 0;
     lobby = onlineSessionLobby();
     lobby->phase = ONLINE_PHASE_COUNTDOWN;
+    /* Arm rematch GO gate — cleared when the lobby reopens after a race. */
+    onlineSessionNoteRaceCountdown();
     gMenuFlowState = 3;
     gMenuExitSelection = 0;
     gCurrentGameTask->callbackData0 = 0;
@@ -198,14 +226,35 @@ static void drawOnlineLobbyHud(void *unused) {
         nameBuf[nameLen] = '\0';
 
         if ((i == (s32)localSeat) && (sOnlineNameEditing != 0)) {
+            s16 caretX;
+            s32 caretBlank;
+            s32 caretOn;
+
             if (sOnlineNameLen > 0) {
                 drawMenuAsciiTextDefaultScale(-0x50, y, sOnlineNameBuffer, 1);
             }
-            if (((sOnlineNameBlink >> 4) & 1) == 0) {
-                drawMenuAsciiTextDefaultScale((s16)(-0x50 + sOnlineNameCursor * 8), y, "_", 1);
+            /*
+             * Font "_" is easy to miss (and blank/space have no glyph). Draw a
+             * solid orange block/underline so the active column is always clear.
+             */
+            caretX = (s16)(-0x50 + sOnlineNameCursor * 8);
+            caretBlank = (sOnlineNameCursor >= sOnlineNameLen) ||
+                         (sOnlineNameBuffer[sOnlineNameCursor] == ' ');
+            caretOn = ((sOnlineNameBlink >> 3) & 1) == 0;
+            if (caretBlank) {
+                if (caretOn) {
+                    drawMenuFillRectangle(caretX, y, 7, 8, 0xFF, 0xA0, 0x00);
+                } else {
+                    drawMenuFillRectangle(caretX, (s16)(y + 6), 7, 2, 0xFF, 0xA0, 0x00);
+                }
+            } else if (caretOn) {
+                drawMenuFillRectangle(caretX, (s16)(y + 7), 7, 2, 0xFF, 0xA0, 0x00);
             }
         } else if (nameLen > 0) {
             drawMenuAsciiTextDefaultScale(-0x50, y, nameBuf, (i == (s32)localSeat) ? 1 : 0);
+        } else if (i == (s32)localSeat) {
+            /* Confirmed name lives in session cache before lobby snapshot catches up. */
+            drawMenuAsciiTextDefaultScale(-0x50, y, onlineSessionPlayerName(i), 1);
         } else {
             drawMenuAsciiTextDefaultScale(-0x50, y, sOnlineSeatLabels[i], 0);
         }
@@ -223,11 +272,14 @@ static void drawOnlineLobbyHud(void *unused) {
             status = sOnlineEmptyText;
         }
         drawMenuAsciiTextDefaultScale(0x00, y, status, (i == (s32)localSeat) ? 1 : 0);
+        if ((i == (s32)lobby->hostSeat) && (lobby->seats[i].kind == ONLINE_SEAT_HUMAN)) {
+            drawMenuAsciiTextDefaultScale(-0x58, y, "*", (i == (s32)localSeat) ? 1 : 0);
+        }
         y += 0x12;
     }
 
     if (sOnlineNameEditing != 0) {
-        drawMenuAsciiTextDefaultScale(-0x50, 0x40, "NAME UP DN A OK", 1);
+        drawMenuAsciiTextDefaultScale(-0x50, 0x40, "UP DN A NEXT START OK", 1);
     } else if (lobby->phase == ONLINE_PHASE_COUNTDOWN) {
         drawMenuAsciiTextDefaultScale(-0x38, 0x40, sOnlineStartingText, 0);
     } else if (localSeat == lobby->hostSeat) {
@@ -316,14 +368,29 @@ void initOnlineLobbyMenu(void) {
     gCurrentGameTask->callbackData0 = 0xFF;
     gMenuFadeAlpha = 0xFF;
 
-    onlineSessionBeginConnect();
-    onlineSessionSetLoadout(
-        (u8)gRaceCourseIndex.signedValue,
-        gRacePlayers[0].selectedCharacterId,
-        gRacePlayers[0].menuSelection,
-        gRacePlayers[0].selectionUnlockState,
-        3
-    );
+    /*
+     * Rematch: stay joined and ask the server to reopen LOBBY. A fresh
+     * beginConnect while phase is still RACING is rejected by the server.
+     * Do not call onlineSessionSetLoadout afterward — the 1-byte game cmd
+     * slot would overwrite RETURN_TO_LOBBY (PC client re-pushes pending).
+     */
+    if (onlineSessionActive() != 0) {
+        gOnlineMailbox.pendingLoadout.courseId = (u8)gRaceCourseIndex.signedValue;
+        gOnlineMailbox.pendingLoadout.characterId = gRacePlayers[0].selectedCharacterId;
+        gOnlineMailbox.pendingLoadout.characterVariant = gRacePlayers[0].menuSelection;
+        gOnlineMailbox.pendingLoadout.snowboardTextureIndex = gRacePlayers[0].selectionUnlockState;
+        gOnlineMailbox.pendingLoadout.lapCount = 3;
+        onlineSessionReturnToLobby();
+    } else {
+        onlineSessionBeginConnect();
+        onlineSessionSetLoadout(
+            (u8)gRaceCourseIndex.signedValue,
+            gRacePlayers[0].selectedCharacterId,
+            gRacePlayers[0].menuSelection,
+            gRacePlayers[0].selectionUnlockState,
+            3
+        );
+    }
     setCurrentGameTaskCallback(updateOnlineLobbyMenu, 0);
     updateCallbackTasks();
 }
